@@ -1,0 +1,60 @@
+{
+  "tarefas": [
+    {
+      "id": "t1",
+      "titulo": "Estruturar página inicial",
+      "status": "a-fazer",
+      "prioridade": "alta",
+      "prazo": "2026-09-05"
+    },
+    {
+      "id": "t2",
+      "titulo": "Definir paleta de cores",
+      "status": "a-fazer",
+      "prioridade": "media",
+      "prazo": "2026-09-06"
+    },
+    {
+      "id": "t3",
+      "titulo": "Pesquisar referências",
+      "status": "a-fazer",
+      "prioridade": "baixa",
+      "prazo": "2026-09-07"
+    },
+    {
+      "id": "t4",
+      "titulo": "Desenvolver componentes",
+      "status": "em-andamento",
+      "prioridade": "alta",
+      "prazo": "2026-09-05"
+    },
+    {
+      "id": "t5",
+      "titulo": "Responsividade",
+      "status": "em-andamento",
+      "prioridade": "media",
+      "prazo": "2026-09-06"
+    },
+    {
+      "id": "t6",
+      "titulo": "Revisar acessibilidade",
+      "status": "em-revisao",
+      "prioridade": "alta",
+      "prazo": "2026-09-07"
+    },
+    {
+      "id": "t7",
+      "titulo": "Definir objetivo",
+      "status": "concluido",
+      "prioridade": "media",
+      "prazo": "2026-09-01"
+    },
+    {
+      "id": "t8",
+      "titulo": "Criar wireframe",
+      "status": "concluido",
+      "prioridade": "baixa",
+      "prazo": "2026-09-02"
+    }
+  ]
+}

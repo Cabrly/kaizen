@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Kanban | Kaizen</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet"
+    >
+
+    <link rel="stylesheet" href="./style.css?v=bolha3">
+</head>
+
+<body>
+
+    <header class="header">
+
+        <div class="logo">
+
+            <span class="logo-jp">
+                改善
+            </span>
+
+            <div>
+                <h1>KAIZEN</h1>
+                <p>Kanban Board</p>
+            </div>
+
+        </div>
+
+        <nav
+            class="nav-telas"
+            role="tablist"
+            aria-label="Navegação principal"
+        >
+
+            <span class="nav-bolha" aria-hidden="true"></span>
+
+            <button
+                type="button"
+                class="nav-tab ativa"
+                data-tela="kanban"
+                role="tab"
+                aria-selected="true"
+                aria-controls="tela-kanban"
+            >
+                Kanban
+            </button>
+
+            <button
+                type="button"
+                class="nav-tab"
+                data-tela="ia"
+                role="tab"
+                aria-selected="false"
+                aria-controls="tela-ia"
+            >
+                Assistente IA
+            </button>
+
+        </nav>
+
+        <button
+            class="add-task"
+            type="button"
+            id="botao-nova-tarefa"
+        >
+            <span>+</span>
+            Nova tarefa
+        </button>
+
+    </header>
+
+
+    <main
+        class="container"
+        id="tela-kanban"
+        role="tabpanel"
+    >
+
+        <section class="intro">
+
+            <div>
+
+                <span class="tag">
+                    今日の仕事
+                </span>
+
+                <h2>
+                    Organize seu fluxo de trabalho
+                </h2>
+
+                <p>
+                    Pequenos passos, grandes resultados.
+                    Organize suas tarefas seguindo
+                    o princípio Kaizen.
+                </p>
+
+            </div>
+
+
+            <div class="progress">
+
+                <span>Progresso</span>
+
+                <strong id="progresso-texto">
+                    0%
+                </strong>
+
+                <div class="progress-bar">
+
+                    <div
+                        class="progress-fill"
+                        id="progresso-barra"
+                    ></div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- CONTROLES DA E4 -->
+        <section
+            class="filtros"
+            aria-label="Busca, filtros e ordenação"
+        >
+
+            <div class="campo-filtro campo-busca">
+
+                <label for="busca">
+                    Buscar tarefa
+                </label>
+
+                <input
+                    type="search"
+                    id="busca"
+                    placeholder="Digite parte do título..."
+                    autocomplete="off"
+                >
+
+            </div>
+
+
+            <div class="campo-filtro">
+
+                <label for="filtro-categoria">
+                    Categoria
+                </label>
+
+                <select id="filtro-categoria">
+
+                    <option value="todos">
+                        Todas as categorias
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="campo-filtro">
+
+                <label for="filtro-prioridade">
+                    Prioridade
+                </label>
+
+                <select id="filtro-prioridade">
+
+                    <option value="todas">
+                        Todas
+                    </option>
+
+                    <option value="alta">
+                        Alta
+                    </option>
+
+                    <option value="media">
+                        Média
+                    </option>
+
+                    <option value="baixa">
+                        Baixa
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="campo-filtro">
+
+                <label for="ordenacao">
+                    Ordenar
+                </label>
+
+                <select id="ordenacao">
+
+                    <option value="padrao">
+                        Ordem original
+                    </option>
+
+                    <option value="prazo-asc">
+                        Prazo mais próximo
+                    </option>
+
+                    <option value="prazo-desc">
+                        Prazo mais distante
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <button
+                type="button"
+                id="limpar-filtros"
+                class="limpar-filtros"
+            >
+                Limpar filtros
+            </button>
+
+        </section>
+
+
+        <!--
+            Essa região já existe no HTML.
+            O JavaScript somente altera o conteúdo.
+        -->
+        <p
+            class="estado"
+            data-estado
+            role="status"
+            aria-live="polite"
+        ></p>
+
+
+        <section
+            class="kanban"
+            id="quadro"
+            aria-label="Quadro de tarefas"
+        >
+
+
+            <!-- A FAZER -->
+            <section
+                class="column"
+                data-coluna="a-fazer"
+            >
+
+                <div class="column-header">
+
+                    <div class="column-title">
+
+                        <span
+                            class="status black"
+                        ></span>
+
+                        <h3>A fazer</h3>
+
+                    </div>
+
+                    <span
+                        class="task-count"
+                        data-contador="a-fazer"
+                    >
+                        0
+                    </span>
+
+                </div>
+
+
+                <div
+                    class="tasks"
+                    data-tarefas="a-fazer"
+                ></div>
+
+
+                <button
+                    class="add-column-task"
+                    type="button"
+                >
+                    + Adicionar tarefa
+                </button>
+
+            </section>
+
+
+            <!-- EM ANDAMENTO -->
+            <section
+                class="column"
+                data-coluna="em-andamento"
+            >
+
+                <div class="column-header">
+
+                    <div class="column-title">
+
+                        <span
+                            class="status red"
+                        ></span>
+
+                        <h3>
+                            Em andamento
+                        </h3>
+
+                    </div>
+
+                    <span
+                        class="task-count"
+                        data-contador="em-andamento"
+                    >
+                        0
+                    </span>
+
+                </div>
+
+
+                <div
+                    class="tasks"
+                    data-tarefas="em-andamento"
+                ></div>
+
+
+                <button
+                    class="add-column-task"
+                    type="button"
+                >
+                    + Adicionar tarefa
+                </button>
+
+            </section>
+
+
+            <!-- EM REVISÃO -->
+            <section
+                class="column"
+                data-coluna="em-revisao"
+            >
+
+                <div class="column-header">
+
+                    <div class="column-title">
+
+                        <span
+                            class="status review"
+                        ></span>
+
+                        <h3>
+                            Em revisão
+                        </h3>
+
+                    </div>
+
+                    <span
+                        class="task-count"
+                        data-contador="em-revisao"
+                    >
+                        0
+                    </span>
+
+                </div>
+
+
+                <div
+                    class="tasks"
+                    data-tarefas="em-revisao"
+                ></div>
+
+
+                <button
+                    class="add-column-task"
+                    type="button"
+                >
+                    + Adicionar tarefa
+                </button>
+
+            </section>
+
+
+            <!-- CONCLUÍDO -->
+            <section
+                class="column"
+                data-coluna="concluido"
+            >
+
+                <div class="column-header">
+
+                    <div class="column-title">
+
+                        <span
+                            class="status done"
+                        ></span>
+
+                        <h3>
+                            Concluído
+                        </h3>
+
+                    </div>
+
+                    <span
+                        class="task-count"
+                        data-contador="concluido"
+                    >
+                        0
+                    </span>
+
+                </div>
+
+
+                <div
+                    class="tasks"
+                    data-tarefas="concluido"
+                ></div>
+
+
+                <button
+                    class="add-column-task"
+                    type="button"
+                >
+                    + Adicionar tarefa
+                </button>
+
+            </section>
+
+        </section>
+
+    </main>
+
+
+    <main
+        class="tela-ia"
+        id="tela-ia"
+        role="tabpanel"
+        hidden
+    >
+
+        <section class="intro ia-intro">
+
+            <div>
+
+                <span class="tag">
+                    忍びの知恵
+                </span>
+
+                <h2>
+                    Fale com o assistente
+                </h2>
+
+                <p>
+                    Converse com a IA rodando localmente no seu servidor,
+                    via Ollama. Escolha o modelo certo para cada tarefa.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <section class="ia-painel">
+
+            <aside class="ia-config">
+
+                <div class="campo-filtro">
+
+                    <label for="ia-modelo">
+                        Modelo
+                    </label>
+
+                    <select id="ia-modelo">
+
+                        <option value="qwen3:14b">
+                            qwen3:14b — conversa e raciocínio
+                        </option>
+
+                        <option value="qwen2.5-coder:14b">
+                            qwen2.5-coder:14b — código e projetos
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div
+                    class="ia-status"
+                    id="ia-status"
+                >
+
+                    <span
+                        class="status-dot"
+                        id="ia-status-dot"
+                    ></span>
+
+                    <span id="ia-status-texto">
+                        Verificando conexão...
+                    </span>
+
+                </div>
+
+                <button
+                    type="button"
+                    class="btn-secundario ia-limpar"
+                    id="ia-limpar-chat"
+                >
+                    Limpar conversa
+                </button>
+
+            </aside>
+
+
+            <div class="ia-chat">
+
+                <div
+                    class="ia-mensagens"
+                    id="ia-mensagens"
+                    role="log"
+                    aria-live="polite"
+                ></div>
+
+                <form
+                    class="ia-form"
+                    id="ia-form"
+                >
+
+                    <textarea
+                        id="ia-input"
+                        class="ia-input"
+                        placeholder="Pergunte algo ao assistente..."
+                        rows="2"
+                        required
+                    ></textarea>
+
+                    <button
+                        type="submit"
+                        class="btn-primario ia-enviar"
+                        id="ia-enviar"
+                    >
+                        Enviar
+                    </button>
+
+                </form>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <footer>
+
+        <p>
+            一歩ずつ — Um passo de cada vez.
+        </p>
+
+    </footer>
+
+
+    <script
+        type="module"
+        src="./js/main.js"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/telas.js"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/bolha.js?v=bolha3"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/chat.js"
+    ></script>
+
+</body>
+
+</html>

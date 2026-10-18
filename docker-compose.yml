@@ -1,0 +1,19 @@
+services:
+  kaizen:
+    build: .
+    container_name: kaizen
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_URL=http://host.docker.internal:11434
+    extra_hosts:
+      # No Linux, host.docker.internal não existe por padrão.
+      # Esta linha faz o container enxergar o Ollama rodando no host.
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Todo o projeto como volume: edite os arquivos fora do container
+      # (index.html, style.css, js/, server.py) e o container serve a
+      # versão nova na hora, sem rebuild. kaizen.sqlite3 também fica
+      # gravado direto aqui, fora do container.
+      - .:/app
+    restart: unless-stopped

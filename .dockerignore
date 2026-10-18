@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.git
+kaizen.sqlite3
+kaizen.sqlite3-shm
+kaizen.sqlite3-wal

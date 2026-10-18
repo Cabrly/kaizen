@@ -1,0 +1,2288 @@
+/* =========================
+   RESET
+========================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Noto Sans JP", Arial, sans-serif;
+    background: #f7f7f5;
+    color: #171717;
+}
+
+
+/* =========================
+   HEADER
+========================= */
+
+.header {
+    height: 80px;
+    background: #ffffff;
+    border-bottom: 1px solid #dedede;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 5%;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-jp {
+    background: #c90016;
+    color: white;
+
+    width: 45px;
+    height: 45px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 20px;
+    font-weight: 700;
+
+    border-radius: 50%;
+}
+
+.logo h1 {
+    font-size: 19px;
+    letter-spacing: 3px;
+}
+
+.logo p {
+    font-size: 11px;
+    color: #777;
+    letter-spacing: 1px;
+}
+
+
+/* =========================
+   BOTÃO
+========================= */
+
+.add-task {
+    background: #c90016;
+    color: white;
+
+    border: none;
+    border-radius: 5px;
+
+    padding: 11px 18px;
+
+    font-family: inherit;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.add-task span {
+    font-size: 18px;
+    margin-right: 5px;
+}
+
+.add-task:hover {
+    background: #a90012;
+}
+
+
+/* =========================
+   CONTAINER
+========================= */
+
+.container {
+    width: 90%;
+    max-width: 1400px;
+    margin: 40px auto;
+}
+
+
+/* =========================
+   INTRO
+========================= */
+
+.intro {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+
+    margin-bottom: 35px;
+}
+
+.tag {
+    color: #c90016;
+    font-size: 12px;
+    font-weight: 700;
+
+    letter-spacing: 2px;
+}
+
+.intro h2 {
+    font-size: 30px;
+    margin: 7px 0;
+}
+
+.intro p {
+    color: #777;
+    max-width: 600px;
+    font-size: 14px;
+}
+
+
+/* =========================
+   PROGRESSO
+========================= */
+
+.progress {
+    width: 220px;
+}
+
+.progress span {
+    font-size: 12px;
+    color: #777;
+}
+
+.progress strong {
+    float: right;
+    font-size: 13px;
+}
+
+.progress-bar {
+    height: 6px;
+    background: #dedede;
+
+    margin-top: 8px;
+
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    width: 35%;
+    height: 100%;
+    background: #c90016;
+}
+
+
+/* =========================
+   KANBAN
+========================= */
+
+.kanban {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+}
+
+.column {
+    background: #eeeeec;
+
+    border: 1px solid #dedede;
+    border-radius: 8px;
+
+    padding: 18px;
+
+    min-height: 500px;
+}
+
+
+/* =========================
+   CABEÇALHO DA COLUNA
+========================= */
+
+.column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    margin-bottom: 18px;
+}
+
+.column-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.column-title h3 {
+    font-size: 15px;
+}
+
+.status {
+    width: 9px;
+    height: 9px;
+
+    border-radius: 50%;
+}
+
+.status.black {
+    background: #171717;
+}
+
+.status.red {
+    background: #c90016;
+}
+
+.status.done {
+    background: #777;
+}
+
+.task-count {
+    background: white;
+
+    border: 1px solid #ddd;
+
+    padding: 2px 8px;
+
+    border-radius: 20px;
+
+    font-size: 11px;
+}
+
+
+/* =========================
+   CARDS
+========================= */
+
+.tasks {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.task {
+    background: white;
+
+    border: 1px solid #dedede;
+    border-radius: 6px;
+
+    padding: 16px;
+
+    transition: 0.2s;
+}
+
+.task:hover {
+    transform: translateY(-2px);
+
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.06);
+}
+
+.task.active {
+    border-left: 4px solid #c90016;
+}
+
+.task.completed {
+    opacity: 0.65;
+}
+
+.task-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    margin-bottom: 10px;
+}
+
+.task-etiquetas {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.categoria {
+    max-width: 115px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #36526d;
+    background: #e7f0f7;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.priority {
+    font-size: 10px;
+    font-weight: 700;
+
+    padding: 4px 8px;
+
+    border-radius: 3px;
+}
+
+.priority.high {
+    color: #c90016;
+    background: #fbe5e7;
+}
+
+.priority.medium {
+    color: #8a5a00;
+    background: #fff3d6;
+}
+
+.priority.low {
+    color: #555;
+    background: #eeeeee;
+}
+
+.priority.done-tag {
+    color: #27733c;
+    background: #e3f3e7;
+}
+
+.menu {
+    border: none;
+    background: transparent;
+
+    color: #999;
+
+    cursor: pointer;
+
+    letter-spacing: 2px;
+}
+
+.task h4 {
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.task p {
+    color: #777;
+
+    font-size: 12px;
+    line-height: 1.5;
+
+    margin-bottom: 15px;
+}
+
+.task-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    color: #888;
+
+    font-size: 10px;
+}
+
+.avatar {
+    width: 25px;
+    height: 25px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #171717;
+    color: white;
+
+    border-radius: 50%;
+
+    font-size: 10px;
+    font-weight: bold;
+}
+
+
+/* =========================
+   ADICIONAR TAREFA
+========================= */
+
+.add-column-task {
+    width: 100%;
+
+    margin-top: 15px;
+    padding: 10px;
+
+    border: 1px dashed #bbb;
+    background: transparent;
+
+    color: #777;
+
+    border-radius: 5px;
+
+    cursor: pointer;
+
+    font-family: inherit;
+
+    transition: 0.2s;
+}
+
+.add-column-task:hover {
+    background: white;
+    color: #c90016;
+    border-color: #c90016;
+}
+
+
+/* =========================
+   FOOTER
+========================= */
+
+footer {
+    text-align: center;
+
+    padding: 20px;
+
+    color: #999;
+
+    font-size: 11px;
+}
+
+
+/* =========================
+   TABLET
+========================= */
+
+@media (max-width: 900px) {
+
+    .kanban {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .intro {
+        align-items: start;
+        gap: 30px;
+    }
+
+    .progress {
+        min-width: 180px;
+    }
+}
+
+
+/* =========================
+   CELULAR
+========================= */
+
+@media (max-width: 650px) {
+
+    .header {
+        height: auto;
+
+        padding: 15px 5%;
+
+        gap: 15px;
+    }
+
+    .logo h1 {
+        font-size: 16px;
+    }
+
+    .add-task {
+        padding: 9px 12px;
+        font-size: 11px;
+    }
+
+    .container {
+        width: 92%;
+        margin-top: 25px;
+    }
+
+    .intro {
+        flex-direction: column;
+        align-items: stretch;
+
+        margin-bottom: 25px;
+    }
+
+    .intro h2 {
+        font-size: 23px;
+    }
+
+    .progress {
+        width: 100%;
+    }
+
+    .kanban {
+        grid-template-columns: 1fr;
+    }
+
+    .column {
+        min-height: auto;
+    }
+}
+/* =========================
+   E3
+========================= */
+
+.status.review {
+    background: #b58a2c;
+}
+
+
+.progress-fill {
+    width: 0;
+    transition: width 0.4s ease;
+}
+
+
+/* =========================
+   ESTADOS
+========================= */
+
+.estado {
+    min-height: 25px;
+    margin-bottom: 18px;
+
+    font-size: 12px;
+}
+
+
+.estado-carregando {
+    color: #777;
+}
+
+
+.estado-sucesso {
+    color: #27733c;
+}
+
+
+.estado-vazio {
+    padding: 12px;
+
+    color: #555;
+
+    background: #eeeeec;
+
+    border-left:
+        3px solid #777;
+}
+
+
+.estado-erro {
+    padding: 12px;
+
+    color: #a90012;
+
+    background: #fbe5e7;
+
+    border-left:
+        3px solid #c90016;
+}
+
+
+.quadro-carregando {
+    opacity: 0.35;
+}
+
+/* =========================================
+   E4 — BUSCA, FILTROS E ORDENAÇÃO
+========================================= */
+
+.filtros {
+    display: grid;
+
+    grid-template-columns:
+        minmax(220px, 2fr)
+        repeat(3, minmax(150px, 1fr))
+        auto;
+
+    align-items: end;
+
+    gap: 12px;
+
+    margin-bottom: 18px;
+
+    padding: 18px;
+
+    background: #ffffff;
+
+    border: 1px solid #dedede;
+    border-radius: 8px;
+}
+
+
+.campo-filtro {
+    display: flex;
+    flex-direction: column;
+
+    gap: 6px;
+
+    min-width: 0;
+}
+
+
+.campo-filtro label {
+    color: #666;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    letter-spacing: 0.5px;
+}
+
+
+.campo-filtro input,
+.campo-filtro select {
+    width: 100%;
+
+    min-height: 42px;
+
+    padding: 9px 11px;
+
+    font-family: inherit;
+    font-size: 12px;
+
+    color: #171717;
+
+    background: #f7f7f5;
+
+    border: 1px solid #d5d5d5;
+    border-radius: 5px;
+
+    outline: none;
+
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s,
+        background 0.2s;
+}
+
+
+.campo-filtro input:hover,
+.campo-filtro select:hover {
+    border-color: #aaa;
+}
+
+
+.campo-filtro input:focus,
+.campo-filtro select:focus {
+    background: #ffffff;
+
+    border-color: #c90016;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(201, 0, 22, 0.1);
+}
+
+
+.limpar-filtros {
+    min-height: 42px;
+
+    padding: 9px 16px;
+
+    font-family: inherit;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    white-space: nowrap;
+
+    color: #c90016;
+
+    background: transparent;
+
+    border:
+        1px solid #c90016;
+
+    border-radius: 5px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s,
+        color 0.2s,
+        transform 0.2s;
+}
+
+
+.limpar-filtros:hover {
+    color: #ffffff;
+
+    background: #c90016;
+}
+
+
+.limpar-filtros:active {
+    transform: scale(0.97);
+}
+
+
+.limpar-filtros:focus-visible {
+    outline:
+        3px solid
+        rgba(201, 0, 22, 0.25);
+
+    outline-offset: 2px;
+}
+
+
+/* =========================================
+   RESULTADO VAZIO
+========================================= */
+
+.estado-resultado-vazio {
+    padding: 12px;
+
+    color: #8a5a00;
+
+    background: #fff3d6;
+
+    border-left:
+        3px solid #b58a2c;
+}
+
+
+/* =========================================
+   E4 RESPONSIVO
+========================================= */
+
+@media (max-width: 1100px) {
+
+    .filtros {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+
+    .campo-busca {
+        grid-column:
+            1 / -1;
+    }
+
+
+    .limpar-filtros {
+        width: 100%;
+    }
+
+}
+
+
+@media (max-width: 650px) {
+
+    .filtros {
+        grid-template-columns:
+            1fr;
+
+        padding: 14px;
+    }
+
+
+    .campo-busca {
+        grid-column:
+            auto;
+    }
+
+
+    .campo-filtro input,
+    .campo-filtro select,
+    .limpar-filtros {
+        width: 100%;
+    }
+
+}
+
+
+@media (max-width: 350px) {
+
+    .filtros {
+        padding: 10px;
+        gap: 10px;
+    }
+
+
+    .campo-filtro input,
+    .campo-filtro select,
+    .limpar-filtros {
+        font-size: 11px;
+    }
+
+}
+
+
+/* =========================================================
+   E5 — INTERAÇÃO (arrastar, menu e modal)
+========================================================= */
+
+
+/* ---------- ARRASTAR E SOLTAR ---------- */
+
+.task {
+    cursor: grab;
+
+    /* Deixa a transição do hover mais suave ao soltar. */
+    user-select: none;
+}
+
+
+.task:active {
+    cursor: grabbing;
+}
+
+
+.task.arrastando {
+    opacity: 0.4;
+
+    box-shadow:
+        0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+
+/*
+    Área que recebe os cards.
+    O min-height garante um alvo de "soltar"
+    mesmo quando a coluna está vazia.
+*/
+.tasks {
+    min-height: 60px;
+}
+
+
+.tasks.solto-ativo {
+    outline: 2px dashed #c90016;
+    outline-offset: 4px;
+
+    border-radius: 6px;
+
+    background: rgba(201, 0, 22, 0.04);
+}
+
+
+/* ---------- MENU ••• DO CARD ---------- */
+
+.menu {
+    border-radius: 4px;
+}
+
+
+.menu:hover {
+    color: #c90016;
+    background: rgba(201, 0, 22, 0.08);
+}
+
+
+.menu-tarefa {
+    position: fixed;
+    z-index: 10000;
+
+    min-width: 180px;
+
+    padding: 6px;
+
+    background: #ffffff;
+
+    border: 1px solid #dedede;
+    border-radius: 8px;
+
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.14);
+
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    animation: menu-surge 0.12s ease-out;
+}
+
+
+@keyframes menu-surge {
+
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+.menu-item {
+    display: block;
+    width: 100%;
+
+    text-align: left;
+
+    padding: 8px 10px;
+
+    font-family: inherit;
+    font-size: 12px;
+
+    color: #171717;
+
+    background: transparent;
+    border: none;
+    border-radius: 5px;
+
+    cursor: pointer;
+
+    transition: background 0.15s;
+}
+
+
+.menu-item:hover {
+    background: #f3f3f1;
+}
+
+
+.menu-item.perigo {
+    color: #a90012;
+}
+
+
+.menu-item.perigo:hover {
+    background: #fbe5e7;
+}
+
+
+.menu-item.atual {
+    color: #c90016;
+    font-weight: 700;
+
+    cursor: default;
+}
+
+
+.menu-item.atual:hover {
+    background: transparent;
+}
+
+
+.menu-rotulo {
+    padding: 6px 10px 2px;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    letter-spacing: 1px;
+    text-transform: uppercase;
+
+    color: #999;
+}
+
+
+.menu-sep {
+    height: 1px;
+
+    margin: 4px 2px;
+
+    background: #ececec;
+}
+
+
+/* ---------- MODAL (criar / editar) ---------- */
+
+.modal {
+    width: min(420px, 92vw);
+
+    padding: 24px;
+
+    border: 1px solid #dedede;
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    color: #171717;
+
+    box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.25);
+}
+
+
+.modal::backdrop {
+    background: rgba(23, 23, 23, 0.45);
+
+    /* Um véu levemente avermelhado, no tom do tema. */
+    backdrop-filter: blur(2px);
+}
+
+
+.modal[open] {
+    animation: modal-surge 0.18s ease-out;
+}
+
+
+@keyframes modal-surge {
+
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+
+.modal .modal-titulo {
+    font-size: 18px;
+
+    margin-bottom: 18px;
+
+    /* Fio vermelho abaixo do título, referência oriental. */
+    padding-bottom: 10px;
+    border-bottom: 2px solid #c90016;
+}
+
+
+.campo-modal {
+    display: flex;
+    flex-direction: column;
+
+    gap: 6px;
+
+    margin-bottom: 14px;
+}
+
+
+.campo-modal span {
+    font-size: 11px;
+    font-weight: 700;
+
+    letter-spacing: 0.5px;
+
+    color: #666;
+}
+
+
+.campo-modal input,
+.campo-modal select {
+    width: 100%;
+
+    min-height: 42px;
+
+    padding: 9px 11px;
+
+    font-family: inherit;
+    font-size: 13px;
+
+    color: #171717;
+
+    background: #f7f7f5;
+
+    border: 1px solid #d5d5d5;
+    border-radius: 6px;
+
+    outline: none;
+
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s,
+        background 0.2s;
+}
+
+
+.campo-modal input:focus,
+.campo-modal select:focus {
+    background: #ffffff;
+
+    border-color: #c90016;
+
+    box-shadow:
+        0 0 0 3px rgba(201, 0, 22, 0.1);
+}
+
+
+.form-acoes {
+    display: flex;
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    margin-top: 22px;
+}
+
+
+.btn-primario,
+.btn-secundario {
+    min-height: 40px;
+
+    padding: 9px 18px;
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+
+    border-radius: 6px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s,
+        color 0.2s,
+        transform 0.1s;
+}
+
+
+.btn-primario {
+    color: #ffffff;
+
+    background: #c90016;
+
+    border: 1px solid #c90016;
+}
+
+
+.btn-primario:hover {
+    background: #a90012;
+}
+
+
+.btn-secundario {
+    color: #555;
+
+    background: transparent;
+
+    border: 1px solid #d5d5d5;
+}
+
+
+.btn-secundario:hover {
+    background: #f3f3f1;
+    color: #171717;
+}
+
+
+.btn-primario:active,
+.btn-secundario:active {
+    transform: scale(0.97);
+}
+
+
+/* =========================================================
+   E6 — FUNDO DE TINTA + TREMOR
+========================================================= */
+
+/*
+    O canvas do fundo fica atrás de tudo (z-index -1).
+    Para ele aparecer, o body não pode ter cor sólida.
+    A cor original passa para o html, como base.
+*/
+html {
+    background: #f7f7f5;
+}
+
+body {
+    background: transparent;
+
+    /* Impede barra horizontal durante o tremor. */
+    overflow-x: hidden;
+}
+
+
+/*
+    Mini tremor de impacto quando o progresso avança.
+    Aplicado ao conteúdo (não ao fundo) para não piscar
+    as bordas da tela.
+*/
+@keyframes tremor {
+
+    0%   { transform: translate(0, 0) rotate(0deg); }
+    15%  { transform: translate(-4px, 3px) rotate(-0.4deg); }
+    30%  { transform: translate(4px, -3px) rotate(0.4deg); }
+    45%  { transform: translate(-3px, 2px) rotate(-0.3deg); }
+    60%  { transform: translate(3px, 2px) rotate(0.3deg); }
+    75%  { transform: translate(-2px, -1px) rotate(-0.15deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+
+.tremor {
+    animation: tremor 0.38s ease-in-out;
+
+    /* Evita rolagem lateral durante o balanço. */
+    will-change: transform;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+
+    .tremor {
+        animation: none;
+    }
+}
+
+
+/* =========================================================
+   E7 — SELETOR DE FUNDO + CONTRASTE ADAPTÁVEL
+========================================================= */
+
+/* ---------- Símbolo 改善 como gatilho do dropdown ---------- */
+
+.fundo-trigger {
+    position: relative;
+
+    cursor: pointer;
+
+    user-select: none;
+
+    transition:
+        transform 0.15s,
+        box-shadow 0.15s;
+}
+
+
+.fundo-trigger:hover {
+    transform: translateY(-1px);
+
+    box-shadow: 0 4px 12px rgba(201, 0, 22, 0.35);
+}
+
+
+/* Setinha discreta indicando que é clicável. */
+.fundo-trigger::after {
+    content: "▾";
+
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+
+    width: 14px;
+    height: 14px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 9px;
+
+    color: #c90016;
+    background: #ffffff;
+
+    border-radius: 50%;
+
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+
+.fundo-trigger:focus-visible {
+    outline: 3px solid rgba(201, 0, 22, 0.35);
+    outline-offset: 2px;
+}
+
+
+/* ---------- Menu dropdown do fundo ---------- */
+
+.fundo-menu {
+    position: fixed;
+    z-index: 10001;
+
+    min-width: 190px;
+
+    padding: 6px;
+
+    background: #ffffff;
+
+    border: 1px solid #dedede;
+    border-radius: 10px;
+
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
+
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+}
+
+
+.fundo-menu.aberto {
+    display: flex;
+
+    animation: menu-surge 0.12s ease-out;
+}
+
+
+.fundo-menu-titulo {
+    padding: 6px 10px 4px;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    letter-spacing: 1px;
+    text-transform: uppercase;
+
+    color: #999;
+}
+
+
+.fundo-menu button {
+    text-align: left;
+    width: 100%;
+
+    padding: 9px 10px;
+
+    font-family: inherit;
+    font-size: 12px;
+
+    color: #171717;
+
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+
+    cursor: pointer;
+
+    transition: background 0.15s;
+}
+
+
+.fundo-menu button:hover {
+    background: #f3f3f1;
+}
+
+
+.fundo-menu button.ativo {
+    color: #c90016;
+    font-weight: 700;
+}
+
+
+.fundo-menu button.ativo::before {
+    content: "• ";
+}
+
+
+/* ---------- Contraste adaptável ---------- */
+
+/*
+    Transições suaves para os textos que ficam
+    sobre o fundo (fora dos cartões brancos).
+*/
+.intro h2,
+.intro p,
+.tag,
+.progress span,
+.progress strong,
+.progress-bar,
+.progress-fill,
+footer,
+footer p,
+.estado-sucesso {
+    transition:
+        color 0.5s ease,
+        background 0.5s ease;
+}
+
+
+/*
+    Quando o fundo fica escuro (avisado pelo JS),
+    a página clareia os textos por cima dele.
+    Os cartões (header, colunas, filtros) já têm
+    fundo próprio, então não precisam mudar.
+*/
+.sobre-escuro .intro h2 {
+    color: #ffffff;
+}
+
+.sobre-escuro .intro p {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.sobre-escuro .tag {
+    color: #ffd0d5;
+}
+
+.sobre-escuro .progress span {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.sobre-escuro .progress strong {
+    color: #ffffff;
+}
+
+.sobre-escuro .progress-bar {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.sobre-escuro .progress-fill {
+    background: #ffffff;
+}
+
+.sobre-escuro footer,
+.sobre-escuro footer p {
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.sobre-escuro .estado-sucesso {
+    color: #d7ffe1;
+}
+
+
+/*
+    Estágio intermediário (a partir de ~28%): o fundo ainda
+    é claro, mas já tem tinta/manchas. Reforçamos os textos
+    apagados (cinzas) para não sumirem antes do modo escuro.
+*/
+.contraste-forte .intro p {
+    color: #333333;
+}
+
+.contraste-forte .progress span {
+    color: #333333;
+}
+
+.contraste-forte .tag {
+    color: #a90012;
+}
+
+.contraste-forte footer,
+.contraste-forte footer p {
+    color: #555555;
+}
+
+
+/* =========================================================
+   E8 — CONCLUSÃO: CORTE, SELO E MANCHAS
+========================================================= */
+
+.task.completed {
+    position: relative;
+
+    /* Mantém manchas e corte dentro do card. */
+    overflow: hidden;
+
+    /*
+        Estética "cortada e caidinha": o card fica inclinado
+        (ângulo por card, via --tilt) e um pouco rebaixado.
+    */
+    transform: rotate(var(--tilt, -2deg)) translateY(3px);
+
+    /*
+        Silhueta cortada: entalhes em "V" nas bordas, onde a
+        lâmina entrou e saiu. É isso que dá o ar de fatiado.
+    */
+    clip-path: polygon(
+        0 0, 100% 0,
+        100% 47%, 94% 51%, 100% 55%,
+        100% 100%, 0 100%,
+        0 55%, 6% 51%, 0 47%
+    );
+
+    /*
+        drop-shadow (e não box-shadow) para a sombra
+        acompanhar o formato recortado.
+    */
+    filter: drop-shadow(0 11px 16px rgba(0, 0, 0, 0.18));
+
+    transition: transform 0.25s ease;
+}
+
+
+.task.completed:hover {
+    transform: rotate(var(--tilt, -2deg)) translateY(-2px);
+
+    filter: drop-shadow(0 15px 20px rgba(0, 0, 0, 0.22));
+}
+
+
+/*
+    A fenda do corte: linha diagonal com brilho no topo
+    (papel pegando luz) e sombra embaixo (a metade de baixo
+    recuada) — parece um corte aberto de lâmina.
+*/
+.task.completed::after {
+    content: "";
+
+    position: absolute;
+    left: -10%;
+    width: 120%;
+    top: 51%;
+
+    height: 4px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.55) 0%,
+            #7a0009 35%,
+            #2c0004 55%,
+            rgba(0, 0, 0, 0.4) 100%
+        );
+
+    box-shadow:
+        0 6px 11px -3px rgba(0, 0, 0, 0.55);
+
+    transform: rotate(-4deg);
+    transform-origin: center;
+
+    z-index: 4;
+
+    pointer-events: none;
+}
+
+
+/* ---------- manchas vermelhas fixas ---------- */
+
+.selo-concluido {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+
+    overflow: hidden;
+    pointer-events: none;
+
+    /* Tinta sobre papel: escurece sem tapar o texto. */
+    mix-blend-mode: multiply;
+}
+
+
+.mancha {
+    position: absolute;
+
+    background:
+        radial-gradient(
+            circle at 38% 35%,
+            #c90016,
+            #8a000f 75%
+        );
+
+    border-radius: 47% 53% 62% 38% / 55% 42% 58% 45%;
+}
+
+
+/* ---------- selo 完了 (marca d'água) ---------- */
+
+.selo-carimbo {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: 4px;
+
+    color: #c90016;
+    opacity: 0.16;
+
+    transform: rotate(-16deg);
+
+    pointer-events: none;
+}
+
+
+/* ---------- lâmina do corte (só na transição) ---------- */
+
+.corte-linha {
+    position: absolute;
+    left: -12%;
+    top: 50%;
+    z-index: 3;
+
+    width: 128%;
+    height: 5px;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            #ffffff 15%,
+            #ff5a50 50%,
+            #ffffff 85%,
+            transparent
+        );
+
+    box-shadow:
+        0 0 20px rgba(201, 0, 22, 0.95),
+        0 0 6px #ffffff;
+
+    transform-origin: center;
+    transform: translateY(-50%) rotate(-22deg) scaleX(0);
+
+    pointer-events: none;
+}
+
+
+/* Clarão vermelho no instante do corte. */
+.cortada-agora::before {
+    content: "";
+
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+
+    background:
+        linear-gradient(
+            115deg,
+            rgba(255, 70, 70, 0) 40%,
+            rgba(255, 60, 60, 0.55) 50%,
+            rgba(255, 70, 70, 0) 60%
+        );
+
+    pointer-events: none;
+
+    animation: flash-corte 0.42s ease-out both;
+}
+
+
+/* ---------- animações da conclusão ---------- */
+
+.cortada-agora {
+    animation: corte-jolt 0.5s ease-out both;
+}
+
+.cortada-agora .corte-linha {
+    animation: laminar 0.4s ease-out both;
+}
+
+.cortada-agora .selo-concluido {
+    animation: surgir-mancha 0.6s 0.22s both;
+}
+
+.cortada-agora .selo-carimbo {
+    animation: carimbar 0.45s 0.3s both;
+}
+
+
+@keyframes corte-jolt {
+    0%   { transform: translate(0, 0) rotate(0deg) scale(1.04); }
+    12%  { transform: translate(-6px, 2px) rotate(-1.4deg) scale(1.04); }
+    30%  { transform: translate(7px, -3px) rotate(1.2deg) scale(1.03); }
+    50%  { transform: translate(-5px, 2px) rotate(-0.8deg) scale(1.02); }
+    70%  { transform: translate(3px, -1px) rotate(0.4deg) scale(1.01); }
+    /* Termina já na pose caidinha (mesma do estado final). */
+    100% { transform: translate(0, 3px) rotate(var(--tilt, -2deg)) scale(1); }
+}
+
+
+@keyframes laminar {
+    0%   { transform: translateY(-50%) rotate(-22deg) scaleX(0); opacity: 0; }
+    15%  { opacity: 1; }
+    45%  { transform: translateY(-50%) rotate(-22deg) scaleX(1.05); opacity: 1; }
+    70%  { transform: translateY(-50%) rotate(-22deg) scaleX(1); opacity: 1; }
+    100% { transform: translateY(-50%) rotate(-22deg) scaleX(1); opacity: 0; }
+}
+
+
+@keyframes flash-corte {
+    0%   { opacity: 0; }
+    15%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+
+@keyframes surgir-mancha {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+
+@keyframes carimbar {
+    0%   { opacity: 0; transform: rotate(-16deg) scale(1.8); }
+    60%  { opacity: 0.22; transform: rotate(-16deg) scale(0.92); }
+    100% { opacity: 0.16; transform: rotate(-16deg) scale(1); }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+
+    .cortada-agora,
+    .cortada-agora .selo-concluido,
+    .cortada-agora .selo-carimbo {
+        animation: none;
+    }
+
+    .corte-linha,
+    .cortada-agora::before {
+        display: none;
+    }
+}
+
+
+/* =========================================================
+   E10 — NAVEGAÇÃO ENTRE TELAS (Kanban / Assistente IA)
+========================================================= */
+
+.nav-telas {
+    display: flex;
+    gap: 4px;
+
+    padding: 4px;
+
+    background: #eeeeec;
+    border: 1px solid #dedede;
+    border-radius: 8px;
+}
+
+.nav-tab {
+    padding: 9px 16px;
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+
+    letter-spacing: 0.5px;
+
+    color: #666;
+
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s,
+        color 0.2s;
+}
+
+.nav-tab:hover {
+    color: #171717;
+}
+
+.nav-tab.ativa {
+    color: #ffffff;
+    background: #c90016;
+
+    box-shadow: 0 2px 8px rgba(201, 0, 22, 0.35);
+}
+
+@media (max-width: 650px) {
+
+    .header {
+        flex-wrap: wrap;
+    }
+
+    .nav-telas {
+        order: 3;
+        width: 100%;
+    }
+
+    .nav-tab {
+        flex: 1;
+        text-align: center;
+    }
+
+}
+
+
+/* Seletor Kanban / Assistente IA sempre no centro do header,
+   mesmo quando o botão "Nova tarefa" some na tela da IA. */
+
+.header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 20px;
+}
+
+.header .logo {
+    grid-column: 1;
+}
+
+.header .nav-telas {
+    grid-column: 2;
+    justify-self: center;
+}
+
+.header .add-task {
+    grid-column: 3;
+    justify-self: end;
+}
+
+@media (max-width: 650px) {
+
+    .header {
+        grid-template-columns: 1fr auto;
+    }
+
+    .header .nav-telas {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+
+    .header .add-task {
+        grid-column: 2;
+    }
+
+}
+
+
+/* =========================================================
+   BOLHA DE SANGUE — indicador fluido da aba ativa
+   (desenhado e animado pelo js/bolha.js em SVG)
+========================================================= */
+
+.nav-telas {
+    position: relative;
+    isolation: isolate;
+}
+
+.nav-tab {
+    position: relative;
+    z-index: 1;
+}
+
+.nav-bolha {
+    display: none;
+}
+
+.nav-telas.com-bolha .nav-bolha {
+    display: block;
+
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+
+    pointer-events: none;
+}
+
+.bolha-svg {
+    position: absolute;
+    inset: 0;
+
+    overflow: visible;
+
+    filter: drop-shadow(0 3px 6px rgba(140, 0, 14, 0.4));
+}
+
+.bolha-sangue circle {
+    fill: #c90016;
+}
+
+.bolha-brilho {
+    fill: rgba(255, 255, 255, 0.22);
+}
+
+/* Com a bolha ligada, a aba ativa não pinta o próprio fundo */
+.nav-telas.com-bolha .nav-tab.ativa {
+    background: transparent;
+    box-shadow: none;
+}
+
+/* O texto só fica branco quando a gota já está chegando */
+.nav-telas.com-bolha .nav-tab {
+    transition:
+        color 0.3s 0.2s;
+}
+
+
+/* =========================================================
+   E11 — ASSISTENTE IA (segunda tela)
+========================================================= */
+
+.tela-ia {
+    width: 90%;
+    max-width: 1400px;
+    margin: 40px auto;
+}
+
+.ia-painel {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 18px;
+
+    align-items: start;
+}
+
+
+/* ---------- barra lateral de configuração ---------- */
+
+.ia-config {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    background: #171717;
+    color: #f2f2f2;
+
+    border: 1px solid #171717;
+    border-radius: 8px;
+
+    padding: 18px;
+
+    /* Fio vermelho no topo, referência ao selo 完了 do quadro. */
+    border-top: 3px solid #c90016;
+}
+
+.ia-config .campo-filtro label {
+    color: #bbb;
+}
+
+.ia-config select {
+    background: #232323;
+    color: #f2f2f2;
+    border-color: #3a3a3a;
+}
+
+.ia-config select:hover {
+    border-color: #666;
+}
+
+.ia-config select:focus {
+    background: #232323;
+    border-color: #c90016;
+}
+
+.ia-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    font-size: 11px;
+    color: #bbb;
+
+    padding: 10px;
+
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
+}
+
+.status-dot {
+    width: 9px;
+    height: 9px;
+    flex-shrink: 0;
+
+    border-radius: 50%;
+
+    background: #666;
+}
+
+.status-dot.status-online {
+    background: #2fbf5f;
+    box-shadow: 0 0 8px rgba(47, 191, 95, 0.7);
+}
+
+.status-dot.status-offline {
+    background: #c90016;
+    box-shadow: 0 0 8px rgba(201, 0, 22, 0.7);
+}
+
+.ia-config .ia-limpar {
+    color: #ffb3ba;
+    border-color: #4a1a1e;
+}
+
+.ia-config .ia-limpar:hover {
+    background: rgba(201, 0, 22, 0.15);
+    color: #ffffff;
+}
+
+
+/* ---------- painel de conversa ---------- */
+
+.ia-chat {
+    display: flex;
+    flex-direction: column;
+
+    height: 560px;
+
+    background: #ffffff;
+    border: 1px solid #dedede;
+    border-radius: 8px;
+
+    overflow: hidden;
+}
+
+.ia-mensagens {
+    flex: 1;
+
+    padding: 20px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    overflow-y: auto;
+}
+
+.ia-vazio {
+    margin: auto;
+
+    color: #999;
+    font-size: 13px;
+    text-align: center;
+}
+
+.ia-bolha {
+    max-width: 75%;
+
+    padding: 11px 14px;
+
+    border-radius: 10px;
+
+    font-size: 13px;
+    line-height: 1.5;
+
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.ia-bolha p {
+    margin: 0;
+}
+
+.ia-bolha-usuario {
+    align-self: flex-end;
+
+    color: #ffffff;
+    background: #171717;
+
+    border-bottom-right-radius: 2px;
+}
+
+.ia-bolha-assistente {
+    align-self: flex-start;
+
+    color: #171717;
+    background: #f7f7f5;
+
+    border: 1px solid #ececec;
+    border-left: 4px solid #c90016;
+    border-bottom-left-radius: 2px;
+}
+
+.ia-erro {
+    align-self: flex-start;
+
+    max-width: 75%;
+
+    padding: 11px 14px;
+
+    font-size: 12px;
+    color: #a90012;
+
+    background: #fbe5e7;
+    border-left: 3px solid #c90016;
+    border-radius: 6px;
+}
+
+
+/* ---------- indicador "digitando" ---------- */
+
+.ia-bolha-espera {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+
+    padding: 14px 16px;
+}
+
+.ia-ponto {
+    width: 6px;
+    height: 6px;
+
+    border-radius: 50%;
+    background: #c90016;
+
+    opacity: 0.35;
+
+    animation: ia-pulso 1s ease-in-out infinite;
+}
+
+.ia-ponto:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.ia-ponto:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+@keyframes ia-pulso {
+    0%, 100% { opacity: 0.25; transform: scale(0.85); }
+    50%      { opacity: 1;    transform: scale(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ia-ponto {
+        animation: none;
+        opacity: 0.7;
+    }
+}
+
+
+/* ---------- formulário ---------- */
+
+.ia-form {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+
+    padding: 14px;
+
+    border-top: 1px solid #dedede;
+    background: #ffffff;
+}
+
+.ia-input {
+    flex: 1;
+    resize: none;
+
+    min-height: 42px;
+    max-height: 160px;
+
+    padding: 10px 12px;
+
+    font-family: inherit;
+    font-size: 13px;
+    color: #171717;
+
+    background: #f7f7f5;
+
+    border: 1px solid #d5d5d5;
+    border-radius: 6px;
+
+    outline: none;
+
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s,
+        background 0.2s;
+}
+
+.ia-input:focus {
+    background: #ffffff;
+    border-color: #c90016;
+
+    box-shadow: 0 0 0 3px rgba(201, 0, 22, 0.1);
+}
+
+.ia-enviar {
+    white-space: nowrap;
+}
+
+.ia-enviar:disabled,
+.ia-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+
+/* ---------- responsivo ---------- */
+
+@media (max-width: 900px) {
+
+    .ia-painel {
+        grid-template-columns: 1fr;
+    }
+
+    .ia-config {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .ia-config .campo-filtro {
+        flex: 1;
+        min-width: 180px;
+    }
+
+}
+
+@media (max-width: 650px) {
+
+    .tela-ia {
+        width: 92%;
+        margin-top: 25px;
+    }
+
+    .ia-chat {
+        height: 70vh;
+    }
+
+    .ia-bolha,
+    .ia-erro {
+        max-width: 88%;
+    }
+
+}
+
+
+/* =========================================================
+   E9 — COSTURA (quando sai de concluída)
+========================================================= */
+
+.task.costurando {
+    position: relative;
+    overflow: hidden;
+
+    /* Endireita o card, desfazendo a pose caidinha. */
+    animation: costurar-endireita 0.6s ease-out both;
+}
+
+
+@keyframes costurar-endireita {
+    0%   { transform: rotate(var(--tilt, -2deg)) translateY(3px); }
+    100% { transform: rotate(0deg) translateY(0); }
+}
+
+
+/* Manchas e carimbo desbotam. */
+.costurando .selo-concluido {
+    animation: sair-mancha 0.7s 0.15s both;
+}
+
+@keyframes sair-mancha {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+
+
+.costurando .selo-carimbo {
+    animation: sair-selo 0.6s both;
+}
+
+@keyframes sair-selo {
+    0%   { opacity: 0.16; }
+    100% { opacity: 0; }
+}
+
+
+/* Linha de pontos ✕ costurando o antigo corte. */
+.costura {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+
+    pointer-events: none;
+}
+
+
+.costura .ponto {
+    position: absolute;
+
+    transform: translate(-50%, -50%) rotate(8deg);
+
+    font-size: 13px;
+    font-weight: 700;
+
+    color: #4a0a0a;
+
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+
+    opacity: 0;
+
+    animation: costurar-ponto 0.9s ease-out both;
+}
+
+
+@keyframes costurar-ponto {
+    0%   { opacity: 0; transform: translate(-50%, -50%) rotate(8deg) scale(0); }
+    25%  { opacity: 1; transform: translate(-50%, -50%) rotate(8deg) scale(1.25); }
+    40%  { transform: translate(-50%, -50%) rotate(8deg) scale(1); }
+    80%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+
+    .task.costurando {
+        animation: none;
+    }
+
+    .costurando .selo-concluido,
+    .costurando .selo-carimbo,
+    .costura {
+        display: none;
+    }
+}

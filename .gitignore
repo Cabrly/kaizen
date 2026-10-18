@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+kaizen.sqlite3
+*.bak-*
