@@ -375,6 +375,7 @@ async function conversarGemini(modelo, conta, mensagens, formato) {
     const semCota = new Set(conta.semCota || []);
     let ordem = semCota.has(modelo) && conta.modeloOk ? [conta.modeloOk] : [modelo];
     let ultimo = null;
+    let teve403 = false;   // projeto sem acesso pesa mais que "sem cota" na explicação
 
     for (let i = 0; i < ordem.length; i++) {
 
@@ -402,6 +403,7 @@ async function conversarGemini(modelo, conta, mensagens, formato) {
                 if (!(erro instanceof ErroIA) || ![403, 429].includes(erro.status)) throw erro;
 
                 ultimo = erro;
+                teve403 = teve403 || erro.status === 403;
 
                 if (erro.semCota || erro.status === 403) {
                     const config = lerConfig();
@@ -437,7 +439,7 @@ async function conversarGemini(modelo, conta, mensagens, formato) {
 
     }
 
-    if (ultimo?.status === 403) {
+    if (teve403) {
         throw new ErroIA(
             "O Google recusou o acesso dessa chave à API do Gemini (o projeto dela está bloqueado). " +
             "Gere uma chave nova em aistudio.google.com/apikey — de preferência num projeto novo, " +

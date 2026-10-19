@@ -466,6 +466,7 @@ def _conversar_gemini(modelo, chave_api, mensagens, formato):
     # modelo que já respondeu "sem cota grátis" não é tentado de novo
     ordem = [lembrado] if modelo in sem_cota and lembrado else [modelo]
     ultimo = None
+    teve_403 = False  # projeto sem acesso pesa mais que "sem cota" na explicação
     i = 0
     while i < len(ordem):
         for tentativa in range(2):
@@ -480,6 +481,7 @@ def _conversar_gemini(modelo, chave_api, mensagens, formato):
                 if erro.status not in (403, 429):
                     raise
                 ultimo = erro
+                teve_403 = teve_403 or erro.status == 403
                 if erro.sem_cota or erro.status == 403:
                     _config("gemini_sem_cota", json.dumps(sorted(_gemini_sem_cota() | {ordem[i]})))
                 elif erro.espera is not None and erro.espera <= 20 and tentativa == 0:
@@ -495,7 +497,7 @@ def _conversar_gemini(modelo, chave_api, mensagens, formato):
                 pass
         i += 1
 
-    if ultimo is not None and ultimo.status == 403:
+    if teve_403:
         raise ErroConexao("O Google recusou o acesso dessa chave à API do Gemini (o projeto dela está bloqueado). "
                           "Gere uma chave nova em aistudio.google.com/apikey — de preferência num projeto novo, "
                           "pela opção do próprio AI Studio (as chaves de lá começam com \"AIza\").", status=403)
