@@ -14,7 +14,9 @@
 
 const CHAVE_DISPENSADO = "kaizen.instalar.dispensado.v1";
 
+// O app de computador (Tauri) já é instalado: ele marca window.KAIZEN_DESKTOP.
 const instalado =
+    window.KAIZEN_DESKTOP === true ||
     matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 
 const ehIos =

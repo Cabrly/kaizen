@@ -1,20 +1,29 @@
 """Servidor local do Kaizen: arquivos estáticos + API SQLite + ponte com o Ollama."""
 from datetime import datetime
+from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import json
 import os
+import signal
 import sqlite3
+import sys
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
 
 import busca
 import estudos
+import ia_local
 import servidores
 
-ROOT = Path(__file__).parent
-DB = ROOT / "kaizen.sqlite3"
+# Empacotado (app de computador), os arquivos do app ficam na pasta temporária
+# do PyInstaller e os dados vão pra pasta do usuário que o app passa em KAIZEN_DADOS.
+ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
+DADOS = Path(os.environ.get("KAIZEN_DADOS") or ROOT)
+DADOS.mkdir(parents=True, exist_ok=True)
+DB = DADOS / "kaizen.sqlite3"
 
 # Em Docker, HOST vira 0.0.0.0 e OLLAMA_URL aponta para o host
 # (ex.: http://host.docker.internal:11434), via variáveis de ambiente.
@@ -26,6 +35,7 @@ busca.CACHE_DB = DB
 estudos.DB = DB
 servidores.DB = DB
 servidores.URL_LOCAL = OLLAMA_URL
+ia_local.PASTA = DADOS / "ollama"
 
 
 def init_db():
@@ -90,6 +100,10 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path == "/api/tarefas":
             return self.responder(200, {"tarefas": listar()})
+        if self.path == "/api/ia/local":
+            return self.responder(200, ia_local.situacao())
+        if self.path == "/api/ia/local/progresso":
+            return self.responder(200, ia_local.progresso())
         if self.path == "/api/ia/status":
             servidor = servidores.obter(servidores.preferido())
             try:
@@ -102,6 +116,12 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         if self.rota_estudos("POST"):
             return
+        if self.path == "/api/ia/local/instalar":
+            try:
+                dados = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+                return self.responder(202, ia_local.instalar(dados.get("modelo"), dados.get("aceito") is True))
+            except ValueError as erro:
+                return self.responder(400, {"erro": str(erro)})
         if self.path != "/api/chat":
             return self.responder(404, {"erro": "Rota não encontrada"})
         try:
@@ -285,9 +305,31 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(corpo)
 
 
+def vigiar_stdin():
+    """No app de computador, a entrada padrão é um cano aberto pelo app: quando
+    ele fecha (app fechou ou travou), o servidor sai junto em vez de ficar órfão."""
+    def esperar():
+        try:
+            while sys.stdin.read(1024):
+                pass
+        except (OSError, ValueError):
+            pass
+        ia_local.encerrar()
+        os._exit(0)
+    threading.Thread(target=esperar, daemon=True).start()
+
+
 if __name__ == "__main__":
+    if os.environ.get("KAIZEN_VIGIAR_STDIN") == "1" and sys.stdin:
+        vigiar_stdin()
+    # SIGTERM vira saída normal, pra o atexit desligar o Ollama que o Kaizen ligou.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+    if sys.stderr is None:  # executável sem console (Windows): o log do http.server iria pro nada e quebraria
+        sys.stderr = open(DADOS / "servidor.log", "a", encoding="utf-8")
     init_db()
     estudos.init()
     servidores.init()
+    if servidores.preferido() == "local":   # a IA daqui é a escolhida: deixa o Ollama ligado
+        threading.Thread(target=ia_local.ligar, daemon=True).start()
     print(f"Kaizen disponível em http://{HOST}:{PORT}")
-    ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
+    ThreadingHTTPServer((HOST, PORT), partial(Handler, directory=str(ROOT))).serve_forever()

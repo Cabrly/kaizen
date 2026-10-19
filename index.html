@@ -26,7 +26,7 @@
     >
 
     <link
-        href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700;900&display=swap"
         rel="stylesheet"
     >
 
@@ -765,31 +765,44 @@
 
                 </div>
 
+                <section class="iai" id="ia-local" aria-live="polite" hidden></section>
+
                 <section class="srv" id="ia-servidores" aria-labelledby="srv-titulo">
 
-                    <h3 class="srv-titulo" id="srv-titulo">Onde a IA roda</h3>
+                    <!-- Recolhido: quem instalou a IA aqui não precisa ver nada disso.
+                         Abre sozinho no celular (só nuvem) ou quando a IA em uso é outra. -->
+                    <details class="srv-mais" id="srv-mais">
 
-                    <div class="srv-lista" id="srv-lista" aria-live="polite"></div>
+                        <summary class="srv-titulo" id="srv-titulo">Outras opções: nuvem ou outro computador</summary>
 
-                    <form class="srv-form" id="srv-form">
-                        <input id="srv-url" required autocomplete="off" spellcheck="false"
-                               placeholder="Endereço: IP do Tailscale ou maquina:11434"
-                               aria-label="Endereço do outro computador">
-                        <input id="srv-nome" maxlength="60" autocomplete="off"
-                               placeholder="Nome (ex.: PC de casa)" aria-label="Nome do servidor">
-                        <button type="submit" class="btn-secundario">Testar e adicionar</button>
-                    </form>
+                        <div class="srv-corpo">
 
-                    <div class="srv-nuvem" id="srv-nuvem"></div>
+                            <div class="srv-lista" id="srv-lista" aria-live="polite"></div>
 
-                    <p class="est-erro" id="srv-erro" role="alert"></p>
+                            <div class="srv-nuvem" id="srv-nuvem"></div>
 
-                    <p class="srv-dica">
-                        No outro computador, o Ollama precisa aceitar conexões da rede:
-                        <code>OLLAMA_HOST=&lt;IP do Tailscale&gt;:11434</code>.
-                        Use só em rede privada — o Ollama não tem senha.
-                        Gemini tem uso gratuito com chave do Google AI Studio.
-                    </p>
+                            <details class="srv-outro">
+                                <summary>Usar a IA de outro computador</summary>
+                                <form class="srv-form" id="srv-form">
+                                    <input id="srv-url" required autocomplete="off" spellcheck="false"
+                                           placeholder="Endereço: IP do Tailscale ou maquina:11434"
+                                           aria-label="Endereço do outro computador">
+                                    <input id="srv-nome" maxlength="60" autocomplete="off"
+                                           placeholder="Nome (ex.: PC de casa)" aria-label="Nome do servidor">
+                                    <button type="submit" class="btn-secundario">Testar e adicionar</button>
+                                </form>
+                                <p class="srv-dica">
+                                    No outro computador, o Ollama precisa aceitar conexões da rede:
+                                    <code>OLLAMA_HOST=&lt;IP do Tailscale&gt;:11434</code>.
+                                    Use só em rede privada — o Ollama não tem senha.
+                                </p>
+                            </details>
+
+                            <p class="est-erro" id="srv-erro" role="alert"></p>
+
+                        </div>
+
+                    </details>
 
                 </section>
 
@@ -910,12 +923,17 @@
 
     <script
         type="module"
-        src="./js/servidores.js?v=or1"
+        src="./js/servidores.js?v=or2"
     ></script>
 
     <script
         type="module"
         src="./js/estudos.js?v=pwa1"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/ia-local.js?v=2"
     ></script>
 
 </body>

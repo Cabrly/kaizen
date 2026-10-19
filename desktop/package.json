@@ -1,0 +1,18 @@
+{
+  "name": "kaizen-desktop",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Kaizen como programa de computador (Tauri + servidor Python empacotado).",
+  "author": "Vitor Cabral",
+  "scripts": {
+    "tauri": "tauri",
+    "servidor": "python empacotar_servidor.py",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "icones": "tauri icon ../icones/icone-512.png -o src-tauri/icons",
+    "chaves": "tauri signer generate -w ~/.tauri/kaizen.key"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

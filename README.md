@@ -2,13 +2,82 @@
 
 改善 — melhoria contínua, um passo de cada vez.
 
-**Use agora:** https://cabrly.github.io/kaizen/ (celular ou PC, IA na nuvem — de graça com o [OpenRouter](#ia-de-graça-openrouter)) · ou baixe a versão completa (abaixo).
+<p align="center">
+  <a href="https://github.com/Cabrly/kaizen/releases/latest"><img alt="Baixar o Kaizen para Windows, Linux e Mac" src="https://img.shields.io/badge/%E2%AC%87%20BAIXAR%20O%20KAIZEN-Windows%20%C2%B7%20Linux%20%C2%B7%20Mac-c90016?style=for-the-badge"></a>
+  <br>
+  <sub>ou use no navegador: <a href="https://cabrly.github.io/kaizen/">cabrly.github.io/kaizen</a> (celular ou PC, IA na nuvem — de graça com o <a href="#ia-de-graça-openrouter">OpenRouter</a>)</sub>
+</p>
 
 Kanban de tarefas com um assistente de estudos: você diz o que quer
 aprender ("quero estudar React") e a IA monta a rotina no calendário,
 com **vídeo**, **documentação oficial** e **atividades** pra cada dia.
 Roda inteiro na sua máquina, com modelos leves do [Ollama](https://ollama.com).
 Não precisa de chave de API nem de conta em serviço nenhum.
+
+## Fundos que reagem às tarefas
+
+Clique no símbolo **改善** no topo pra escolher o fundo. Além da tinta vermelha
+que enche com o progresso, há **cenas que mudam a cada tarefa concluída**:
+
+| Cena | A cada tarefa | Em 100% |
+|---|---|---|
+| Pagode lofi | janelas e lanternas do pagode acendem | tudo aceso; estrelas cadentes e pétalas o tempo todo |
+| Fuji ao amanhecer | o cordão de lanternas sobe a trilha e o céu doura | o sol nasce sobre o mar de nuvens |
+| Ensō dourado | o pincel de ouro avança no círculo zen | o círculo se fecha e o selo é carimbado |
+| Ameixeira ao luar | flores vermelhas abrem no galho com neve | florada e pétalas no ar |
+| Bambuzal com vaga-lumes | mais vaga-lumes acendem | a lanterna de pedra brilha forte |
+| Montanhas ao pôr do sol | a paisagem é pintada em aguada | o sol pousa na crista e doura o lago |
+
+Pra ver a cena inteira, sem o quadro na frente: aperte **Z** (ou o botão de
+olho no canto). Parado por 3 minutos, o app entra sozinho em **descanso de
+tela**. Tudo é desenhado em código (SVG), sem imagem pra baixar.
+
+## Programa de computador (instalador)
+
+Na página [Releases](https://github.com/Cabrly/kaizen/releases/latest), baixe o
+instalador do seu sistema e abra com dois cliques. Não precisa de Python,
+terminal nem navegador: o Kaizen abre na janela dele.
+
+| Sistema | Arquivo |
+|---|---|
+| Windows | `Kaizen_x.y.z_x64-setup.exe` |
+| Ubuntu / Debian | `Kaizen_x.y.z_amd64.deb` |
+| Outras distros Linux | `Kaizen_x.y.z_amd64.AppImage` |
+| Mac (Apple Silicon) | `Kaizen_x.y.z_aarch64.dmg` |
+
+- **"O Windows protegeu o computador"** na primeira vez: clique em
+  **Mais informações → Executar assim mesmo**. Aparece porque o app não tem
+  certificado de assinatura (que é pago); no Mac, abra com botão direito → Abrir.
+- **Atualiza sozinho**: quando sai versão nova, o app avisa ao abrir e se
+  atualiza num clique. Suas tarefas e planos ficam na pasta do usuário
+  (não junto do programa), então atualizar ou reinstalar não apaga nada.
+- **IA em um clique**: na aba **Assistente IA**, o Kaizen confere se o
+  computador já tem o Ollama e algum modelo. Se não tiver, lê a memória e a
+  placa de vídeo, recomenda o modelo que roda bem ali (com estrelas de
+  potência e a velocidade esperada) e, depois do "li e aceito", baixa e liga
+  tudo sozinho, sem terminal e sem senha de administrador. Em computador fraco
+  ele recomenda a IA na nuvem (grátis) em vez de deixar travando.
+
+### Gerar os instaladores (pra quem mantém o projeto)
+
+O código do programa fica em `desktop/`: uma janela [Tauri](https://tauri.app)
+na frente do mesmo `server.py`, empacotado com PyInstaller.
+
+```bash
+cd desktop
+python -m venv .venv && .venv/bin/pip install pyinstaller
+.venv/bin/python empacotar_servidor.py   # gera o servidor em src-tauri/binarios/
+npm install
+npm run dev                              # abre o app pra testar
+npm run build                            # instaladores em src-tauri/target/release/bundle/
+```
+
+Lançar uma versão: `git tag v1.2.0 && git push origin v1.2.0`. O GitHub Actions
+(`.github/workflows/lancamento.yml`) compila pra Windows, Linux e Mac e publica
+na Releases, com o arquivo de atualização automática. Precisa do segredo
+`TAURI_SIGNING_PRIVATE_KEY` no repositório (Settings → Secrets → Actions) com o
+conteúdo da chave privada gerada por `npm run chaves`. **Não perca essa chave:**
+sem ela, quem já instalou não recebe mais atualização.
 
 ## Como rodar
 

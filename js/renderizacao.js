@@ -457,7 +457,7 @@ function atualizarProgresso(
             "0%";
 
 
-        atualizarFundo(0);
+        atualizarFundo(0, 0, 0);
 
         return;
 
@@ -493,7 +493,7 @@ function atualizarProgresso(
         Alimenta o fundo de tinta com a mesma
         porcentagem exibida na barra.
     */
-    atualizarFundo(porcentagem);
+    atualizarFundo(porcentagem, concluidas, tarefas.length);
 }
 
 

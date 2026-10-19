@@ -3,3 +3,10 @@ __pycache__/
 kaizen.sqlite3
 *.bak-*
 APRENDIZADO.md
+desktop/node_modules/
+desktop/.venv/
+desktop/build/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+desktop/src-tauri/binarios/
+previa-*.html

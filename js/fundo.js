@@ -20,6 +20,12 @@
 ========================================================= */
 
 
+import { ARTES, arteAtual, definirArte, lerArteSalva, miniatura } from "./fundos-orientais.js";
+import { CENAS } from "./cenas/index.js";
+import { fotografar } from "./cenas/foto.js";
+import { descansoLigado, definirDescanso, entrar as contemplar, iniciarContemplacao } from "./contemplacao.js";
+
+
 /* ---------- estado do módulo ---------- */
 
 let canvas = null;
@@ -32,7 +38,17 @@ let dpr = 1;
 let alvo = 0;      // nível desejado (0..1), vem do progresso
 let nivel = 0;     // nível atual, persegue o alvo suavemente
 
-let modo = "respingo";   // "barra" | "respingo"
+let modo = "respingo";   // "barra" | "respingo" | "cena:<id>"
+
+/* cena interativa (js/cenas/) no lugar da tinta */
+let cenaDef = null;
+let camadaCena = null;
+let pararVivo = null;       // desliga a camada animada da cena (estrelas cadentes…)
+let pedidoFoto = 0;         // a foto mais nova vence (pedidos antigos são descartados)
+let feitosAtual = 0;
+let totalAtual = 0;
+let feitosVistos = -1;      // o que a foto atual mostra (evita refazer à toa)
+let totalVistos = -1;
 
 /* dados do modo respingo */
 let marcas = [];
@@ -108,12 +124,16 @@ export function iniciarFundo() {
     /* Recupera o modo salvo. */
     try {
         const salvo = localStorage.getItem(CHAVE_MODO);
-        if (salvo === "barra" || salvo === "respingo") {
+        if (modoValido(salvo)) {
             modo = salvo;
         }
     } catch (erro) {
         /* ignora */
     }
+
+
+    /* Desenho oriental escolhido: camada atrás do canvas da tinta. */
+    definirArte(lerArteSalva());
 
 
     canvas = document.createElement("canvas");
@@ -132,8 +152,11 @@ export function iniciarFundo() {
 
 
     criarSeletor();
+    iniciarContemplacao();
 
     redimensionar();
+
+    aplicarCena();
 
     window.addEventListener("resize", redimensionar);
 
@@ -155,6 +178,11 @@ function redimensionar() {
 
     gerarMarcas();
     gerarPingos();
+
+    if (cenaDef) {
+        clearTimeout(redimensionar.espera);
+        redimensionar.espera = setTimeout(revelarCena, 400);
+    }
 }
 
 
@@ -186,15 +214,86 @@ function criarSeletor() {
         <span class="fundo-menu-titulo">Fundo do progresso</span>
         <button type="button" data-modo="barra">Barra escorrendo</button>
         <button type="button" data-modo="respingo">Respingos</button>
+        <span class="fundo-menu-titulo">Ver o fundo</span>
+        <button type="button" data-acao="contemplar">Contemplar agora <kbd>Z</kbd></button>
+        <button type="button" data-acao="descanso">Descanso de tela (3 min sem mexer)</button>
+        <span class="fundo-menu-titulo">Cenas que reagem às tarefas</span>
+        <div class="fundo-artes fundo-cenas"></div>
+        <span class="fundo-menu-titulo">Desenho por baixo da tinta</span>
+        <div class="fundo-artes">
+            <button type="button" class="fundo-arte" data-arte="" title="Sem desenho">
+                <span class="fundo-arte-vazia"></span><small>Nenhum</small>
+            </button>
+            ${ARTES.map((arte) => `
+                <button type="button" class="fundo-arte" data-arte="${arte.id}" title="${arte.nome} — ${arte.desc}">
+                    ${miniatura(arte)}<small>${arte.nome.split(/[\u3000-\u9fff+]/)[0].trim()}</small>
+                </button>`).join("")}
+        </div>
     `;
 
     document.body.appendChild(menu);
 
 
-    menu.querySelectorAll("button").forEach((botao) => {
+    /* Miniaturas das cenas: foto pequena num estado do meio, tirada só
+       quando o menu abre pela primeira vez (não pesa a abertura do app). */
+    const gradeCenas = menu.querySelector(".fundo-cenas");
+    const quadrosMini = [];
+    CENAS.forEach((def) => {
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.className = "fundo-arte";
+        botao.dataset.modo = `cena:${def.id}`;
+        botao.title = `${def.nome} — ${def.desc}`;
+        const quadro = document.createElement("span");
+        quadro.className = "fundo-cena-mini";
+        botao.append(quadro);
+        botao.insertAdjacentHTML("beforeend", `<small>${def.nome}</small>`);
+        gradeCenas.append(botao);
+        quadrosMini.push([def, quadro]);
+    });
+
+    let miniaturasProntas = false;
+    async function fotografarMiniaturas() {
+        if (miniaturasProntas) return;
+        miniaturasProntas = true;
+        for (const [def, quadro] of quadrosMini) {
+            try {
+                quadro.append(await fotografar(def, 6, 10, 192, 120));
+            } catch (erro) {
+                /* sem miniatura: o nome continua lá */
+            }
+        }
+    }
+
+
+    menu.querySelectorAll("button[data-modo]").forEach((botao) => {
         botao.addEventListener("click", () => {
             definirModo(botao.dataset.modo);
-            fecharMenu();
+            // nas cenas o menu fica aberto, pra experimentar várias seguidas
+            if (!botao.dataset.modo.startsWith("cena:")) {
+                fecharMenu();
+            }
+        });
+    });
+
+    menu.querySelector('[data-acao="contemplar"]').addEventListener("click", () => {
+        fecharMenu();
+        setTimeout(() => contemplar("manual"), 80);
+    });
+
+    const botaoDescanso = menu.querySelector('[data-acao="descanso"]');
+    const marcarDescanso = () => botaoDescanso.classList.toggle("ativo", descansoLigado());
+    botaoDescanso.addEventListener("click", () => {
+        definirDescanso(!descansoLigado());
+        marcarDescanso();
+    });
+    marcarDescanso();
+
+    /* Desenho: o menu fica aberto pra dar pra experimentar vários seguidos. */
+    menu.querySelectorAll("button[data-arte]").forEach((botao) => {
+        botao.addEventListener("click", () => {
+            definirArte(botao.dataset.arte || null);
+            marcarBotaoAtivo();
         });
     });
 
@@ -206,6 +305,7 @@ function criarSeletor() {
     }
 
     function abrirMenu() {
+        fotografarMiniaturas();
         posicionar();
         menu.classList.add("aberto");
         simbolo.setAttribute("aria-expanded", "true");
@@ -253,7 +353,11 @@ function criarSeletor() {
         }
     });
 
-    window.addEventListener("scroll", fecharMenu, true);
+    window.addEventListener("scroll", (evento) => {
+        if (!menu.contains(evento.target)) {   // rolar a grade de desenhos não fecha o menu
+            fecharMenu();
+        }
+    }, true);
 
     window.addEventListener("resize", () => {
         if (menu.classList.contains("aberto")) {
@@ -271,18 +375,28 @@ function marcarBotaoAtivo() {
         return;
     }
 
-    menu.querySelectorAll("button").forEach((botao) => {
+    menu.querySelectorAll("button[data-modo]").forEach((botao) => {
         botao.classList.toggle(
             "ativo",
             botao.dataset.modo === modo
         );
     });
+
+    menu.querySelectorAll("button[data-arte]").forEach((botao) => {
+        botao.classList.toggle("ativo", (botao.dataset.arte || null) === arteAtual());
+    });
+}
+
+
+function modoValido(valor) {
+    return valor === "barra" || valor === "respingo" ||
+        (typeof valor === "string" && CENAS.some((c) => valor === `cena:${c.id}`));
 }
 
 
 function definirModo(novo) {
 
-    if (novo !== "barra" && novo !== "respingo") {
+    if (!modoValido(novo)) {
         return;
     }
 
@@ -294,7 +408,171 @@ function definirModo(novo) {
         /* ignora */
     }
 
+    aplicarCena();
     marcarBotaoAtivo();
+}
+
+
+/* Liga a cena escolhida (ou volta pra tinta): a cena tem céu próprio,
+   então o canvas da tinta e o desenho de baixo saem de cena. */
+function aplicarCena() {
+
+    const def = CENAS.find((c) => modo === `cena:${c.id}`) || null;
+
+    if (!def) {
+        document.body.classList.remove("com-vidro");
+    }
+
+    const trocou = def !== cenaDef;
+
+    if (camadaCena && trocou) {
+        pararVivo?.();
+        pararVivo = null;
+        camadaCena.querySelector(".fundo-cena-pintura").replaceChildren();
+        camadaCena.querySelector(".fundo-cena-vivo").replaceChildren();
+        if (!def) {                      // voltando pra tinta: a tinta já está pronta pra aparecer
+            camadaCena.remove();
+            camadaCena = null;
+        }
+    }
+
+    cenaDef = def;
+
+    if (def) {
+        if (!camadaCena) {
+            camadaCena = document.createElement("div");
+            camadaCena.id = "fundo-cena";
+            camadaCena.setAttribute("aria-hidden", "true");
+            camadaCena.innerHTML = '<div class="fundo-cena-fotos"></div><div class="fundo-cena-pintura"></div><div class="fundo-cena-vivo"></div>';
+            document.body.prepend(camadaCena);
+        }
+        if (trocou) {
+            // a camada viva consulta o progresso (ex.: quantos vaga-lumes estão acesos)
+            pararVivo = def.vivo?.(camadaCena.querySelector(".fundo-cena-vivo"),
+                () => ({ feitos: feitosAtual, total: totalAtual, fracao: totalAtual ? feitosAtual / totalAtual : 0 })) || null;
+        }
+        // a foto antiga fica até a nova ficar pronta (sem piscar no branco)
+        revelarCena(trocou ? 450 : 1600);
+    } else {
+        if (canvas) canvas.style.display = "";
+        document.querySelector("#fundo-arte")?.removeAttribute("hidden");
+    }
+
+    // força o contraste a ser recalculado (pela cena ou, de volta, pela tinta)
+    escuroAtual = null;
+    forteAtual = null;
+    contrasteDaCena();
+}
+
+
+/* Tira a foto da cena no progresso atual e a funde por cima da anterior. */
+async function revelarCena(duracao = 1600) {
+
+    const pedido = ++pedidoFoto;
+    const def = cenaDef;
+    const escala = Math.min(window.devicePixelRatio || 1, 2);
+
+    let quadro;
+    try {
+        quadro = await fotografar(def, feitosAtual, totalAtual,
+            Math.round(window.innerWidth * escala), Math.round(window.innerHeight * escala));
+    } catch (erro) {
+        return;
+    }
+
+    if (pedido !== pedidoFoto || def !== cenaDef || !camadaCena) {
+        return;                         // outra foto já foi pedida depois desta
+    }
+
+    const fotos = camadaCena.querySelector(".fundo-cena-fotos");
+    const anteriores = [...fotos.children];
+    quadro.className = "fundo-cena-foto";
+    fotos.append(quadro);
+    vidroDaCena(quadro);
+
+    // só agora (com a cena na tela) a tinta e o desenho de baixo saem
+    if (canvas) canvas.style.display = "none";
+    document.querySelector("#fundo-arte")?.setAttribute("hidden", "");
+
+    if (reduzir || anteriores.length === 0 || duracao === 0) {
+        anteriores.forEach((velho) => velho.remove());
+        return;
+    }
+
+    await quadro.animate([{ opacity: 0 }, { opacity: 1 }], { duration: duracao, easing: "ease-in-out" }).finished.catch(() => {});
+    anteriores.forEach((velho) => velho.remove());
+}
+
+
+/* Cenas de tinta: a pincelada nova aparece sendo pintada. A cena roda viva
+   só durante a pintura (alguns segundos) e depois volta a ser foto parada. */
+async function pintarCena(deFeitos, feitos, total) {
+
+    const def = cenaDef;
+    const palco = camadaCena?.querySelector(".fundo-cena-pintura");
+    if (!palco || reduzir) {
+        return revelarCena();
+    }
+
+    palco.replaceChildren();
+    const viva = def.montar(palco);
+    viva.atualizar(deFeitos, total, false);
+    await new Promise((ok) => requestAnimationFrame(ok));
+    const pintura = viva.atualizar(feitos, total, true);
+    await Promise.race([pintura, new Promise((ok) => setTimeout(ok, 7000))]);
+
+    if (def !== cenaDef) {
+        return;
+    }
+    await revelarCena(0);               // a foto final fica embaixo, idêntica
+    palco.replaceChildren();
+}
+
+
+/* Vidro fosco barato: em vez de backdrop-filter (o navegador re-borra a tela
+   inteira a cada rolagem, e no WebKitGTK do app isso trava), a cena é
+   encolhida uma vez só — esticada de volta pelo CSS, ela fica borrada — e
+   vira o fundo fixo dos cartões. */
+let urlVidro = null;
+
+function vidroDaCena(quadro) {
+    const pequeno = document.createElement("canvas");
+    pequeno.width = Math.max(1, Math.round(quadro.width / 24));
+    pequeno.height = Math.max(1, Math.round(quadro.height / 24));
+    const ctx2 = pequeno.getContext("2d");
+    ctx2.imageSmoothingQuality = "high";
+    ctx2.drawImage(quadro, 0, 0, pequeno.width, pequeno.height);
+    try {
+        pequeno.toBlob((blob) => {
+            if (!blob) return;
+            if (urlVidro) URL.revokeObjectURL(urlVidro);
+            urlVidro = URL.createObjectURL(blob);
+            document.documentElement.style.setProperty("--fundo-vidro", `url("${urlVidro}")`);
+            document.body.classList.add("com-vidro");
+        });
+    } catch (erro) {
+        /* navegador não deixou ler a imagem: fica o branco translúcido */
+    }
+}
+
+
+function contrasteDaCena() {
+
+    if (!cenaDef) {
+        return;
+    }
+
+    const escuro = cenaDef.escuro(totalAtual ? feitosAtual / totalAtual : 0);
+
+    if (escuro !== escuroAtual) {
+        escuroAtual = escuro;
+        document.body.classList.toggle("sobre-escuro", escuro);
+    }
+
+    if (forteAtual !== false) {
+        forteAtual = false;
+        document.body.classList.remove("contraste-forte");
+    }
 }
 
 
@@ -423,7 +701,10 @@ function gerarPingos() {
    ATUALIZAÇÃO (chamada pelo progresso)
 ========================================================= */
 
-export function atualizarFundo(porcentagem) {
+export function atualizarFundo(porcentagem, feitos = 0, total = 0) {
+
+    feitosAtual = feitos;
+    totalAtual = total;
 
     if (!iniciado) {
         return;
@@ -432,7 +713,18 @@ export function atualizarFundo(porcentagem) {
     const novo =
         Math.max(0, Math.min(1, (porcentagem || 0) / 100));
 
-    if (novo > alvo + 0.001) {
+    if (cenaDef) {
+        const mudou = feitos !== feitosVistos || total !== totalVistos;
+        const antes = [feitosVistos, totalVistos];
+        feitosVistos = feitos;
+        totalVistos = total;
+        if (mudou && cenaDef.pinta && antes[1] === total && feitos > antes[0]) {
+            pintarCena(antes[0], feitos, total);
+        } else if (mudou) {
+            revelarCena();
+        }
+        contrasteDaCena();
+    } else if (novo > alvo + 0.001) {
         estourar();
         tremer();
     }
@@ -747,6 +1039,11 @@ function ajustarContraste(corBase) {
 
 function loop(tempo) {
 
+    if (cenaDef) {                      // a cena se anima sozinha; a tinta descansa
+        requestAnimationFrame(loop);
+        return;
+    }
+
     nivel += (alvo - nivel) * 0.06;
     if (Math.abs(alvo - nivel) < 0.0008) {
         nivel = alvo;
@@ -759,7 +1056,9 @@ function loop(tempo) {
     const t = modo === "barra" ? nivel : Math.pow(nivel, 1.3);
     const corBase = mistura(CLARO, TINTA_FUNDA, t);
 
-    ctx.fillStyle = rgb(corBase);
+    /* Com desenho de fundo, a base começa transparente (mostra o desenho)
+       e fica opaca conforme o progresso avança. */
+    ctx.fillStyle = rgb(corBase, arteAtual() ? Math.min(1, t * 1.4) : 1);
     ctx.fillRect(0, 0, largura, altura);
 
 

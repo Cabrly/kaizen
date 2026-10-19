@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "padrao",
+  "description": "A janela não chama o Rust: tudo passa pelo servidor local.",
+  "windows": ["principal"],
+  "permissions": ["core:default"]
+}

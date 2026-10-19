@@ -3644,3 +3644,689 @@ dialog.modal {
 @media (prefers-reduced-motion: reduce) {
     .sinc-aviso { animation: none; }
 }
+
+
+/* =========================================================
+   IA NESTE COMPUTADOR (js/ia-local.js)
+   Cartão no topo da lateral escura: confere, recomenda e instala.
+========================================================= */
+
+.iai {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    padding-top: 14px;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.iai[hidden] {
+    display: none;
+}
+
+.iai-situacao,
+.iai-dica,
+.iai-potencia,
+.iai-alerta {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #d4d4d4;
+}
+
+.iai-dica {
+    font-size: 11px;
+    color: #a8a8a8;
+}
+
+.iai-alerta {
+    padding: 8px 10px;
+
+    background: rgba(201, 0, 22, 0.14);
+    border-left: 3px solid #c90016;
+    border-radius: 4px;
+}
+
+.iai-ok {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.iai-link {
+    padding: 0;
+
+    font: inherit;
+    font-weight: 700;
+    color: #ff6b78;
+
+    background: none;
+    border: none;
+
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.iai-hw {
+    display: grid;
+    gap: 4px;
+
+    list-style: none;
+}
+
+.iai-hw li {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+
+    font-size: 11px;
+}
+
+.iai-hw span {
+    color: #9a9a9a;
+}
+
+.iai-hw strong {
+    min-width: 0;
+
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.iai-estrelas {
+    margin-right: 4px;
+
+    color: #f5b301;
+    letter-spacing: 1px;
+}
+
+.iai-detalhes summary {
+    font-size: 11px;
+    color: #a8a8a8;
+
+    cursor: pointer;
+}
+
+.iai-detalhes[open] summary {
+    margin-bottom: 8px;
+}
+
+.iai-escolhido {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    padding: 12px;
+
+    background: rgba(201, 0, 22, 0.16);
+
+    border: 1px solid #c90016;
+    border-radius: 6px;
+}
+
+.iai-escolhido strong {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    font-size: 14px;
+}
+
+.iai-escolhido em {
+    padding: 2px 6px;
+
+    font-size: 9.5px;
+    font-style: normal;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    color: #fff;
+    background: #c90016;
+    border-radius: 3px;
+}
+
+.iai-escolhido small {
+    font-size: 11px;
+    color: #c8c8c8;
+}
+
+.iai-modelos {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.iai-modelo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 6px 8px;
+
+    font-size: 12px;
+
+    border-radius: 4px;
+
+    cursor: pointer;
+}
+
+.iai-modelo:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.iai-modelo span {
+    flex: 1;
+}
+
+.iai-modelo small {
+    font-size: 10.5px;
+    color: #a8a8a8;
+}
+
+.iai-modelo input {
+    accent-color: #c90016;
+}
+
+.iai-termos {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+
+    font-size: 11px;
+    line-height: 1.5;
+    color: #c8c8c8;
+
+    cursor: pointer;
+}
+
+.iai-termos input {
+    margin-top: 3px;
+
+    accent-color: #c90016;
+}
+
+.iai-termos a {
+    color: #ff6b78;
+}
+
+.iai-instalar:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.iai-barra {
+    height: 8px;
+    overflow: hidden;
+
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.iai-barra span {
+    display: block;
+    height: 100%;
+
+    background: #c90016;
+    border-radius: 4px;
+
+    transition: width 0.4s ease;
+}
+
+.iai-barra.indeterminada span {
+    width: 35% !important;
+
+    animation: iai-correr 1.2s ease-in-out infinite;
+}
+
+@keyframes iai-correr {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(300%); }
+}
+
+/* Aba do assistente com bolinha: falta configurar a IA. */
+.nav-tab.aba-aviso {
+    position: relative;
+}
+
+.nav-tab.aba-aviso::after {
+    content: "";
+
+    position: absolute;
+    top: 5px;
+    right: 6px;
+
+    width: 7px;
+    height: 7px;
+
+    background: #f5b301;
+    border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .iai-barra.indeterminada span {
+        animation: none;
+    }
+}
+
+/* Sem IA neste computador: o cartão de instalação fala por si. */
+.ia-config.ia-sem-ia > .campo-filtro,
+.ia-config.ia-sem-ia > #ia-status {
+    display: none;
+}
+
+/* "Outras opções" recolhido (nuvem, outro computador). */
+.srv-mais > summary {
+    cursor: pointer;
+    list-style-position: inside;
+}
+
+.srv-corpo {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    margin-top: 12px;
+}
+
+.srv-outro > summary {
+    font-size: 11px;
+    color: #a8a8a8;
+
+    cursor: pointer;
+}
+
+.srv-outro[open] > summary {
+    margin-bottom: 10px;
+}
+
+.srv-outro .srv-dica {
+    margin-top: 8px;
+}
+
+.ia-config.ia-sem-ia > .iai {
+    padding-top: 0;
+    border-top: none;
+}
+
+.ia-config.ia-sem-ia > .ia-limpar {
+    display: none;
+}
+
+
+/* =========================================================
+   DESENHO DE FUNDO ORIENTAL (js/fundos-orientais.js)
+   Camada atrás do canvas da tinta (que é z-index -1).
+========================================================= */
+
+#fundo-arte {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+
+    pointer-events: none;
+}
+
+#fundo-arte svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.fundo-menu {
+    max-width: min(392px, calc(100vw - 32px));
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+.fundo-artes {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+
+    padding: 2px 4px 6px;
+}
+
+.fundo-menu button.fundo-arte {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+
+    padding: 4px;
+
+    text-align: center;
+
+    border: 2px solid transparent;
+    border-radius: 8px;
+}
+
+.fundo-arte svg,
+.fundo-arte-vazia {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+
+    background: #f7f7f5;
+    border: 1px solid #e4e4e0;
+    border-radius: 5px;
+}
+
+.fundo-arte-vazia {
+    background:
+        linear-gradient(135deg, transparent 47%, #d5d5d5 47%, #d5d5d5 53%, transparent 53%),
+        #f7f7f5;
+}
+
+.fundo-arte small {
+    font-size: 10px;
+    line-height: 1.2;
+    color: #555;
+}
+
+.fundo-menu button.fundo-arte.ativo {
+    border-color: #c90016;
+}
+
+.fundo-menu button.fundo-arte.ativo::before {
+    content: none;
+}
+
+.fundo-menu button.fundo-arte.ativo small {
+    color: #c90016;
+    font-weight: 700;
+}
+
+@media (max-width: 480px) {
+    .fundo-artes {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+
+/* =========================================================
+   CENAS INTERATIVAS (js/cenas/)
+========================================================= */
+
+#fundo-cena {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+
+    pointer-events: none;
+}
+
+#fundo-cena svg,
+.fundo-arte .cena {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.cena-estrela {
+    animation: cena-piscar 3.2s ease-in-out infinite;
+}
+
+@keyframes cena-piscar {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+.fj-raios {
+    animation: cena-balancar 9s ease-in-out infinite alternate;
+}
+
+@keyframes cena-balancar {
+    from { transform: rotate(-4deg); }
+    to { transform: rotate(4deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cena-estrela,
+    .fj-raios {
+        animation: none;
+    }
+}
+
+/* Fuji: lanternas de cabeça tremulando e nuvens à deriva. */
+.fj-lanterna {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: fj-tremular 2.4s ease-in-out infinite;
+}
+
+@keyframes fj-tremular {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(0.55); }
+}
+
+.fj-nuvem-deriva {
+    animation: fj-deriva 40s ease-in-out infinite alternate;
+}
+
+@keyframes fj-deriva {
+    from { transform: translateX(-30px); }
+    to { transform: translateX(30px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fj-lanterna,
+    .fj-nuvem-deriva {
+        animation: none;
+    }
+}
+
+.fundo-cena-mini {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+
+    border: 1px solid #e4e4e0;
+    border-radius: 5px;
+}
+
+.fundo-cena-mini svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#fundo-arte[hidden] {
+    display: none;
+}
+
+
+/* =========================================================
+   VIDRO FOSCO — cartões e painéis deixam o fundo aparecer
+   Sem backdrop-filter: ele re-borra a tela inteira a cada
+   rolagem e trava o app (WebKitGTK). Com cena, o "vidro" é a
+   própria cena já borrada (js/fundo.js, --fundo-vidro) fixa
+   na janela; sem cena, só branco translúcido.
+========================================================= */
+
+.header {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.column {
+    background: rgba(238, 238, 236, 0.62);
+}
+
+.task,
+.filtros,
+.ia-chat,
+.est-cartao,
+.est-plano {
+    background: rgba(255, 255, 255, 0.84);
+}
+
+body.com-vidro .header,
+body.com-vidro .column,
+body.com-vidro .task,
+body.com-vidro .filtros,
+body.com-vidro .ia-chat,
+body.com-vidro .est-cartao,
+body.com-vidro .est-plano {
+    background-image: linear-gradient(var(--vidro-tom), var(--vidro-tom)), var(--fundo-vidro);
+    background-size: auto, 100vw 100vh;
+    background-position: 0 0, center;
+    background-attachment: scroll, fixed;
+}
+
+body.com-vidro .header,
+body.com-vidro .task,
+body.com-vidro .filtros,
+body.com-vidro .ia-chat,
+body.com-vidro .est-cartao,
+body.com-vidro .est-plano {
+    --vidro-tom: rgba(255, 255, 255, 0.72);
+}
+
+body.com-vidro .column {
+    --vidro-tom: rgba(240, 240, 238, 0.45);
+}
+
+.fundo-cena-foto {
+    position: absolute;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+}
+
+.fundo-cena-mini canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.cena-viva {
+    position: absolute;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+}
+
+.fundo-cena-fotos,
+.fundo-cena-vivo {
+    position: absolute;
+    inset: 0;
+}
+
+.fundo-cena-pintura {
+    position: absolute;
+    inset: 0;
+}
+
+.fundo-cena-pintura svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+
+/* =========================================================
+   CONTEMPLAÇÃO (js/contemplacao.js)
+   A interface esmaece; ficam o fundo, a cena e o aviso.
+========================================================= */
+
+body > *:not(#fundo-cena):not(#fundo-tinta):not(#fundo-arte):not(.contemplar-aviso):not(script) {
+    transition: opacity 0.9s ease;
+}
+
+body.contemplando > *:not(#fundo-cena):not(#fundo-tinta):not(#fundo-arte):not(.contemplar-aviso):not(script) {
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.contemplando {
+    cursor: none;
+}
+
+.contemplar-aviso {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    z-index: 10002;
+
+    transform: translateX(-50%);
+
+    padding: 8px 16px;
+
+    font-size: 12px;
+    color: #fff;
+
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 999px;
+
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.contemplando .contemplar-aviso.some {
+    animation: contemplar-aviso 3.2s ease forwards;
+}
+
+@keyframes contemplar-aviso {
+    0% { opacity: 0; }
+    15%, 70% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.contemplar-botao {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 900;
+
+    display: grid;
+    place-items: center;
+
+    width: 38px;
+    height: 38px;
+
+    color: #555;
+    background: rgba(255, 255, 255, 0.78);
+
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+
+    cursor: pointer;
+    opacity: 0.55;
+
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.contemplar-botao:hover,
+.contemplar-botao:focus-visible {
+    opacity: 1;
+    transform: scale(1.06);
+}
+
+.contemplar-botao svg {
+    width: 20px;
+    height: 20px;
+}
+
+.fundo-menu kbd {
+    margin-left: 6px;
+    padding: 1px 6px;
+
+    font-family: inherit;
+    font-size: 10px;
+
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body > * {
+        transition: none !important;
+    }
+}
