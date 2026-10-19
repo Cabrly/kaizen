@@ -211,8 +211,8 @@ function renderizar(servidores, soNuvem = false) {
 
     if (soNuvem && servidores.length === 0) {
         painel.querySelector("#srv-lista").innerHTML = `
-            <p class="srv-dica">Nenhuma IA conectada. Conecte o <b>Gemini</b> (tem uso gratuito)
-            ou o ChatGPT abaixo — a chave fica salva só neste aparelho.</p>`;
+            <p class="srv-dica">Nenhuma IA conectada. Conecte o <b>OpenRouter</b> (modelos grátis)
+            ou outra IA abaixo — a chave fica salva só neste aparelho.</p>`;
         return;
     }
 

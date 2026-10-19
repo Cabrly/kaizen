@@ -3,7 +3,7 @@
    Rede primeiro (online pega sempre a versão nova; offline usa a cópia
    guardada). /api e outros sites nunca passam por aqui. */
 
-const CACHE = "kaizen-v6";
+const CACHE = "kaizen-v7";
 
 const ARQUIVOS = [
     "./",

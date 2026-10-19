@@ -2,7 +2,7 @@
 
 改善 — melhoria contínua, um passo de cada vez.
 
-**Use agora:** https://cabrly.github.io/kaizen/ (celular ou PC, IA na nuvem) · ou baixe a versão completa (abaixo).
+**Use agora:** https://cabrly.github.io/kaizen/ (celular ou PC, IA na nuvem — de graça com o [OpenRouter](#ia-de-graça-openrouter)) · ou baixe a versão completa (abaixo).
 
 Kanban de tarefas com um assistente de estudos: você diz o que quer
 aprender ("quero estudar React") e a IA monta a rotina no calendário,
@@ -48,16 +48,31 @@ O Kaizen também roda inteiro no navegador, sem servidor nenhum. Abra
 - **Android:** no Chrome, menu ⋮ → *Instalar app*.
 
 Vira um app com ícone próprio, que abre até sem internet (só a IA precisa
-dela). Na primeira vez, vá em **Assistente IA → Onde a IA roda** e conecte o
-**Gemini** (a chave é grátis no [Google AI Studio](https://aistudio.google.com/apikey)),
-o **OpenRouter** (modelos grátis, chave em [openrouter.ai/keys](https://openrouter.ai/keys)), o **Claude**, o **ChatGPT** ou qualquer API compatível com OpenAI (Groq…).
+dela). Na primeira vez, conecte uma IA (veja abaixo).
 
-Se o Gemini responder que o projeto da chave foi negado (403), crie a chave num **projeto novo** no AI Studio; se continuar, o bloqueio é da conta Google — use o OpenRouter.
+### IA de graça: OpenRouter
+
+O jeito recomendado de usar sem pagar nada:
+
+1. Crie uma conta grátis em [openrouter.ai](https://openrouter.ai) (dá pra entrar com a conta Google).
+2. Em [openrouter.ai/keys](https://openrouter.ai/keys), clique em **Create Key** e copie a chave (`sk-or-…`).
+3. No Kaizen: **Assistente IA → Onde a IA roda → ☁ Conectar OpenRouter (modelos grátis)**, cole e salve.
+
+Pronto: chat e planos usam o `openrouter/free`, que escolhe sozinho um modelo
+gratuito disponível a cada pedido (a lista mostra só os grátis, se quiser fixar
+um). Modelo grátis pode ficar lento quando está cheio, e a conta sem créditos
+tem um limite diário de pedidos — um plano gasta poucos.
+
+**Outras opções:** **Claude** e **ChatGPT** (chave de API, pagos por uso),
+qualquer API compatível com OpenAI (Groq…) e **Gemini** — este tem nível grátis,
+mas o Google tem barrado projetos novos com o erro 403 "project denied access";
+se acontecer, use o OpenRouter.
 
 Sem servidor, o Kaizen funciona assim:
 
 - os dados (tarefas, planos, chaves) ficam **só no aparelho**, sem
-  sincronizar entre celular e PC;
+  sincronizar entre celular e PC — use **Fazer backup / Restaurar backup**,
+  no rodapé, pra levar de um pro outro (o arquivo serve nos dois);
 - a IA é só na nuvem (sem Ollama);
 - vídeos vêm do Invidious/Piped e a documentação é um link que cai direto na
   página do site oficial.

@@ -159,7 +159,7 @@ async function gerarJson(motor, sistema, pedido, esquema) {
 
     const { provedor, modelo } = separarMotor(motor);
 
-    if (!provedor) throw new ErroIA("Escolha uma IA conectada (Gemini, ChatGPT…).");
+    if (!provedor) throw new ErroIA("Escolha uma IA conectada (OpenRouter, Claude, ChatGPT…).");
 
     const texto = await conversar(provedor, modelo,
         [{ role: "system", content: sistema }, { role: "user", content: pedido }], esquema);
@@ -713,7 +713,7 @@ async function chat(corpo) {
 
     const p = preferido();
 
-    if (!p) throw new ErroIA("Conecte o Gemini ou o ChatGPT em \"Onde a IA roda\".");
+    if (!p) throw new ErroIA("Conecte uma IA em \"Onde a IA roda\" (o OpenRouter tem modelos grátis).");
 
     const { sistema_chat } = await carregarPrompts();
     const mensagens = Array.isArray(corpo.mensagens) ? corpo.mensagens : [];
@@ -821,7 +821,7 @@ export async function rotear(url, opcoes = {}) {
             if (metodo === "POST" && ident === "nuvem") return json(200, { servidores: await conectarNuvem(acao, corpo.chave, corpo.url) });
             if (metodo === "POST" && acao === "preferido") { definirPreferido(ident); return json(200, { servidores: await destinosComStatus() }); }
             if (metodo === "DELETE" && ident) { removerConta(ident); return json(200, { servidores: await destinosComStatus() }); }
-            if (metodo === "POST" && !ident) throw new RangeError("No celular a IA roda só na nuvem: conecte o Gemini ou o ChatGPT.");
+            if (metodo === "POST" && !ident) throw new RangeError("No celular a IA roda só na nuvem: conecte o OpenRouter (grátis), o Claude ou outra.");
         }
 
         if (area === "estudos") {
