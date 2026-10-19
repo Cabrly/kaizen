@@ -10,14 +10,19 @@
 const CHAVE_CONFIG = "kaizen.nuvem.config.v1";
 
 
+// os grátis primeiro: é assim que aparecem na tela
 export const PROVEDORES = {
-    claude: {
-        nome: "Claude (Anthropic)",
-        ondePegar: "https://platform.claude.com/settings/keys"
-    },
     gemini: {
         nome: "Gemini (Google)",
         ondePegar: "https://aistudio.google.com/apikey"
+    },
+    openrouter: {
+        nome: "OpenRouter (modelos grátis)",
+        ondePegar: "https://openrouter.ai/keys"
+    },
+    claude: {
+        nome: "Claude (Anthropic)",
+        ondePegar: "https://platform.claude.com/settings/keys"
     },
     openai: {
         nome: "ChatGPT (OpenAI)",
@@ -156,8 +161,13 @@ async function pedir(url, { corpo, cabecalhos = {}, tempo = 120000 } = {}) {
 }
 
 
+const OPENROUTER_API = "https://openrouter.ai/api/v1";
+
+
 function baseOpenAI(provedor, conta) {
-    return provedor === "openai" ? "https://api.openai.com/v1" : (conta.url || "").replace(/\/+$/, "");
+    if (provedor === "openai") return "https://api.openai.com/v1";
+    if (provedor === "openrouter") return OPENROUTER_API;
+    return (conta.url || "").replace(/\/+$/, "");
 }
 
 
@@ -195,6 +205,24 @@ export async function listarModelos(provedor, conta) {
     }
 
 
+    if (provedor === "openrouter") {
+
+        // a lista de modelos deles é pública: valida a chave à parte
+        await pedir(`${OPENROUTER_API}/key`, { cabecalhos: autorizacao(conta) });
+
+        const dados = await pedir(`${OPENROUTER_API}/models`);
+        const fora = /lyria|content-safety|guard|moderation/;
+
+        // só os grátis; "openrouter/free" escolhe sozinho um grátis disponível
+        return (dados.data || [])
+            .map((m) => m.id)
+            .filter((id) => (id.endsWith(":free") || id === "openrouter/free") && !fora.test(id))
+            .sort((a, b) => (b === "openrouter/free") - (a === "openrouter/free") || a.localeCompare(b))
+            .slice(0, 20);
+
+    }
+
+
     const dados = await pedir(`${baseOpenAI(provedor, conta)}/models`, { cabecalhos: autorizacao(conta) });
     const lista = dados.data || [];
 
@@ -226,6 +254,10 @@ export function modeloSugerido(provedor, modelos) {
 
     if (provedor === "claude") {
         return modelos.includes("claude-opus-5-5") ? "claude-opus-5-5" : modelos[0];
+    }
+
+    if (provedor === "openrouter") {
+        return modelos.includes("openrouter/free") ? "openrouter/free" : modelos[0];
     }
 
     if (provedor === "gemini") {
@@ -307,7 +339,8 @@ export async function conversar(provedor, modelo, mensagens, formato = null) {
 
     const corpo = { model: modelo, messages: mensagens };
 
-    if (formato) corpo.response_format = { type: "json_object" };
+    // nem todo modelo grátis do OpenRouter aceita response_format; o schema já vai no prompt
+    if (formato && provedor !== "openrouter") corpo.response_format = { type: "json_object" };
 
     const dados = await pedir(`${baseOpenAI(provedor, conta)}/chat/completions`,
                               { corpo, cabecalhos: autorizacao(conta), tempo: 180000 });

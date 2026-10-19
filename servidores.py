@@ -28,7 +28,18 @@ _status_cache = {}                      # chave -> (quando, status)
 CACHE_SEGUNDOS = 10
 CACHE_NUVEM = 600                       # lista de modelos da nuvem muda pouco
 
+# os grátis primeiro: é assim que aparecem na tela
 NUVEM = {
+    "gemini": {
+        "nome": "Gemini (Google)",
+        "host": "generativelanguage.googleapis.com",
+        "onde_pegar": "https://aistudio.google.com/apikey",
+    },
+    "openrouter": {
+        "nome": "OpenRouter (modelos grátis)",
+        "host": "openrouter.ai",
+        "onde_pegar": "https://openrouter.ai/keys",
+    },
     "claude": {
         "nome": "Claude (Anthropic)",
         "host": "api.anthropic.com",
@@ -38,11 +49,6 @@ NUVEM = {
         "nome": "ChatGPT (OpenAI)",
         "host": "api.openai.com",
         "onde_pegar": "https://platform.openai.com/api-keys",
-    },
-    "gemini": {
-        "nome": "Gemini (Google)",
-        "host": "generativelanguage.googleapis.com",
-        "onde_pegar": "https://aistudio.google.com/apikey",
     },
     # qualquer API no formato da OpenAI: OpenRouter, Groq, DeepSeek, LM Studio…
     "compat": {
@@ -179,6 +185,16 @@ def _modelos_nuvem(provedor, chave_api, url=None):
     if provedor == "compat":
         dados = _http(f"{(url or _url_compat())}/models", cabecalhos=_cabecalhos(provedor, chave_api))
         return sorted(m["id"] for m in dados.get("data", []))[:40]
+
+    if provedor == "openrouter":
+        # a lista de modelos deles é pública: valida a chave à parte
+        _http("https://openrouter.ai/api/v1/key", cabecalhos=_cabecalhos(provedor, chave_api))
+        dados = _http("https://openrouter.ai/api/v1/models")
+        fora = ("lyria", "content-safety", "guard", "moderation")
+        # só os grátis; "openrouter/free" escolhe sozinho um grátis disponível
+        gratis = [m["id"] for m in dados.get("data", [])
+                  if (m["id"].endswith(":free") or m["id"] == "openrouter/free") and not any(f in m["id"] for f in fora)]
+        return sorted(gratis, key=lambda m: (m != "openrouter/free", m))[:20]
 
     if provedor == "claude":
         # a API já devolve os mais novos primeiro
@@ -418,10 +434,11 @@ def _conversar_nuvem(provedor, modelo, mensagens, formato):
         # só os blocos de texto (o raciocínio vem em blocos "thinking", vazios por padrão)
         return "".join(b.get("text", "") for b in dados.get("content", []) if b.get("type") == "text").strip()
 
-    if provedor in ("openai", "compat"):
-        base = "https://api.openai.com/v1" if provedor == "openai" else _url_compat()
+    if provedor in ("openai", "openrouter", "compat"):
+        base = {"openai": "https://api.openai.com/v1", "openrouter": "https://openrouter.ai/api/v1"}.get(provedor)             or _url_compat()
         corpo = {"model": modelo, "messages": mensagens}
-        if formato:
+        # nem todo modelo grátis do OpenRouter aceita response_format; o schema já vai no prompt
+        if formato and provedor != "openrouter":
             corpo["response_format"] = {"type": "json_object"}
         dados = _http(f"{base}/chat/completions", corpo, _cabecalhos(provedor, chave_api), timeout=300)
         return _sem_raciocinio(dados["choices"][0]["message"]["content"] or "")
@@ -515,6 +532,8 @@ def _conversar_gemini(modelo, chave_api, mensagens, formato):
 
 def modelos_para_chat(destino_id, modelos):
     """O modelo mais indicado primeiro (o chat começa por ele)."""
+    if destino_id == "openrouter":
+        return sorted(modelos, key=lambda m: m != "openrouter/free")
     if destino_id != "gemini":
         return modelos
     sem_cota = _gemini_sem_cota()
