@@ -2,7 +2,7 @@
 
 - "Este computador" (OLLAMA_URL) sempre existe.
 - Dá pra cadastrar outros servidores Ollama — uma máquina mais forte em
-  casa, ou um servidor alcançado pelo Tailscale (http://100.80.57.121:11434).
+  casa, ou um servidor alcançado pelo Tailscale (ex.: http://100.x.y.z:11434).
 - Dá pra conectar uma conta da OpenAI (ChatGPT) ou do Google (Gemini) com
   uma chave de API. A chave fica só no banco local.
 
@@ -88,7 +88,7 @@ def _config(chave, valor=..., apagar=False):
 
 
 def normalizar_url(url):
-    """Aceita "100.80.57.121", "minha-maquina:11434", "http://x/api/tags"…"""
+    """Aceita "100.64.0.10", "minha-maquina:11434", "http://x/api/tags"…"""
     url = (url or "").strip().rstrip("/")
     if not url:
         raise ValueError("Informe o endereço do servidor.")
