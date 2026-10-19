@@ -638,7 +638,8 @@ function mostrarSessaoAtualizada(sessao, mexeuEmOutrosDias) {
 const assistente = {
     dialogo: null,
     perguntas: [],
-    motores: []
+    motores: [],
+    aviso: ""
 };
 
 
@@ -709,7 +710,7 @@ async function abrirAssistente() {
 
     d.querySelector("#est-form-tema").reset();
     d.querySelector("#est-inicio").value = hojeIso();
-    d.querySelector("#est-erro-tema").textContent = "";
+    d.querySelector("#est-erro-tema").textContent = assistente.aviso || "";
 
     mostrarPasso(1);
     d.showModal();
@@ -731,6 +732,20 @@ async function abrirAssistente() {
                 `<option value="${esc(m.id)}" ${m.id === padrao ? "selected" : ""}>
                     ${esc(m.nome)}${m.recomendado ? " — recomendado" : ""}
                  </option>`).join("");
+
+
+            // quem baixou o projeto agora pode ainda não ter o modelo
+            const recomendado = padrao.replace("ollama:", "");
+
+            if (motores.length === 0) {
+                assistente.aviso =
+                    `Nenhuma IA encontrada. Instale o Ollama (ollama.com) e rode: ollama pull ${recomendado}`;
+            } else if (!motores.some((m) => m.recomendado)) {
+                assistente.aviso =
+                    `Dica: o modelo recomendado é o ${recomendado}. Instale com: ollama pull ${recomendado}`;
+            }
+
+            d.querySelector("#est-erro-tema").textContent = assistente.aviso || "";
 
         } catch (erro) {
             d.querySelector("#est-erro-tema").textContent = "Não consegui listar os modelos de IA.";

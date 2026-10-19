@@ -314,6 +314,28 @@ def buscar_videos(consulta, minutos_max=None, limite=2):
     return sorted(videos, key=nota)[:limite]
 
 
+_PORTUGUES = re.compile(r"[ãõçáéíóúâêô]|\b(de|do|da|dos|das|com|como|para|aula|curso|em|no|na|um|uma|seu|sua)\b", re.I)
+
+
+def parece_portugues(texto):
+    return bool(_PORTUGUES.search(texto or ""))
+
+
+def titulo_original(video):
+    """Invidious/Piped devolvem o título traduzido pelo YouTube (as instâncias
+    ficam fora do Brasil). O noembed repassa o oEmbed do YouTube com o título
+    original — e funciona mesmo onde o youtube.com é bloqueado."""
+    def buscar():
+        dados = json.loads(_baixar("https://noembed.com/embed?" + urllib.parse.urlencode({"url": video["url"]}), timeout=5))
+        return {"titulo": dados.get("title"), "fonte": dados.get("author_name")} if dados.get("title") else {}
+
+    try:
+        original = _cache(f"oembed:{video['url']}", buscar)
+    except ERROS:
+        return video
+    return {**video, "titulo": original.get("titulo") or video["titulo"], "fonte": original.get("fonte") or video["fonte"]}
+
+
 # ---------- Documentação oficial (sitemap) ----------
 
 def _urls_do_sitemap(url, profundidade=0):

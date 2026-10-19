@@ -1,8 +1,85 @@
-# Gerenciador de Tarefas Acadêmicas — Kaizen
+# Kaizen — kanban + estudos com IA local
+
+改善 — melhoria contínua, um passo de cada vez.
+
+Kanban de tarefas com um assistente de estudos: você diz o que quer
+aprender ("quero estudar React") e a IA monta a rotina no calendário,
+com **vídeo**, **documentação oficial** e **atividades** pra cada dia.
+Roda inteiro na sua máquina, com modelos leves do [Ollama](https://ollama.com).
+Não precisa de chave de API nem de conta em serviço nenhum.
+
+## Como rodar
+
+Precisa de **Python 3.9+** e do **Ollama**. O servidor usa só a biblioteca padrão
+do Python, então não há nada pra instalar com pip.
+
+```bash
+ollama pull qwen3:8b      # modelo recomendado (~5 GB)
+ollama serve              # se o Ollama ainda não estiver rodando
+python3 server.py
+```
+
+Abra `http://localhost:8000`. O banco (`kaizen.sqlite3`) é criado sozinho.
+
+Com Docker: `docker compose up -d` (o container fala com o Ollama da máquina).
+
+## Aba Estudos
+
+1. **+ Novo plano** → escreva o assunto.
+2. A IA faz 3 perguntas rápidas (nível, objetivo, base). Clique numa das
+   respostas prontas ou escreva a sua. Depois escolha os dias, o tempo por dia
+   e por quantas semanas.
+3. Em cerca de um minuto o calendário se preenche. Clique num dia, abra a
+   sessão e vá marcando:
+   - **✓** feito;
+   - **✕** não fiz: o item vai sozinho pra próxima sessão daquele plano (ou
+     pra uma sessão de *Pendências* no próximo dia de estudo). Clicar de novo
+     desfaz.
+
+### Como os materiais são escolhidos
+
+Modelo pequeno inventa link, então **a IA nunca escreve URL**. Ela só monta o
+roteiro: tópicos, ordem, objetivo, termos de busca e atividades. Quem acha os
+materiais é o `busca.py`:
+
+- **Vídeos:** busca no YouTube, com Invidious/Piped e busca web como reserva
+  (funciona até em rede que bloqueia o YouTube). Escolhe um vídeo que cabe no
+  tempo da sessão e não repete vídeo entre sessões.
+- **Documentação:** lê o menu e o sitemap do site oficial do assunto (em
+  português quando existe, ex. `pt-br.react.dev`) e casa cada tópico com a
+  página certa.
+- As datas são calculadas pelo código a partir dos dias escolhidos, não pela IA.
+
+### Qual modelo usar
+
+Teste com o mesmo plano (React, 12 sessões de 1h) numa RTX A2000 12 GB:
+
+| Modelo | Tempo do roteiro | Observação |
+|---|---|---|
+| `qwen3:4b` | ~45 s | o mais leve; bom pra PC sem placa de vídeo boa |
+| **`qwen3:8b`** | ~65 s | **recomendado**: melhor equilíbrio entre qualidade e velocidade |
+| `qwen3:14b` | ~145 s | mais lento e não foi melhor |
+| `gemma3:4b` | ~46 s | conteúdo desatualizado e estourava o tempo das sessões |
+
+Qualquer modelo instalado no Ollama aparece pra escolher. Se você tiver o
+[Claude Code](https://claude.com/claude-code) instalado e logado, ele também
+aparece como opção.
+
+### Configuração (variáveis de ambiente, todas opcionais)
+
+| Variável | Padrão | Pra quê |
+|---|---|---|
+| `PORT` / `HOST` | `8000` / `127.0.0.1` | onde o servidor escuta |
+| `OLLAMA_URL` | `http://127.0.0.1:11434` | onde está o Ollama |
+| `SEARXNG_URL` | — | instância [SearXNG](https://docs.searxng.org) própria pra busca web (mais estável que os buscadores públicos, se você for hospedar pra muita gente) |
+
+---
+
+## Histórico: Gerenciador de Tarefas Acadêmicas
 
 Projeto desenvolvido para a disciplina de Desenvolvimento Frontend — 2026.2.
 
-## Entrega E4
+### Entrega E4
 
 A aplicação utiliza um estado único para controlar:
 
@@ -16,7 +93,7 @@ A aplicação utiliza um estado único para controlar:
 
 A lista exibida é derivada do estado original, sem alterar o array de tarefas carregado do arquivo JSON.
 
-## Funcionalidades
+### Funcionalidades
 
 - Carregamento de tarefas utilizando Fetch API;
 - Estado de carregamento;
@@ -33,7 +110,7 @@ A lista exibida é derivada do estado original, sem alterar o array de tarefas c
 - Feedback acessível com `aria-live`;
 - Atualização centralizada da interface.
 
-## Tecnologias
+### Tecnologias
 
 - HTML5
 - CSS3
@@ -42,11 +119,11 @@ A lista exibida é derivada do estado original, sem alterar o array de tarefas c
 - Fetch API
 - JSON
 
-## Página publicada
+### Página publicada
 
 [Acessar aplicação no GitHub Pages](https://cabrly.github.io/Trabalho-facul/)
 
-## Modo com banco de dados local
+### Modo com banco de dados local
 
 Para salvar as tarefas em SQLite, abra um terminal nesta pasta e execute:
 

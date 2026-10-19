@@ -297,7 +297,12 @@ def _gerar_plano(plano_id):
 
         def materiais(sessao):
             videos = busca.buscar_videos(sessao.get("busca_video") or f"{sessao['topico']} {plano['tema']} aula",
-                                         minutos_max=minutos_video, limite=4)
+                                         minutos_max=minutos_video, limite=3)
+            # título original (não o traduzido pelo YouTube) e, entre os que
+            # cabem na sessão, aula em português primeiro
+            videos = [busca.titulo_original(v) for v in videos]
+            videos.sort(key=lambda v: ((v.get("minutos") or 0) > minutos_video,
+                                       not busca.parece_portugues(v["titulo"])))
             docs = busca.buscar_documentacao(
                 f"{sessao.get('termos_doc', '')} {sessao['topico']}", doc_oficial, ignorar=ignorar, limite=2)
             with trava:
