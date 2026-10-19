@@ -3042,6 +3042,7 @@ dialog.modal {
 
 /* =========================================================
    E13 — SERVIDORES DE IA (onde a IA roda)
+   Fica na lateral escura da aba do assistente.
 ========================================================= */
 
 .srv {
@@ -3051,7 +3052,7 @@ dialog.modal {
 
     padding-top: 14px;
 
-    border-top: 1px solid #e6e6e4;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .srv-titulo {
@@ -3060,7 +3061,7 @@ dialog.modal {
     text-transform: uppercase;
     letter-spacing: 1px;
 
-    color: #666;
+    color: #9a9a9a;
 }
 
 .srv-lista {
@@ -3088,10 +3089,10 @@ dialog.modal {
     font-family: inherit;
     text-align: left;
 
-    color: #171717;
-    background: #f7f7f5;
+    color: #f2f2f2;
+    background: rgba(255, 255, 255, 0.05);
 
-    border: 1px solid #dedede;
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 6px;
 
     cursor: pointer;
@@ -3100,14 +3101,12 @@ dialog.modal {
 }
 
 .srv-usar:hover {
-    border-color: #aaa;
+    border-color: rgba(255, 255, 255, 0.35);
 }
 
 .srv-usar[aria-pressed="true"] {
-    background: #ffffff;
+    background: rgba(201, 0, 22, 0.16);
     border-color: #c90016;
-
-    box-shadow: 0 0 0 3px rgba(201, 0, 22, 0.08);
 }
 
 .srv-usar .status-dot {
@@ -3129,7 +3128,7 @@ dialog.modal {
 .srv-texto small {
     font-size: 10.5px;
 
-    color: #888;
+    color: #a8a8a8;
 
     white-space: nowrap;
     overflow: hidden;
@@ -3163,7 +3162,7 @@ dialog.modal {
     font-family: inherit;
     font-size: 11px;
 
-    color: #999;
+    color: #8a8a8a;
     background: transparent;
 
     border: 1px solid transparent;
@@ -3173,8 +3172,8 @@ dialog.modal {
 }
 
 .srv-remover:hover {
-    color: #c90016;
-    border-color: #f0c8cc;
+    color: #ff5a6a;
+    border-color: rgba(255, 90, 106, 0.4);
 }
 
 .srv-form {
@@ -3192,26 +3191,49 @@ dialog.modal {
     font-family: inherit;
     font-size: 12px;
 
-    background: #f7f7f5;
+    color: #f2f2f2;
+    background: rgba(255, 255, 255, 0.06);
 
-    border: 1px solid #d5d5d5;
+    border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 5px;
 
     outline: none;
 }
 
+.srv-form input::placeholder {
+    color: #8a8a8a;
+}
+
 .srv-form input:focus {
-    background: #ffffff;
     border-color: #c90016;
 
-    box-shadow: 0 0 0 3px rgba(201, 0, 22, 0.1);
+    box-shadow: 0 0 0 3px rgba(201, 0, 22, 0.25);
+}
+
+.srv-form button {
+    color: #f2f2f2;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.srv-form button:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.srv-form button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.srv .est-erro {
+    color: #ff7a87;
 }
 
 .srv-dica {
     font-size: 10.5px;
     line-height: 1.5;
 
-    color: #888;
+    color: #9a9a9a;
 }
 
 .srv-dica code {
@@ -3219,7 +3241,8 @@ dialog.modal {
 
     padding: 1px 4px;
 
-    background: #f0f0ee;
+    color: #e6e6e6;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
 }
 

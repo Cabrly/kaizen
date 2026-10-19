@@ -151,7 +151,7 @@ function renderizar(servidores) {
     painel.querySelector("#srv-lista").innerHTML = servidores.map((s) => {
 
         const situacao = s.online
-            ? `${s.modelos.length} modelo(s) · ${s.ms} ms`
+            ? `${s.modelos.length} modelo${s.modelos.length === 1 ? "" : "s"} · ${s.ms} ms`
             : "offline";
 
         return `
@@ -161,7 +161,8 @@ function renderizar(servidores) {
                     <span class="status-dot ${s.online ? "status-online" : "status-offline"}"></span>
                     <span class="srv-texto">
                         <strong>${esc(s.nome)}</strong>
-                        <small>${esc(s.url.replace(/^https?:\/\//, ""))} · ${situacao}</small>
+                        <small>${esc(s.url.replace(/^https?:\/\//, ""))}</small>
+                        <small>${situacao}</small>
                     </span>
                     ${s.preferido ? '<span class="srv-em-uso">em uso</span>' : ""}
                 </button>
