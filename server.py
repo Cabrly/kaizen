@@ -5,7 +5,11 @@ import json
 import os
 import sqlite3
 import urllib.error
+import urllib.parse
 import urllib.request
+
+import busca
+import estudos
 
 ROOT = Path(__file__).parent
 DB = ROOT / "kaizen.sqlite3"
@@ -15,6 +19,10 @@ DB = ROOT / "kaizen.sqlite3"
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
+
+busca.CACHE_DB = DB
+estudos.DB = DB
+estudos.OLLAMA_URL = OLLAMA_URL
 
 
 def init_db():
@@ -82,6 +90,8 @@ def ollama_chat(modelo, mensagens):
 
 class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
+        if self.rota_estudos("GET"):
+            return
         if self.path == "/api/tarefas":
             return self.responder(200, {"tarefas": listar()})
         if self.path == "/api/ia/status":
@@ -93,6 +103,8 @@ class Handler(SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_POST(self):
+        if self.rota_estudos("POST"):
+            return
         if self.path != "/api/chat":
             return self.responder(404, {"erro": "Rota não encontrada"})
         try:
@@ -130,6 +142,67 @@ class Handler(SimpleHTTPRequestHandler):
         except (KeyError, TypeError, ValueError, sqlite3.Error) as erro:
             return self.responder(400, {"erro": str(erro)})
 
+    def do_PATCH(self):
+        if not self.rota_estudos("PATCH"):
+            self.responder(404, {"erro": "Rota não encontrada"})
+
+    def do_DELETE(self):
+        if not self.rota_estudos("DELETE"):
+            self.responder(404, {"erro": "Rota não encontrada"})
+
+    def rota_estudos(self, metodo):
+        """Rotas /api/estudos/... da aba Estudos. Devolve True se atendeu."""
+        url = urllib.parse.urlparse(self.path)
+        partes = url.path.strip("/").split("/")
+        if partes[:2] != ["api", "estudos"]:
+            return False
+        recurso = partes[2] if len(partes) > 2 else ""
+        ident = int(partes[3]) if len(partes) > 3 and partes[3].isdigit() else None
+        acao = partes[4] if len(partes) > 4 else None
+
+        try:
+            corpo = {}
+            if metodo in ("POST", "PATCH"):
+                tamanho = int(self.headers.get("Content-Length", 0))
+                corpo = json.loads(self.rfile.read(tamanho) or b"{}") if tamanho else {}
+
+            if metodo == "GET" and recurso == "motores":
+                return self.responder(200, {"motores": estudos.motores_disponiveis(),
+                                            "padrao": f"ollama:{estudos.MODELO_PADRAO}"}) or True
+            if metodo == "GET" and recurso == "planos" and ident is None:
+                return self.responder(200, {"planos": estudos.listar_planos()}) or True
+            if metodo == "GET" and recurso == "planos":
+                plano = estudos.obter_plano(ident)
+                return self.responder(200 if plano else 404, {"plano": plano}) or True
+            if metodo == "GET" and recurso == "calendario":
+                q = urllib.parse.parse_qs(url.query)
+                return self.responder(200, {"sessoes": estudos.calendario(q["inicio"][0], q["fim"][0])}) or True
+            if metodo == "GET" and recurso == "sessoes" and ident:
+                sessao = estudos.obter_sessao(ident)
+                return self.responder(200 if sessao else 404, {"sessao": sessao}) or True
+            if metodo == "POST" and recurso == "perguntas":
+                return self.responder(200, {"perguntas": estudos.perguntas(
+                    str(corpo.get("tema", "")).strip(), corpo.get("motor") or f"ollama:{estudos.MODELO_PADRAO}")}) or True
+            if metodo == "POST" and recurso == "planos":
+                return self.responder(201, {"plano": estudos.criar_plano(corpo)}) or True
+            if metodo == "POST" and recurso == "sessoes" and ident and acao == "adiar":
+                return self.responder(200, {"sessao": estudos.adiar_pendentes(ident)}) or True
+            if metodo == "PATCH" and recurso == "itens" and ident:
+                sessao = estudos.marcar_item(ident, corpo.get("estado"))
+                return self.responder(200 if sessao else 404, {"sessao": sessao}) or True
+            if metodo == "DELETE" and recurso == "planos" and ident:
+                estudos.excluir_plano(ident)
+                return self.responder(200, {"ok": True}) or True
+
+            self.responder(404, {"erro": "Rota não encontrada"})
+        except estudos.ErroIA as erro:
+            self.responder(502, {"erro": str(erro)})
+        except (KeyError, TypeError, ValueError) as erro:
+            self.responder(400, {"erro": str(erro)})
+        except sqlite3.Error as erro:
+            self.responder(500, {"erro": f"Erro no banco: {erro}"})
+        return True
+
     def responder(self, status, conteudo):
         corpo = json.dumps(conteudo, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -141,5 +214,6 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     init_db()
+    estudos.init()
     print(f"Kaizen disponível em http://{HOST}:{PORT}")
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
