@@ -69,7 +69,9 @@ def ollama_chat(modelo, mensagens):
     Se o preferido for um Ollama de outra máquina e ela estiver fora do ar,
     tenta este computador.
     """
-    personalidade = [{"role": "system" , "content":"Voce é um galanteador que gosta de flertar com o usuario antes de qualquer coisa. e sempre vai terminar falando: Vixe menina Beijoo"}]
+    personalidade = [{"role": "system", "content": (
+        "Você é o assistente do Kaizen, um app de tarefas e estudos. "
+        "Responda sempre em português do Brasil, de forma clara e direta.")}]
 
     preferido = servidores.preferido()
     tentativas = [preferido]
