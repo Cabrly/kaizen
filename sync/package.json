@@ -3,9 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "banco:local": "wrangler d1 execute kaizen-sync --local --file=schema.sql",
-    "banco:nuvem": "wrangler d1 execute kaizen-sync --remote --file=schema.sql"
+    "deploy": "wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "^4.40.0"

@@ -7,9 +7,14 @@
    GET    /v1/cofre/:id                 → { versao, dados, atualizado_em } | 404
    PUT    /v1/cofre/:id  { base, dados } → grava se a versão atual for "base"
                                            (0 = cofre novo); senão 409 com a atual
-   DELETE /v1/cofre/:id                 → apaga o cofre */
+   DELETE /v1/cofre/:id                 → apaga o cofre
 
-const TAMANHO_MAXIMO = 1_500_000;  // o D1 aceita linhas de até 2 MB
+   Cada cofre é um Durable Object: um código atende um pedido por vez, então
+   dois aparelhos gravando juntos não se atropelam. */
+
+import { DurableObject } from "cloudflare:workers";
+
+const TAMANHO_MAXIMO = 1_500_000;  // o armazenamento aceita valores de até 2 MB
 const UM_ANO = 365 * 24 * 60 * 60 * 1000;
 
 const CORS = {
@@ -28,45 +33,62 @@ function json(status, corpo) {
 }
 
 
-async function ler(env, id) {
-    return env.DB.prepare("SELECT versao, dados, atualizado_em FROM cofres WHERE id = ?").bind(id).first();
-}
+export class Cofre extends DurableObject {
 
-
-async function gravar(env, id, pedido) {
-
-    const texto = await pedido.text();
-    if (texto.length > TAMANHO_MAXIMO + 1000) return json(413, { erro: "Dados grandes demais pra sincronizar." });
-
-    let corpo;
-    try {
-        corpo = JSON.parse(texto);
-    } catch {
-        return json(400, { erro: "JSON inválido." });
+    async ler() {
+        const cofre = await this.ctx.storage.get(["versao", "dados", "atualizado_em"]);
+        return cofre.has("versao") ? Object.fromEntries(cofre) : null;
     }
 
-    const { base, dados } = corpo || {};
-    if (!Number.isInteger(base) || base < 0 || typeof dados !== "string" || !dados) {
-        return json(400, { erro: "Esperava { base, dados }." });
+    async fetch(pedido) {
+
+        if (pedido.method === "GET") {
+            const cofre = await this.ler();
+            return cofre ? json(200, cofre) : json(404, { erro: "Nada sincronizado com esse código ainda." });
+        }
+
+        if (pedido.method === "DELETE") {
+            await this.ctx.storage.deleteAlarm();
+            await this.ctx.storage.deleteAll();
+            return json(200, { ok: true });
+        }
+
+        if (pedido.method !== "PUT") return json(405, { erro: "Método não permitido." });
+
+        const texto = await pedido.text();
+        if (texto.length > TAMANHO_MAXIMO + 1000) return json(413, { erro: "Dados grandes demais pra sincronizar." });
+
+        let corpo;
+        try {
+            corpo = JSON.parse(texto);
+        } catch {
+            return json(400, { erro: "JSON inválido." });
+        }
+
+        const { base, dados } = corpo || {};
+        if (!Number.isInteger(base) || base < 0 || typeof dados !== "string" || !dados) {
+            return json(400, { erro: "Esperava { base, dados }." });
+        }
+        if (dados.length > TAMANHO_MAXIMO) return json(413, { erro: "Dados grandes demais pra sincronizar." });
+
+        const atual = await this.ler();
+
+        // alguém gravou antes: devolve o que está lá pra o aparelho decidir
+        if ((atual?.versao || 0) !== base) {
+            return atual ? json(409, atual) : json(404, { erro: "Esse código de sincronia não existe mais." });
+        }
+
+        const agora = Date.now();
+        await this.ctx.storage.put({ versao: base + 1, dados, atualizado_em: agora });
+        await this.ctx.storage.setAlarm(agora + UM_ANO);  // cofre esquecido por um ano se apaga sozinho
+
+        return json(200, { versao: base + 1, atualizado_em: agora });
+
     }
-    if (dados.length > TAMANHO_MAXIMO) return json(413, { erro: "Dados grandes demais pra sincronizar." });
 
-    const agora = Date.now();
-
-    // uma instrução só, então dois aparelhos gravando juntos não se atropelam
-    const resultado = base === 0
-        ? await env.DB.prepare(
-            "INSERT INTO cofres (id, versao, dados, atualizado_em) VALUES (?, 1, ?, ?) ON CONFLICT (id) DO NOTHING")
-            .bind(id, dados, agora).run()
-        : await env.DB.prepare(
-            "UPDATE cofres SET versao = versao + 1, dados = ?, atualizado_em = ? WHERE id = ? AND versao = ?")
-            .bind(dados, agora, id, base).run();
-
-    if (resultado.meta.changes === 1) return json(200, { versao: base + 1, atualizado_em: agora });
-
-    // alguém gravou antes: devolve o que está lá pra o aparelho decidir
-    const atual = await ler(env, id);
-    return atual ? json(409, atual) : json(404, { erro: "Esse código de sincronia não existe mais." });
+    async alarm() {
+        await this.ctx.storage.deleteAll();
+    }
 
 }
 
@@ -86,30 +108,12 @@ export default {
         }
 
         try {
-
-            if (pedido.method === "GET") {
-                const cofre = await ler(env, id);
-                return cofre ? json(200, cofre) : json(404, { erro: "Nada sincronizado com esse código ainda." });
-            }
-
-            if (pedido.method === "PUT") return await gravar(env, id, pedido);
-
-            if (pedido.method === "DELETE") {
-                await env.DB.prepare("DELETE FROM cofres WHERE id = ?").bind(id).run();
-                return json(200, { ok: true });
-            }
-
-            return json(405, { erro: "Método não permitido." });
-
+            return await env.COFRES.get(env.COFRES.idFromName(id)).fetch(pedido);
         } catch (erro) {
             console.error(erro);
             return json(500, { erro: "O servidor de sincronia falhou. Tente de novo daqui a pouco." });
         }
 
-    },
-
-    async scheduled(evento, env) {
-        await env.DB.prepare("DELETE FROM cofres WHERE atualizado_em < ?").bind(Date.now() - UM_ANO).run();
     }
 
 };

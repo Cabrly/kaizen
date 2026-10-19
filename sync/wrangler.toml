@@ -2,11 +2,11 @@ name = "kaizen-sync"
 main = "src/worker.js"
 compatibility_date = "2026-09-01"
 
-# limpa cofres esquecidos (sem uso há mais de um ano), uma vez por mês
-[triggers]
-crons = ["0 4 1 * *"]
+# um Durable Object por código de sincronia, guardado em SQLite (incluso no plano grátis)
+[[durable_objects.bindings]]
+name = "COFRES"
+class_name = "Cofre"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "kaizen-sync"
-database_id = "COLOQUE_AQUI_O_ID_DO_D1"
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Cofre"]
