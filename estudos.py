@@ -130,7 +130,8 @@ def motores_disponiveis():
             motores.append({"id": f"{d['tipo']}@{d['id']}:{nome}", "modelo": nome, "servidor": d["nome"],
                             "recomendado": nome == MODELO_PADRAO})
     if os.path.exists(CLAUDE_BIN):
-        motores.append({"id": "claude", "modelo": "Claude Code (sua conta)", "servidor": "Claude", "recomendado": False})
+        motores.append({"id": "claude", "modelo": "Claude Code instalado", "servidor": "Claude Code (este computador)",
+                        "recomendado": False})
 
     # sugerido: o recomendado no servidor preferido; senão o recomendado em
     # qualquer um; senão um qwen3 qualquer; senão o primeiro que houver

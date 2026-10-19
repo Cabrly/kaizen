@@ -2,7 +2,7 @@
 
 - "Este computador" (OLLAMA_URL) sempre existe.
 - Dá pra cadastrar outros servidores Ollama — uma máquina mais forte em
-  casa, ou um servidor alcançado pelo Tailscale (ex.: http://100.x.y.z:11434).
+  casa, ou um servidor alcançado pelo Tailscale (http://100.80.57.121:11434).
 - Dá pra conectar uma conta da OpenAI (ChatGPT) ou do Google (Gemini) com
   uma chave de API. A chave fica só no banco local.
 
@@ -29,6 +29,11 @@ CACHE_SEGUNDOS = 10
 CACHE_NUVEM = 600                       # lista de modelos da nuvem muda pouco
 
 NUVEM = {
+    "claude": {
+        "nome": "Claude (Anthropic)",
+        "host": "api.anthropic.com",
+        "onde_pegar": "https://platform.claude.com/settings/keys",
+    },
     "openai": {
         "nome": "ChatGPT (OpenAI)",
         "host": "api.openai.com",
@@ -88,7 +93,7 @@ def _config(chave, valor=..., apagar=False):
 
 
 def normalizar_url(url):
-    """Aceita "100.64.0.10", "minha-maquina:11434", "http://x/api/tags"…"""
+    """Aceita "100.80.57.121", "minha-maquina:11434", "http://x/api/tags"…"""
     url = (url or "").strip().rstrip("/")
     if not url:
         raise ValueError("Informe o endereço do servidor.")
@@ -136,7 +141,14 @@ def _url_compat():
     return (_config("url_compat") or "").rstrip("/")
 
 
+# modelos que aceitam fallbacks: "default" — se o Claude recusar por
+# segurança, a API refaz o pedido em outro modelo em vez de devolver a recusa
+CLAUDE_COM_FALLBACK = ("claude-fable-5-1", "claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5")
+
+
 def _cabecalhos(provedor, chave_api):
+    if provedor == "claude":
+        return {"x-api-key": chave_api, "anthropic-version": "2023-06-01"}
     if provedor == "gemini":
         return {"x-goog-api-key": chave_api}
     return {"Authorization": f"Bearer {chave_api}"} if chave_api else {}
@@ -147,6 +159,11 @@ def _modelos_nuvem(provedor, chave_api, url=None):
     if provedor == "compat":
         dados = _http(f"{(url or _url_compat())}/models", cabecalhos=_cabecalhos(provedor, chave_api))
         return sorted(m["id"] for m in dados.get("data", []))[:40]
+
+    if provedor == "claude":
+        # a API já devolve os mais novos primeiro
+        dados = _http("https://api.anthropic.com/v1/models?limit=100", cabecalhos=_cabecalhos(provedor, chave_api))
+        return [m["id"] for m in dados.get("data", []) if m["id"].startswith("claude-")][:12]
 
     if provedor == "openai":
         dados = _http("https://api.openai.com/v1/models", cabecalhos=_cabecalhos(provedor, chave_api))
@@ -357,6 +374,22 @@ def _conversar_nuvem(provedor, modelo, mensagens, formato):
         aviso = ("Responda SOMENTE com um objeto JSON válido que siga este JSON Schema:\n"
                  + json.dumps(formato, ensure_ascii=False))
         mensagens = [{"role": "system", "content": aviso}] + mensagens
+
+    if provedor == "claude":
+        cabecalhos = _cabecalhos(provedor, chave_api)
+        corpo = {"model": modelo, "max_tokens": 16000,
+                 "messages": [{"role": m["role"], "content": m["content"]} for m in mensagens if m["role"] != "system"]}
+        sistema = "\n\n".join(m["content"] for m in mensagens if m["role"] == "system")
+        if sistema:
+            corpo["system"] = sistema
+        if modelo in CLAUDE_COM_FALLBACK:
+            corpo["fallbacks"] = "default"
+            cabecalhos["anthropic-beta"] = "server-side-fallback-2026-07-01"
+        dados = _http("https://api.anthropic.com/v1/messages", corpo, cabecalhos, timeout=300)
+        if dados.get("stop_reason") == "refusal":
+            raise ErroConexao("O Claude recusou esse pedido. Tente reformular ou use outro modelo.")
+        # só os blocos de texto (o raciocínio vem em blocos "thinking", vazios por padrão)
+        return "".join(b.get("text", "") for b in dados.get("content", []) if b.get("type") == "text").strip()
 
     if provedor in ("openai", "compat"):
         base = "https://api.openai.com/v1" if provedor == "openai" else _url_compat()

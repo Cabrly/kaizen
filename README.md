@@ -50,7 +50,7 @@ O Kaizen também roda inteiro no navegador, sem servidor nenhum. Abra
 Vira um app com ícone próprio, que abre até sem internet (só a IA precisa
 dela). Na primeira vez, vá em **Assistente IA → Onde a IA roda** e conecte o
 **Gemini** (a chave é grátis no [Google AI Studio](https://aistudio.google.com/apikey)),
-o **ChatGPT** ou qualquer API compatível com OpenAI (OpenRouter, Groq…).
+o **Claude**, o **ChatGPT** ou qualquer API compatível com OpenAI (OpenRouter, Groq…).
 
 Sem servidor, o Kaizen funciona assim:
 

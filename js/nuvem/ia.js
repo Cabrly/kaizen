@@ -1,5 +1,5 @@
 /* =========================================================
-   NUVEM / IA — Gemini, ChatGPT e APIs compatíveis com OpenAI
+   NUVEM / IA — Claude, Gemini, ChatGPT e compatíveis com OpenAI
    ---------------------------------------------------------
    Usado quando o Kaizen roda sem servidor (celular, site
    estático). As chamadas saem direto do navegador, com a
@@ -11,6 +11,10 @@ const CHAVE_CONFIG = "kaizen.nuvem.config.v1";
 
 
 export const PROVEDORES = {
+    claude: {
+        nome: "Claude (Anthropic)",
+        ondePegar: "https://platform.claude.com/settings/keys"
+    },
     gemini: {
         nome: "Gemini (Google)",
         ondePegar: "https://aistudio.google.com/apikey"
@@ -28,6 +32,27 @@ export const PROVEDORES = {
 
 
 export class ErroIA extends Error {}
+
+
+/*
+    API do Claude: chamada direta do navegador precisa do header
+    anthropic-dangerous-direct-browser-access (a chave é da própria
+    pessoa e fica no aparelho dela, então tudo bem).
+*/
+const CLAUDE_API = "https://api.anthropic.com/v1";
+
+// modelos que aceitam fallbacks: "default" — se o Claude recusar por
+// segurança, a API refaz o pedido em outro modelo em vez de devolver a recusa
+const CLAUDE_COM_FALLBACK = ["claude-fable-5-1", "claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5"];
+
+
+function cabecalhosClaude(conta) {
+    return {
+        "x-api-key": conta.chave,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+    };
+}
 
 
 
@@ -117,6 +142,12 @@ function autorizacao(conta) {
 
 export async function listarModelos(provedor, conta) {
 
+    if (provedor === "claude") {
+        // a API já devolve os mais novos primeiro
+        const dados = await pedir(`${CLAUDE_API}/models?limit=100`, { cabecalhos: cabecalhosClaude(conta) });
+        return (dados.data || []).map((m) => m.id).filter((id) => id.startsWith("claude-")).slice(0, 12);
+    }
+
     if (provedor === "gemini") {
 
         const dados = await pedir(
@@ -164,6 +195,10 @@ export function modeloSugerido(provedor, modelos) {
 
     const estavel = (m) => !/preview|exp|thinking|lite/.test(m);
 
+    if (provedor === "claude") {
+        return modelos.includes("claude-opus-5-5") ? "claude-opus-5-5" : modelos[0];
+    }
+
     if (provedor === "gemini") {
         return modelos.find((m) => m.includes("flash") && estavel(m)) || modelos[0];
     }
@@ -199,6 +234,36 @@ export async function conversar(provedor, modelo, mensagens, formato = null) {
             role: "system",
             content: "Responda SOMENTE com um objeto JSON válido que siga este JSON Schema:\n" + JSON.stringify(formato)
         }, ...mensagens];
+    }
+
+
+    if (provedor === "claude") {
+
+        const sistema = mensagens.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
+        const cabecalhos = cabecalhosClaude(conta);
+
+        const corpo = {
+            model: modelo,
+            max_tokens: 16000,
+            messages: mensagens.filter((m) => m.role !== "system").map((m) => ({ role: m.role, content: m.content }))
+        };
+
+        if (sistema) corpo.system = sistema;
+
+        if (CLAUDE_COM_FALLBACK.includes(modelo)) {
+            corpo.fallbacks = "default";
+            cabecalhos["anthropic-beta"] = "server-side-fallback-2026-07-01";
+        }
+
+        const dados = await pedir(`${CLAUDE_API}/messages`, { corpo, cabecalhos, tempo: 300000 });
+
+        if (dados.stop_reason === "refusal") {
+            throw new ErroIA("O Claude recusou esse pedido. Tente reformular ou use outro modelo.");
+        }
+
+        // só os blocos de texto (o raciocínio vem em blocos "thinking", vazios por padrão)
+        return (dados.content || []).filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+
     }
 
 
