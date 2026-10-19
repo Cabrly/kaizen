@@ -12,6 +12,7 @@ const abas =
 
 const paineis = {
     kanban: document.querySelector("#tela-kanban"),
+    estudos: document.querySelector("#tela-estudos"),
     ia: document.querySelector("#tela-ia")
 };
 
@@ -35,7 +36,7 @@ function lembrarTela(nome) {
 function telaLembrada() {
     try {
         const salva = localStorage.getItem(CHAVE);
-        return salva === "ia" ? "ia" : "kanban";
+        return salva in paineis ? salva : "kanban";
     } catch (erro) {
         return "kanban";
     }
