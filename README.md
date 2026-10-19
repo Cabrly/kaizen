@@ -21,6 +21,20 @@ python3 server.py
 
 Abra `http://localhost:8000`. O banco (`kaizen.sqlite3`) é criado sozinho.
 
+Atalho: dois cliques em **`iniciar.bat`** (Windows) ou `./iniciar.sh` (Linux/Mac)
+sobe o servidor e já abre o navegador.
+
+### IA em outro computador
+
+Sem placa de vídeo boa? A IA pode rodar em outra máquina. Na aba
+**Assistente IA → Onde a IA roda**, cadastre o endereço dela (ex.: o IP do
+[Tailscale](https://tailscale.com), `100.x.y.z`) e escolha qual usar. Os
+planos de estudo podem usar modelos de qualquer servidor online.
+
+Na outra máquina, o Ollama precisa aceitar conexões da rede:
+`OLLAMA_HOST=<IP do Tailscale>:11434 ollama serve`. Use só em rede privada
+(Tailscale, VPN): o Ollama não tem senha.
+
 Com Docker: `docker compose up -d` (o container fala com o Ollama da máquina).
 
 ## Aba Estudos
