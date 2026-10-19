@@ -20,7 +20,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="./style.css?v=estudos3">
+    <link rel="stylesheet" href="./style.css?v=srv1">
 </head>
 
 <body>
@@ -546,6 +546,8 @@
                 <select id="est-motor"></select>
             </label>
 
+            <button type="button" class="est-link" id="est-config-ia">Configurar onde a IA roda →</button>
+
             <label class="campo-modal">
                 <span>Idioma dos vídeos e da documentação</span>
                 <select id="est-idioma">
@@ -698,6 +700,31 @@
 
                 </div>
 
+                <section class="srv" id="ia-servidores" aria-labelledby="srv-titulo">
+
+                    <h3 class="srv-titulo" id="srv-titulo">Onde a IA roda</h3>
+
+                    <div class="srv-lista" id="srv-lista" aria-live="polite"></div>
+
+                    <form class="srv-form" id="srv-form">
+                        <input id="srv-url" required autocomplete="off" spellcheck="false"
+                               placeholder="Endereço: IP do Tailscale ou maquina:11434"
+                               aria-label="Endereço do outro computador">
+                        <input id="srv-nome" maxlength="60" autocomplete="off"
+                               placeholder="Nome (ex.: PC de casa)" aria-label="Nome do servidor">
+                        <button type="submit" class="btn-secundario">Testar e adicionar</button>
+                    </form>
+
+                    <p class="est-erro" id="srv-erro" role="alert"></p>
+
+                    <p class="srv-dica">
+                        No outro computador, o Ollama precisa aceitar conexões da rede:
+                        <code>OLLAMA_HOST=&lt;IP do Tailscale&gt;:11434</code>.
+                        Use só em rede privada — o Ollama não tem senha.
+                    </p>
+
+                </section>
+
                 <button
                     type="button"
                     class="btn-secundario ia-limpar"
@@ -774,12 +801,17 @@
 
     <script
         type="module"
-        src="./js/chat.js"
+        src="./js/chat.js?v=srv1"
     ></script>
 
     <script
         type="module"
-        src="./js/estudos.js?v=idioma1"
+        src="./js/servidores.js?v=srv1"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/estudos.js?v=srv1"
     ></script>
 
 </body>

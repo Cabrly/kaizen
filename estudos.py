@@ -13,21 +13,21 @@ Tudo roda numa thread; a tela acompanha pelo campo "etapa" do plano.
 Item marcado como "não feito" ganha uma cópia na próxima sessão do mesmo
 plano (ou numa sessão de pendências criada no próximo dia de estudo).
 """
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 import json
 import os
-import re
 import shutil
 import sqlite3
 import subprocess
+import tempfile
 import threading
 import urllib.error
 import urllib.request
 
 import busca
+import servidores
 
 DB = None                 # o server.py aponta pro kaizen.sqlite3
-OLLAMA_URL = "http://127.0.0.1:11434"
 MODELO_PADRAO = "qwen3:8b"
 MODELO_CLAUDE = "sonnet"
 CLAUDE_BIN = shutil.which("claude") or os.path.expanduser("~/.npm-global/bin/claude")
@@ -106,20 +106,37 @@ class ErroIA(Exception):
     pass
 
 
+# Motor = "ollama@<servidor>:<modelo>" (ex.: "ollama@local:qwen3:8b") ou "claude".
+# "ollama:<modelo>" (formato antigo) vale como servidor local.
+
+def _separar_motor(motor):
+    if motor.startswith("ollama@"):
+        servidor, _, modelo = motor[len("ollama@"):].partition(":")
+        return servidor, modelo
+    return "local", motor.removeprefix("ollama:")
+
+
 def motores_disponiveis():
-    """[{id, nome, recomendado}] — o que dá pra escolher na tela."""
+    """(motores, padrao) — modelos de todos os servidores online + Claude, e o sugerido."""
+    servidores_ = servidores.listar_com_status()
     motores = []
-    try:
-        with urllib.request.urlopen(f"{OLLAMA_URL}/api/tags", timeout=2) as r:
-            nomes = sorted(m["name"] for m in json.loads(r.read()).get("models", []))
-        for nome in nomes:
-            motores.append({"id": f"ollama:{nome}", "nome": f"{nome} (local)", "recomendado": nome == MODELO_PADRAO})
-    except (urllib.error.URLError, OSError, ValueError):
-        pass
+    for s in sorted(servidores_, key=lambda s: not s["preferido"]):
+        for nome in s["modelos"]:
+            motores.append({"id": f"ollama@{s['id']}:{nome}", "modelo": nome, "servidor": s["nome"],
+                            "recomendado": nome == MODELO_PADRAO})
     if os.path.exists(CLAUDE_BIN):
-        motores.append({"id": "claude", "nome": "Claude (sua conta)", "recomendado": False})
-    motores.sort(key=lambda m: not m["recomendado"])
-    return motores
+        motores.append({"id": "claude", "modelo": "Claude (sua conta)", "servidor": "Nuvem", "recomendado": False})
+
+    # sugerido: o recomendado no servidor preferido; senão o recomendado em
+    # qualquer um; senão um qwen3 qualquer; senão o primeiro que houver
+    padrao = next((m["id"] for m in motores if m["recomendado"]), None) \
+        or next((m["id"] for m in motores if m["modelo"].startswith("qwen3")), None) \
+        or (motores[0]["id"] if motores else "")
+    return motores, padrao
+
+
+def motor_padrao():
+    return motores_disponiveis()[1] or f"ollama@local:{MODELO_PADRAO}"
 
 
 def _json_do_texto(texto):
@@ -141,14 +158,15 @@ def gerar_json(motor, sistema, pedido, esquema):
             proc = subprocess.run(
                 [CLAUDE_BIN, "-p", "--model", MODELO_CLAUDE, "--tools", "", "--strict-mcp-config",
                  "--no-session-persistence", "--output-format", "text"],
-                input=prompt, capture_output=True, text=True, timeout=600, cwd="/tmp")
+                input=prompt, capture_output=True, text=True, encoding="utf-8", timeout=600,
+                cwd=tempfile.gettempdir())  # pasta neutra, em Linux ou Windows
         except (OSError, subprocess.TimeoutExpired) as erro:
             raise ErroIA(f"Falha ao rodar o Claude: {erro}")
         if proc.returncode != 0:
             raise ErroIA((proc.stderr or proc.stdout or "Claude retornou erro").strip()[-300:])
         return _json_do_texto(proc.stdout)
 
-    modelo = motor.removeprefix("ollama:")
+    servidor_id, modelo = _separar_motor(motor)
     corpo = json.dumps({
         "model": modelo,
         "messages": [{"role": "system", "content": sistema}, {"role": "user", "content": pedido}],
@@ -157,14 +175,24 @@ def gerar_json(motor, sistema, pedido, esquema):
         "think": False,
         "options": {"temperature": 0.3, "num_ctx": 8192},
     }).encode()
-    req = urllib.request.Request(f"{OLLAMA_URL}/api/chat", corpo, {"Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=900) as r:
-            return _json_do_texto(json.loads(r.read())["message"]["content"])
-    except urllib.error.HTTPError as erro:
-        raise ErroIA(f"Ollama respondeu {erro.code}: {erro.read()[:200].decode(errors='replace')}")
-    except (urllib.error.URLError, OSError) as erro:
-        raise ErroIA(f"Não consegui falar com o Ollama ({erro}). Ele está rodando?")
+
+    # servidor escolhido primeiro; se ele estiver fora do ar, qualquer outro
+    # online que tenha o mesmo modelo (ex.: a máquina de casa desligou)
+    candidatos = [servidores.url_de(servidor_id)] + [
+        s["url"] for s in servidores.listar_com_status()
+        if s["id"] != servidor_id and s["online"] and modelo in s["modelos"]]
+    erro_conexao = None
+    for url in candidatos:
+        req = urllib.request.Request(f"{url}/api/chat", corpo, {"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=900) as r:
+                return _json_do_texto(json.loads(r.read())["message"]["content"])
+        except urllib.error.HTTPError as erro:
+            raise ErroIA(f"Ollama respondeu {erro.code}: {erro.read()[:200].decode(errors='replace')}")
+        except (urllib.error.URLError, OSError) as erro:
+            erro_conexao = erro
+    nome = (servidores.obter(servidor_id) or {}).get("nome", servidor_id)
+    raise ErroIA(f"Não consegui falar com o Ollama em \"{nome}\" ({erro_conexao}). Ele está ligado e na mesma rede?")
 
 
 # ---------- Etapa 1: perguntas ----------
@@ -379,7 +407,7 @@ def criar_plano(dados):
             "INSERT INTO planos (tema, respostas, dias, minutos, horario, inicio, semanas, motor, idioma, cor, etapa) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Na fila…')",
             (tema, json.dumps(dados.get("respostas", []), ensure_ascii=False), json.dumps(dias), minutos,
-             dados.get("horario") or None, inicio, semanas, dados.get("motor") or f"ollama:{MODELO_PADRAO}",
+             dados.get("horario") or None, inicio, semanas, dados.get("motor") or motor_padrao(),
              busca.idioma_valido(dados.get("idioma")), cor)
         ).lastrowid
     threading.Thread(target=_gerar_plano, args=(plano_id,), daemon=True).start()

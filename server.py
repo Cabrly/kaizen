@@ -10,6 +10,7 @@ import urllib.request
 
 import busca
 import estudos
+import servidores
 
 ROOT = Path(__file__).parent
 DB = ROOT / "kaizen.sqlite3"
@@ -22,7 +23,8 @@ OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 
 busca.CACHE_DB = DB
 estudos.DB = DB
-estudos.OLLAMA_URL = OLLAMA_URL
+servidores.DB = DB
+servidores.URL_LOCAL = OLLAMA_URL
 
 
 def init_db():
@@ -53,9 +55,9 @@ def listar():
 
 
 def ollama_modelos():
-    """Lista os modelos baixados no Ollama. Levanta exceção se ele estiver fora do ar."""
-    req = urllib.request.Request(f"{OLLAMA_URL}/api/tags")
-    with urllib.request.urlopen(req, timeout=2) as resposta:
+    """Modelos do servidor de IA preferido. Levanta exceção se ele estiver fora do ar."""
+    req = urllib.request.Request(f"{servidores.url_de(servidores.preferido())}/api/tags")
+    with urllib.request.urlopen(req, timeout=3) as resposta:
         dados = json.loads(resposta.read())
         return [modelo["name"] for modelo in dados.get("models", [])]
 
@@ -75,17 +77,28 @@ def ollama_chat(modelo, mensagens):
         "think": False
     }).encode("utf-8")
 
-    req = urllib.request.Request(
-        f"{OLLAMA_URL}/api/chat",
-        data=corpo,
-        headers={"Content-Type": "application/json"},
-        method="POST"
-    )
+    # servidor preferido; se ele estiver fora do ar, tenta este computador
+    urls = [servidores.url_de(servidores.preferido())]
+    if urls[0] != servidores.URL_LOCAL:
+        urls.append(servidores.URL_LOCAL)
 
-    # Modelos de 14B em GPU de 12GB podem demorar; margem generosa.
-    with urllib.request.urlopen(req, timeout=180) as resposta:
-        dados = json.loads(resposta.read())
-        return dados["message"]["content"]
+    for i, url in enumerate(urls):
+        req = urllib.request.Request(
+            f"{url}/api/chat",
+            data=corpo,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        try:
+            # Modelos de 14B em GPU de 12GB podem demorar; margem generosa.
+            with urllib.request.urlopen(req, timeout=180) as resposta:
+                dados = json.loads(resposta.read())
+                return dados["message"]["content"]
+        except urllib.error.HTTPError:
+            raise
+        except urllib.error.URLError:
+            if i == len(urls) - 1:
+                raise
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -95,11 +108,12 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path == "/api/tarefas":
             return self.responder(200, {"tarefas": listar()})
         if self.path == "/api/ia/status":
+            servidor = servidores.obter(servidores.preferido())
             try:
                 modelos = ollama_modelos()
-                return self.responder(200, {"disponivel": True, "modelos": modelos})
+                return self.responder(200, {"disponivel": True, "modelos": modelos, "servidor": servidor["nome"]})
             except (urllib.error.URLError, OSError, json.JSONDecodeError):
-                return self.responder(200, {"disponivel": False, "modelos": []})
+                return self.responder(200, {"disponivel": False, "modelos": [], "servidor": servidor["nome"]})
         return super().do_GET()
 
     def do_POST(self):
@@ -119,8 +133,12 @@ class Handler(SimpleHTTPRequestHandler):
             return self.responder(400, {"erro": str(erro)})
         except TimeoutError:
             return self.responder(504, {"erro": "O modelo demorou demais para responder."})
+        except urllib.error.HTTPError as erro:
+            # ex.: o modelo escolhido não existe no servidor preferido
+            return self.responder(502, {"erro": f"O Ollama recusou: {erro.read()[:200].decode(errors='replace')}"})
         except urllib.error.URLError:
-            return self.responder(502, {"erro": f"Não foi possível falar com o Ollama em {OLLAMA_URL}. Ele está rodando?"})
+            nome = servidores.obter(servidores.preferido())["nome"]
+            return self.responder(502, {"erro": f"Não foi possível falar com o Ollama (\"{nome}\"). Ele está rodando?"})
 
     def do_PUT(self):
         if self.path != "/api/tarefas":
@@ -154,6 +172,8 @@ class Handler(SimpleHTTPRequestHandler):
         """Rotas /api/estudos/... da aba Estudos. Devolve True se atendeu."""
         url = urllib.parse.urlparse(self.path)
         partes = url.path.strip("/").split("/")
+        if partes[:3] == ["api", "ia", "servidores"]:
+            return self.rota_servidores(metodo, partes[3:])
         if partes[:2] != ["api", "estudos"]:
             return False
         recurso = partes[2] if len(partes) > 2 else ""
@@ -167,8 +187,9 @@ class Handler(SimpleHTTPRequestHandler):
                 corpo = json.loads(self.rfile.read(tamanho) or b"{}") if tamanho else {}
 
             if metodo == "GET" and recurso == "motores":
-                return self.responder(200, {"motores": estudos.motores_disponiveis(),
-                                            "padrao": f"ollama:{estudos.MODELO_PADRAO}"}) or True
+                motores, padrao = estudos.motores_disponiveis()
+                return self.responder(200, {"motores": motores, "padrao": padrao,
+                                            "recomendado": estudos.MODELO_PADRAO}) or True
             if metodo == "GET" and recurso == "planos" and ident is None:
                 return self.responder(200, {"planos": estudos.listar_planos()}) or True
             if metodo == "GET" and recurso == "planos":
@@ -182,7 +203,7 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.responder(200 if sessao else 404, {"sessao": sessao}) or True
             if metodo == "POST" and recurso == "perguntas":
                 return self.responder(200, {"perguntas": estudos.perguntas(
-                    str(corpo.get("tema", "")).strip(), corpo.get("motor") or f"ollama:{estudos.MODELO_PADRAO}")}) or True
+                    str(corpo.get("tema", "")).strip(), corpo.get("motor") or estudos.motor_padrao())}) or True
             if metodo == "POST" and recurso == "planos":
                 return self.responder(201, {"plano": estudos.criar_plano(corpo)}) or True
             if metodo == "POST" and recurso == "sessoes" and ident and acao == "adiar":
@@ -203,6 +224,28 @@ class Handler(SimpleHTTPRequestHandler):
             self.responder(500, {"erro": f"Erro no banco: {erro}"})
         return True
 
+    def rota_servidores(self, metodo, partes):
+        """/api/ia/servidores[/<id>[/preferido]] — onde a IA roda."""
+        ident = partes[0] if partes else None
+        try:
+            if metodo == "GET" and not ident:
+                self.responder(200, {"servidores": servidores.listar_com_status(usar_cache=False)})
+            elif metodo == "POST" and not ident:
+                tamanho = int(self.headers.get("Content-Length", 0))
+                corpo = json.loads(self.rfile.read(tamanho) or b"{}") if tamanho else {}
+                self.responder(201, {"servidor": servidores.adicionar(corpo.get("nome"), corpo.get("url"))})
+            elif metodo == "POST" and ident and partes[1:] == ["preferido"]:
+                servidores.definir_preferido(ident)
+                self.responder(200, {"servidores": servidores.listar_com_status()})
+            elif metodo == "DELETE" and ident:
+                servidores.remover(ident)
+                self.responder(200, {"servidores": servidores.listar_com_status()})
+            else:
+                self.responder(404, {"erro": "Rota não encontrada"})
+        except ValueError as erro:
+            self.responder(400, {"erro": str(erro)})
+        return True
+
     def responder(self, status, conteudo):
         corpo = json.dumps(conteudo, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -215,5 +258,6 @@ class Handler(SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     init_db()
     estudos.init()
+    servidores.init()
     print(f"Kaizen disponível em http://{HOST}:{PORT}")
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()

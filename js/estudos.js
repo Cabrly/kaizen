@@ -673,6 +673,14 @@ function iniciarAssistente() {
     d.querySelector("#est-voltar").addEventListener("click", () => mostrarPasso(1));
 
 
+    // atalho pra tela de servidores, na aba do assistente
+    d.querySelector("#est-config-ia").addEventListener("click", () => {
+        d.close();
+        document.querySelector('.nav-tab[data-tela="ia"]')?.click();
+        document.querySelector("#srv-url")?.focus();
+    });
+
+
     // chips: um clique escolhe (nos dias, liga/desliga)
     d.addEventListener("click", (evento) => {
 
@@ -728,40 +736,47 @@ async function abrirAssistente() {
     d.querySelector("#est-tema").focus();
 
 
-    // carrega os motores uma vez (lista de modelos do Ollama + Claude)
-    if (assistente.motores.length === 0) {
+    /*
+        Recarrega os modelos a cada abertura: um servidor pode ter
+        caído ou voltado desde a última vez. Agrupa por servidor.
+    */
+    try {
 
-        try {
+        const { motores, padrao, recomendado } = await api("/motores");
+        const seletor = d.querySelector("#est-motor");
+        const escolhido = seletor.value;
+        const grupos = {};
 
-            const { motores, padrao } = await api("/motores");
+        motores.forEach((m) => {
+            (grupos[m.servidor] ||= []).push(m);
+        });
 
-            assistente.motores = motores;
+        assistente.motores = motores;
 
-            const seletor = d.querySelector("#est-motor");
+        seletor.innerHTML = Object.entries(grupos).map(([servidor, lista]) => `
+            <optgroup label="${esc(servidor)}">
+                ${lista.map((m) => `<option value="${esc(m.id)}">${esc(m.modelo)}${m.recomendado ? " — recomendado" : ""}</option>`).join("")}
+            </optgroup>`).join("");
 
-            seletor.innerHTML = motores.map((m) =>
-                `<option value="${esc(m.id)}" ${m.id === padrao ? "selected" : ""}>
-                    ${esc(m.nome)}${m.recomendado ? " — recomendado" : ""}
-                 </option>`).join("");
+        seletor.value = motores.some((m) => m.id === escolhido) ? escolhido : padrao;
 
 
-            // quem baixou o projeto agora pode ainda não ter o modelo
-            const recomendado = padrao.replace("ollama:", "");
-
-            if (motores.length === 0) {
-                assistente.aviso =
-                    `Nenhuma IA encontrada. Instale o Ollama (ollama.com) e rode: ollama pull ${recomendado}`;
-            } else if (!motores.some((m) => m.recomendado)) {
-                assistente.aviso =
-                    `Dica: o modelo recomendado é o ${recomendado}. Instale com: ollama pull ${recomendado}`;
-            }
-
-            d.querySelector("#est-erro-tema").textContent = assistente.aviso || "";
-
-        } catch (erro) {
-            d.querySelector("#est-erro-tema").textContent = "Não consegui listar os modelos de IA.";
+        // quem baixou o projeto agora pode ainda não ter o modelo
+        if (motores.length === 0) {
+            assistente.aviso =
+                `Nenhuma IA encontrada. Instale o Ollama (ollama.com) e rode: ollama pull ${recomendado}, ` +
+                `ou cadastre outro computador em "Configurar onde a IA roda".`;
+        } else if (!motores.some((m) => m.recomendado)) {
+            assistente.aviso =
+                `Dica: o modelo recomendado é o ${recomendado}. Instale com: ollama pull ${recomendado}`;
+        } else {
+            assistente.aviso = "";
         }
 
+        d.querySelector("#est-erro-tema").textContent = assistente.aviso;
+
+    } catch (erro) {
+        d.querySelector("#est-erro-tema").textContent = "Não consegui listar os modelos de IA.";
     }
 
 }

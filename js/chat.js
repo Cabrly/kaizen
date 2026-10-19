@@ -402,9 +402,32 @@ async function verificarStatus() {
                 Array.isArray(documento.modelos) ? documento.modelos : [];
 
             statusTexto.textContent =
-                modelos.length > 0
-                    ? `Ollama conectado — ${modelos.length} modelo(s) disponível(is)`
-                    : "Ollama conectado";
+                `Conectado a "${documento.servidor || "Ollama"}" — ${modelos.length} modelo(s)`;
+
+
+            /*
+                A lista de modelos vem do servidor em uso (pode ser
+                este computador ou outro). Mantém a escolha se ela
+                existir lá; senão, um qwen3, senão o primeiro.
+            */
+            if (modelos.length > 0) {
+
+                const atual = seletorModelo.value || carregarModeloEscolhido();
+
+                seletorModelo.replaceChildren(...modelos.map((nome) => {
+                    const opcao = document.createElement("option");
+                    opcao.value = nome;
+                    opcao.textContent = nome;
+                    return opcao;
+                }));
+
+                seletorModelo.value = modelos.includes(atual)
+                    ? atual
+                    : (modelos.find((m) => m.startsWith("qwen3")) || modelos[0]);
+
+                salvarModeloEscolhido(seletorModelo.value);
+
+            }
 
             return;
 
@@ -417,8 +440,13 @@ async function verificarStatus() {
         statusPonto.className = "status-dot status-offline";
 
         statusTexto.textContent =
-            "Ollama offline. Rode \"ollama serve\" no servidor.";
+            "IA offline. Confira se o Ollama está rodando no servidor em uso (abaixo).";
 
     }
 
 }
+
+
+
+// trocou o servidor em uso: atualiza status e lista de modelos
+window.addEventListener("kaizen:servidores-mudaram", verificarStatus);

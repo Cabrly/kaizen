@@ -3038,3 +3038,209 @@ dialog.modal {
     }
 
 }
+
+
+/* =========================================================
+   E13 — SERVIDORES DE IA (onde a IA roda)
+========================================================= */
+
+.srv {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    padding-top: 14px;
+
+    border-top: 1px solid #e6e6e4;
+}
+
+.srv-titulo {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+
+    color: #666;
+}
+
+.srv-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.srv-item {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+}
+
+.srv-usar {
+    flex: 1;
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+    gap: 9px;
+
+    padding: 9px 10px;
+
+    font-family: inherit;
+    text-align: left;
+
+    color: #171717;
+    background: #f7f7f5;
+
+    border: 1px solid #dedede;
+    border-radius: 6px;
+
+    cursor: pointer;
+
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.srv-usar:hover {
+    border-color: #aaa;
+}
+
+.srv-usar[aria-pressed="true"] {
+    background: #ffffff;
+    border-color: #c90016;
+
+    box-shadow: 0 0 0 3px rgba(201, 0, 22, 0.08);
+}
+
+.srv-usar .status-dot {
+    flex: none;
+}
+
+.srv-texto {
+    flex: 1;
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+}
+
+.srv-texto strong {
+    font-size: 12px;
+}
+
+.srv-texto small {
+    font-size: 10.5px;
+
+    color: #888;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.srv-offline .srv-texto {
+    opacity: 0.6;
+}
+
+.srv-em-uso {
+    flex: none;
+
+    padding: 2px 7px;
+
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    color: #ffffff;
+    background: #c90016;
+
+    border-radius: 99px;
+}
+
+.srv-remover {
+    flex: none;
+    width: 30px;
+
+    font-family: inherit;
+    font-size: 11px;
+
+    color: #999;
+    background: transparent;
+
+    border: 1px solid transparent;
+    border-radius: 6px;
+
+    cursor: pointer;
+}
+
+.srv-remover:hover {
+    color: #c90016;
+    border-color: #f0c8cc;
+}
+
+.srv-form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.srv-form input {
+    width: 100%;
+    min-height: 36px;
+
+    padding: 7px 10px;
+
+    font-family: inherit;
+    font-size: 12px;
+
+    background: #f7f7f5;
+
+    border: 1px solid #d5d5d5;
+    border-radius: 5px;
+
+    outline: none;
+}
+
+.srv-form input:focus {
+    background: #ffffff;
+    border-color: #c90016;
+
+    box-shadow: 0 0 0 3px rgba(201, 0, 22, 0.1);
+}
+
+.srv-dica {
+    font-size: 10.5px;
+    line-height: 1.5;
+
+    color: #888;
+}
+
+.srv-dica code {
+    font-size: 10px;
+
+    padding: 1px 4px;
+
+    background: #f0f0ee;
+    border-radius: 3px;
+}
+
+.est-link {
+    align-self: flex-start;
+
+    margin: -6px 0 12px;
+    padding: 0;
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+
+    color: #c90016;
+    background: none;
+
+    border: none;
+
+    cursor: pointer;
+}
+
+.est-link:hover {
+    text-decoration: underline;
+}
