@@ -2,6 +2,8 @@
 
 改善 — melhoria contínua, um passo de cada vez.
 
+**Use agora:** https://cabrly.github.io/kaizen/ (celular ou PC, IA na nuvem) · ou baixe a versão completa (abaixo).
+
 Kanban de tarefas com um assistente de estudos: você diz o que quer
 aprender ("quero estudar React") e a IA monta a rotina no calendário,
 com **vídeo**, **documentação oficial** e **atividades** pra cada dia.
@@ -39,8 +41,8 @@ Com Docker: `docker compose up -d` (o container fala com o Ollama da máquina).
 
 ## No celular (iPhone e Android)
 
-O Kaizen também roda inteiro no navegador, sem servidor nenhum: é só abrir o
-endereço do projeto publicado no GitHub Pages.
+O Kaizen também roda inteiro no navegador, sem servidor nenhum. Abra
+**https://cabrly.github.io/kaizen/** no celular.
 
 - **iPhone:** no Safari, toque em Compartilhar → *Adicionar à Tela de Início*.
 - **Android:** no Chrome, menu ⋮ → *Instalar app*.
