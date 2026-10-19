@@ -57,6 +57,25 @@ NUVEM = {
 class ErroConexao(Exception):
     """Não deu pra falar com o destino (fora do ar, sem rede, chave errada)."""
 
+    def __init__(self, mensagem, status=None, espera=None, sem_cota=False):
+        super().__init__(mensagem)
+        self.status = status        # HTTP
+        self.espera = espera        # segundos que o serviço pediu pra esperar (429)
+        self.sem_cota = sem_cota    # 429 porque o modelo não tem cota no plano (grátis)
+
+
+def _ler_limite(detalhe):
+    """O 429 do Gemini diz o motivo: RetryInfo (quanto esperar) e QuotaFailure
+    (qual cota). Cota 0 / "limit: 0" = o modelo não tem uso gratuito."""
+    itens = detalhe.get("details") or [] if isinstance(detalhe, dict) else []
+    atraso = next((d.get("retryDelay") for d in itens if str(d.get("@type", "")).endswith("RetryInfo")), None)
+    cotas = [v for d in itens if str(d.get("@type", "")).endswith("QuotaFailure") for v in d.get("violations", [])]
+    mensagem = detalhe.get("message", "") if isinstance(detalhe, dict) else ""
+    return {
+        "espera": float(re.sub(r"[^\d.]", "", atraso) or 0) if atraso else None,
+        "sem_cota": bool(re.search(r"limit:\s*0\b", mensagem)) or any(str(v.get("quotaValue")) == "0" for v in cotas),
+    }
+
 
 def conectar():
     con = sqlite3.connect(DB, timeout=10)
@@ -119,8 +138,9 @@ def _http(url, corpo=None, cabecalhos=None, timeout=20):
             detalhe = json.loads(erro.read()).get("error", {})
             mensagem = detalhe.get("message") if isinstance(detalhe, dict) else str(detalhe)
         except (ValueError, AttributeError):
-            mensagem = ""
-        raise ErroConexao(f"{erro.code}: {mensagem or erro.reason}")
+            detalhe, mensagem = {}, ""
+        extras = _ler_limite(detalhe) if erro.code == 429 else {}
+        raise ErroConexao(f"{erro.code}: {mensagem or erro.reason}", status=erro.code, **extras)
     except (urllib.error.URLError, OSError, ValueError) as erro:
         raise ErroConexao(str(erro))
 
@@ -202,6 +222,9 @@ def conectar_nuvem(provedor, chave_api, url=None):
     _config(f"chave_{provedor}", chave_api)
     if url:
         _config(f"url_{provedor}", url)
+    # chave nova: o que funcionava (ou não) com a antiga não vale mais
+    _config(f"{provedor}_modelo_ok", apagar=True)
+    _config(f"{provedor}_sem_cota", apagar=True)
     _status_cache.pop(provedor, None)
 
 
@@ -298,6 +321,8 @@ def remover(destino_id):
     if destino_id in NUVEM:
         _config(f"chave_{destino_id}", apagar=True)
         _config(f"url_{destino_id}", apagar=True)
+        _config(f"{destino_id}_modelo_ok", apagar=True)
+        _config(f"{destino_id}_sem_cota", apagar=True)
         _status_cache.pop(destino_id, None)
     else:
         with conectar() as con:
@@ -399,6 +424,12 @@ def _conversar_nuvem(provedor, modelo, mensagens, formato):
         dados = _http(f"{base}/chat/completions", corpo, _cabecalhos(provedor, chave_api), timeout=300)
         return _sem_raciocinio(dados["choices"][0]["message"]["content"] or "")
 
+    return _conversar_gemini(modelo, chave_api, mensagens, formato)
+
+
+# ---------- Gemini: troca de modelo quando bate no limite grátis ----------
+
+def _chamar_gemini(modelo, chave_api, mensagens, formato):
     sistema = "\n\n".join(m["content"] for m in mensagens if m["role"] == "system")
     corpo = {"contents": [{"role": "model" if m["role"] == "assistant" else "user", "parts": [{"text": m["content"]}]}
                           for m in mensagens if m["role"] != "system"]}
@@ -407,9 +438,76 @@ def _conversar_nuvem(provedor, modelo, mensagens, formato):
     if formato:
         corpo["generationConfig"] = {"responseMimeType": "application/json"}
     dados = _http(f"https://generativelanguage.googleapis.com/v1beta/models/{urllib.parse.quote(modelo)}:generateContent",
-                  corpo, _cabecalhos(provedor, chave_api), timeout=300)
+                  corpo, _cabecalhos("gemini", chave_api), timeout=300)
     try:
         return "".join(p.get("text", "") for p in dados["candidates"][0]["content"]["parts"])
     except (KeyError, IndexError):
         motivo = (dados.get("promptFeedback") or {}).get("blockReason") or "resposta vazia"
         raise ErroConexao(f"O Gemini não respondeu ({motivo}).")
+
+
+def _gemini_sem_cota():
+    return set(json.loads(_config("gemini_sem_cota") or "[]"))
+
+
+def _ordem_gemini(pedido, modelos):
+    """Flash estáveis, depois flash-lite, depois o resto: "pro" e "preview"
+    costumam ficar fora do nível gratuito."""
+    def peso(m):
+        return (4 if re.search(r"preview|exp", m) else 0) + (2 if "pro" in m else 0) \
+            + (1 if "lite" in m else 0) + (0 if "flash" in m else 3)
+    resto = sorted(modelos, key=peso)
+    return list(dict.fromkeys(m for m in [pedido, _config("gemini_modelo_ok")] + resto if m))[:6]
+
+
+def _conversar_gemini(modelo, chave_api, mensagens, formato):
+    sem_cota = _gemini_sem_cota()
+    lembrado = _config("gemini_modelo_ok")
+    # modelo que já respondeu "sem cota grátis" não é tentado de novo
+    ordem = [lembrado] if modelo in sem_cota and lembrado else [modelo]
+    ultimo = None
+    i = 0
+    while i < len(ordem):
+        for tentativa in range(2):
+            try:
+                texto = _chamar_gemini(ordem[i], chave_api, mensagens, formato)
+                if ordem[i] != lembrado:
+                    _config("gemini_modelo_ok", ordem[i])  # da próxima vez já começa por ele
+                return texto
+            except ErroConexao as erro:
+                if erro.status != 429:
+                    raise
+                ultimo = erro
+                if erro.sem_cota:
+                    _config("gemini_sem_cota", json.dumps(sorted(_gemini_sem_cota() | {ordem[i]})))
+                elif erro.espera is not None and erro.espera <= 20 and tentativa == 0:
+                    time.sleep(erro.espera + 0.3)  # limite por minuto: espera o que o Google pediu
+                    continue
+                break
+        if len(ordem) == 1:
+            try:
+                bloqueados = _gemini_sem_cota()
+                ordem = [m for j, m in enumerate(_ordem_gemini(ordem[0], _modelos_nuvem("gemini", chave_api)))
+                         if j == 0 or m not in bloqueados]
+            except ErroConexao:
+                pass
+        i += 1
+
+    if ultimo is not None and ultimo.sem_cota:
+        raise ErroConexao("Nenhum modelo do Gemini na sua chave tem uso gratuito liberado agora. "
+                          "Confira em aistudio.google.com se a chave é do nível gratuito, ou tente mais tarde.",
+                          status=429)
+    espera = f"em {int(ultimo.espera) + 1} s" if ultimo is not None and ultimo.espera else "daqui a pouco"
+    raise ErroConexao(f"Limite gratuito do Gemini atingido. Tente de novo {espera}.", status=429)
+
+
+def modelos_para_chat(destino_id, modelos):
+    """O modelo mais indicado primeiro (o chat começa por ele)."""
+    if destino_id != "gemini":
+        return modelos
+    sem_cota = _gemini_sem_cota()
+    lembrado = _config("gemini_modelo_ok")
+    livres = [m for m in modelos if m not in sem_cota]
+    estavel = [m for m in livres if "flash" in m and not re.search(r"preview|exp|thinking|lite", m)]
+    primeiro = lembrado if lembrado in modelos else (estavel or livres or modelos or [None])[0]
+    return ([primeiro] if primeiro else []) + [m for m in modelos if m != primeiro]

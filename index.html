@@ -30,7 +30,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="./style.css?v=pwa2">
+    <link rel="stylesheet" href="./style.css?v=backup1">
 </head>
 
 <body>
@@ -794,12 +794,34 @@
             一歩ずつ — Um passo de cada vez.
         </p>
 
+        <div class="rodape-backup">
+            <button type="button" class="btn-secundario" id="backup-baixar"
+                    title="Baixa um arquivo com suas tarefas e planos de estudo">
+                Fazer backup
+            </button>
+            <button type="button" class="btn-secundario" id="backup-restaurar"
+                    title="Carrega um backup feito aqui ou em outro aparelho">
+                Restaurar backup
+            </button>
+            <input type="file" id="backup-arquivo" accept="application/json,.json" hidden>
+        </div>
+
     </footer>
 
 
     <script
         type="module"
-        src="./js/modo.js?v=pwa1"
+        src="./js/modo.js?v=backup1"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/backup.js?v=backup1"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/instalar.js?v=backup1"
     ></script>
 
     <script

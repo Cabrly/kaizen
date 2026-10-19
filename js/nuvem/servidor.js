@@ -730,6 +730,69 @@ async function chat(corpo) {
 
 
 /* =========================================================
+   Backup — mesmo formato do server.py: o arquivo feito no
+   celular restaura no PC e vice-versa. Sem as chaves de IA.
+========================================================= */
+
+const CHAVE_TAREFAS = "kaizen.tarefas.v1";       // as mesmas do js/persistencia.js
+const CHAVE_CATEGORIAS = "kaizen.categorias.v1";
+
+
+function lerJson(chave, padrao) {
+    try {
+        return JSON.parse(localStorage.getItem(chave) || "null") ?? padrao;
+    } catch (erro) {
+        return padrao;
+    }
+}
+
+
+function exportarBackup() {
+
+    const dados = ler();
+
+    return {
+        app: "kaizen",
+        formato: 1,
+        criado_em: agora().replace(" ", "T"),
+        kanban: { tarefas: lerJson(CHAVE_TAREFAS, []), categorias: lerJson(CHAVE_CATEGORIAS, []) },
+        estudos: { planos: dados.planos, sessoes: dados.sessoes, itens: dados.itens }
+    };
+
+}
+
+
+function restaurarBackup(corpo) {
+
+    if (corpo.app !== "kaizen") throw new RangeError("Esse arquivo não é um backup do Kaizen.");
+
+    if (Array.isArray(corpo.kanban?.tarefas)) {
+        localStorage.setItem(CHAVE_TAREFAS, JSON.stringify(corpo.kanban.tarefas));
+        localStorage.setItem(CHAVE_CATEGORIAS, JSON.stringify(corpo.kanban.categorias || []));
+    }
+
+    const e = corpo.estudos;
+
+    if (e && Array.isArray(e.planos) && Array.isArray(e.sessoes) && Array.isArray(e.itens)) {
+
+        const maior = (lista) => lista.reduce((m, x) => Math.max(m, Number(x.id) || 0), 0);
+
+        const planos = e.planos.map((p) => p.status === "gerando"
+            ? { ...p, status: "erro", etapa: null, erro: "O backup foi feito no meio da geração." }
+            : { idioma: "pt", ...p });
+
+        gravar({
+            seq: { plano: maior(planos), sessao: maior(e.sessoes), item: maior(e.itens) },
+            planos, sessoes: e.sessoes, itens: e.itens
+        });
+
+    }
+
+}
+
+
+
+/* =========================================================
    Roteador: mesmas rotas e respostas do server.py
 ========================================================= */
 
@@ -749,6 +812,8 @@ export async function rotear(url, opcoes = {}) {
     try {
 
         if (area === "chat" && metodo === "POST") return json(200, await chat(corpo));
+        if (area === "backup" && metodo === "GET") return json(200, exportarBackup());
+        if (area === "backup" && metodo === "POST") { restaurarBackup(corpo); return json(200, { ok: true }); }
         if (area === "ia" && recurso === "status") return json(200, await statusChat());
 
         if (area === "ia" && recurso === "servidores") {

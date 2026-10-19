@@ -52,7 +52,8 @@ window.fetch = async (entrada, opcoes = {}) => {
 };
 
 
-detectarModo();
+// outros scripts leem daqui (importar este arquivo de novo envolveria o fetch duas vezes)
+window.kaizenModo = detectarModo();
 
 
 if ("serviceWorker" in navigator && location.protocol !== "file:") {

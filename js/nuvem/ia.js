@@ -31,7 +31,35 @@ export const PROVEDORES = {
 };
 
 
-export class ErroIA extends Error {}
+export class ErroIA extends Error {
+
+    constructor(mensagem, { status = null, espera = null, semCota = false } = {}) {
+        super(mensagem);
+        this.status = status;     // HTTP
+        this.espera = espera;     // segundos que o serviço pediu pra esperar (429)
+        this.semCota = semCota;   // 429 porque o modelo não tem cota no plano (grátis)
+    }
+
+}
+
+
+/*
+    O 429 do Gemini vem com o motivo: RetryInfo (quanto esperar) e
+    QuotaFailure (qual cota). "limit: 0" ou cota 0 = esse modelo não tem
+    uso gratuito — esperar não adianta, tem que trocar de modelo.
+*/
+function lerLimite(erro) {
+
+    const detalhes = Array.isArray(erro?.details) ? erro.details : [];
+    const atraso = detalhes.find((d) => String(d["@type"]).endsWith("RetryInfo"))?.retryDelay;
+    const cotas = detalhes.filter((d) => String(d["@type"]).endsWith("QuotaFailure")).flatMap((d) => d.violations || []);
+
+    return {
+        espera: atraso ? parseFloat(atraso) : null,
+        semCota: /limit:\s*0\b/.test(erro?.message || "") || cotas.some((v) => String(v.quotaValue) === "0")
+    };
+
+}
 
 
 /*
@@ -108,7 +136,8 @@ async function pedir(url, { corpo, cabecalhos = {}, tempo = 120000 } = {}) {
         if (!resposta.ok) {
             const erro = dados.error;
             const mensagem = typeof erro === "string" ? erro : erro?.message;
-            throw new ErroIA(`${resposta.status}: ${mensagem || resposta.statusText}`);
+            throw new ErroIA(`${resposta.status}: ${mensagem || resposta.statusText}`,
+                             { status: resposta.status, ...(resposta.status === 429 ? lerLimite(erro) : {}) });
         }
 
         return dados;
@@ -200,7 +229,11 @@ export function modeloSugerido(provedor, modelos) {
     }
 
     if (provedor === "gemini") {
-        return modelos.find((m) => m.includes("flash") && estavel(m)) || modelos[0];
+        // o que já funcionou nesta chave (ver conversar: 429 sem cota troca de modelo)
+        const conta = lerConfig().contas.gemini || {};
+        if (conta.modeloOk && modelos.includes(conta.modeloOk)) return conta.modeloOk;
+        const livres = modelos.filter((m) => !(conta.semCota || []).includes(m));
+        return livres.find((m) => m.includes("flash") && estavel(m)) || livres[0] || modelos[0];
     }
 
     if (provedor === "openai") {
@@ -268,31 +301,7 @@ export async function conversar(provedor, modelo, mensagens, formato = null) {
 
 
     if (provedor === "gemini") {
-
-        const sistema = mensagens.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
-
-        const corpo = {
-            contents: mensagens
-                .filter((m) => m.role !== "system")
-                .map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }))
-        };
-
-        if (sistema) corpo.systemInstruction = { parts: [{ text: sistema }] };
-        if (formato) corpo.generationConfig = { responseMimeType: "application/json" };
-
-        const dados = await pedir(
-            `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelo)}:generateContent` +
-            `?key=${encodeURIComponent(conta.chave)}`,
-            { corpo, tempo: 180000 });
-
-        const partes = dados.candidates?.[0]?.content?.parts;
-
-        if (!partes) {
-            throw new ErroIA(`O Gemini não respondeu (${dados.promptFeedback?.blockReason || "resposta vazia"}).`);
-        }
-
-        return partes.map((p) => p.text || "").join("");
-
+        return conversarGemini(modelo, conta, mensagens, formato);
     }
 
 
@@ -307,5 +316,129 @@ export async function conversar(provedor, modelo, mensagens, formato = null) {
 
     // alguns modelos (qwen3, deepseek-r1…) soltam o raciocínio antes da resposta
     return texto.includes("</think>") ? texto.split("</think>").pop().trim() : texto.trim();
+
+}
+
+
+
+/* ---------- Gemini: troca de modelo quando bate no limite grátis ---------- */
+
+async function chamarGemini(modelo, conta, mensagens, formato) {
+
+    const sistema = mensagens.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
+
+    const corpo = {
+        contents: mensagens
+            .filter((m) => m.role !== "system")
+            .map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }))
+    };
+
+    if (sistema) corpo.systemInstruction = { parts: [{ text: sistema }] };
+    if (formato) corpo.generationConfig = { responseMimeType: "application/json" };
+
+    const dados = await pedir(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelo)}:generateContent` +
+        `?key=${encodeURIComponent(conta.chave)}`,
+        { corpo, tempo: 180000 });
+
+    const partes = dados.candidates?.[0]?.content?.parts;
+
+    if (!partes) {
+        throw new ErroIA(`O Gemini não respondeu (${dados.promptFeedback?.blockReason || "resposta vazia"}).`);
+    }
+
+    return partes.map((p) => p.text || "").join("");
+
+}
+
+
+/*
+    Ordem de tentativa quando o modelo pedido não tem cota: os "flash"
+    estáveis, depois os "flash-lite", depois o resto — os "pro" e os
+    "preview" costumam ficar fora do nível gratuito.
+*/
+function ordemGemini(pedido, conta, modelos) {
+
+    const peso = (m) =>
+        (/preview|exp/.test(m) ? 4 : 0) + (/pro/.test(m) ? 2 : 0) + (m.includes("lite") ? 1 : 0) + (m.includes("flash") ? 0 : 3);
+
+    const resto = [...modelos].sort((a, b) => peso(a) - peso(b));
+
+    return [...new Set([pedido, conta.modeloOk, ...resto].filter(Boolean))].slice(0, 6);
+
+}
+
+
+async function conversarGemini(modelo, conta, mensagens, formato) {
+
+    // modelo que já respondeu "sem cota grátis" não é tentado de novo
+    const semCota = new Set(conta.semCota || []);
+    let ordem = semCota.has(modelo) && conta.modeloOk ? [conta.modeloOk] : [modelo];
+    let ultimo = null;
+
+    for (let i = 0; i < ordem.length; i++) {
+
+        for (let tentativa = 0; tentativa < 2; tentativa++) {
+
+            try {
+
+                const texto = await chamarGemini(ordem[i], conta, mensagens, formato);
+
+                if (ordem[i] !== conta.modeloOk) {
+                    // lembra o que funcionou: da próxima vez já começa por ele
+                    const config = lerConfig();
+                    if (config.contas.gemini) {
+                        config.contas.gemini.modeloOk = ordem[i];
+                        salvarConfig(config);
+                    }
+                }
+
+                return texto;
+
+            } catch (erro) {
+
+                if (!(erro instanceof ErroIA) || erro.status !== 429) throw erro;
+
+                ultimo = erro;
+
+                if (erro.semCota) {
+                    const config = lerConfig();
+                    const conhecidos = new Set(config.contas.gemini?.semCota || []);
+                    if (config.contas.gemini && !conhecidos.has(ordem[i])) {
+                        config.contas.gemini.semCota = [...conhecidos, ordem[i]];
+                        salvarConfig(config);
+                    }
+                }
+
+                // limite por minuto: espera o que o Google pediu (se for pouco) e tenta de novo
+                if (!erro.semCota && erro.espera != null && erro.espera <= 20 && tentativa === 0) {
+                    await new Promise((r) => setTimeout(r, erro.espera * 1000 + 300));
+                    continue;
+                }
+
+                break;
+
+            }
+
+        }
+
+        // na primeira falha, monta a lista de outros modelos da chave pra tentar
+        if (ordem.length === 1) {
+            try {
+                const bloqueados = new Set(lerConfig().contas.gemini?.semCota || []);
+                ordem = ordemGemini(ordem[0], conta, await listarModelos("gemini", conta))
+                    .filter((m, j) => j === 0 || !bloqueados.has(m));
+            } catch (erro) {
+                /* sem lista: fica só com o pedido */
+            }
+        }
+
+    }
+
+    throw new ErroIA(ultimo?.semCota
+        ? "Nenhum modelo do Gemini na sua chave tem uso gratuito liberado agora. " +
+          "Confira em aistudio.google.com se a chave é do nível gratuito, ou tente mais tarde."
+        : `Limite gratuito do Gemini atingido. Tente de novo ${ultimo?.espera ? `em ${Math.ceil(ultimo.espera)} s` : "daqui a pouco"}.`,
+        { status: 429 });
 
 }

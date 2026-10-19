@@ -126,9 +126,11 @@ def motores_disponiveis():
     destinos = servidores.listar_com_status()
     motores = []
     for d in sorted(destinos, key=lambda d: not d["preferido"]):
+        # no Gemini, o sugerido é o que tem cota grátis (ou já funcionou)
+        sugerido = servidores.modelos_para_chat("gemini", d["modelos"])[0] if d["id"] == "gemini" and d["modelos"] else None
         for nome in d["modelos"]:
             motores.append({"id": f"{d['tipo']}@{d['id']}:{nome}", "modelo": nome, "servidor": d["nome"],
-                            "recomendado": nome == MODELO_PADRAO})
+                            "recomendado": nome in (MODELO_PADRAO, sugerido)})
     if os.path.exists(CLAUDE_BIN):
         motores.append({"id": "claude", "modelo": "Claude Code instalado", "servidor": "Claude Code (este computador)",
                         "recomendado": False})
@@ -507,3 +509,55 @@ def adiar_pendentes(sessao_id):
     for item_id in ids:
         marcar_item(item_id, "nao-feito")
     return obter_sessao(sessao_id)
+
+
+# =========================================================
+#   Backup (mesmo formato do modo nuvem: dá pra levar do
+#   celular pro PC e vice-versa)
+# =========================================================
+
+COLUNAS_PLANO = ["id", "tema", "respostas", "dias", "minutos", "horario", "inicio", "semanas", "motor", "idioma",
+                 "cor", "status", "etapa", "erro", "titulo", "doc_oficial", "criado_em"]
+COLUNAS_SESSAO = ["id", "plano_id", "data", "topico", "objetivo", "extra"]
+COLUNAS_ITEM = ["id", "sessao_id", "tipo", "titulo", "url", "descricao", "fonte", "minutos", "estado", "origem_id"]
+
+
+def exportar():
+    with conectar() as con:
+        planos = []
+        for linha in con.execute("SELECT * FROM planos ORDER BY id"):
+            p = dict(linha)
+            p["dias"] = json.loads(p["dias"])
+            p["respostas"] = json.loads(p["respostas"] or "[]")
+            planos.append(p)
+        sessoes = [dict(l) for l in con.execute("SELECT * FROM sessoes ORDER BY id")]
+        itens = [dict(l) for l in con.execute("SELECT * FROM itens ORDER BY id")]
+    return {"planos": planos, "sessoes": sessoes, "itens": itens}
+
+
+def importar(dados):
+    """Substitui todos os planos pelos do backup (mantém os ids, que ligam
+    planos, sessões, itens e as cópias do "não fiz")."""
+    planos, sessoes, itens = (dados.get(k) or [] for k in ("planos", "sessoes", "itens"))
+    if not all(isinstance(x, list) for x in (planos, sessoes, itens)):
+        raise ValueError("Backup com formato inválido.")
+
+    with conectar() as con:
+        con.execute("DELETE FROM itens")
+        con.execute("DELETE FROM sessoes")
+        con.execute("DELETE FROM planos")
+        for p in planos:
+            p = {**p, "dias": json.dumps(p.get("dias") or []), "respostas": json.dumps(p.get("respostas") or [],
+                                                                                         ensure_ascii=False)}
+            if p.get("status") == "gerando":  # não tem mais quem termine
+                p.update(status="erro", etapa=None, erro="O backup foi feito no meio da geração.")
+            p.setdefault("idioma", "pt")
+            con.execute(f"INSERT INTO planos ({', '.join(COLUNAS_PLANO)}) VALUES ({', '.join('?' * len(COLUNAS_PLANO))})",
+                        [p.get(c) for c in COLUNAS_PLANO])
+        # ordem por id: a cópia de um "não fiz" sempre vem depois do original
+        for s in sorted(sessoes, key=lambda x: x["id"]):
+            con.execute(f"INSERT INTO sessoes ({', '.join(COLUNAS_SESSAO)}) VALUES ({', '.join('?' * len(COLUNAS_SESSAO))})",
+                        [s.get(c) for c in COLUNAS_SESSAO])
+        for i in sorted(itens, key=lambda x: x["id"]):
+            con.execute(f"INSERT INTO itens ({', '.join(COLUNAS_ITEM)}) VALUES ({', '.join('?' * len(COLUNAS_ITEM))})",
+                        [i.get(c) for c in COLUNAS_ITEM])

@@ -1,4 +1,5 @@
 """Servidor local do Kaizen: arquivos estáticos + API SQLite + ponte com o Ollama."""
+from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import json
@@ -60,7 +61,7 @@ def ollama_modelos():
     estado = servidores.status(destino)
     if not estado["online"]:
         raise servidores.ErroConexao(f"{destino['nome']} está fora do ar.")
-    return estado["modelos"]
+    return servidores.modelos_para_chat(destino["id"], estado["modelos"])
 
 
 def ollama_chat(modelo, mensagens):
@@ -153,6 +154,8 @@ class Handler(SimpleHTTPRequestHandler):
         partes = url.path.strip("/").split("/")
         if partes[:3] == ["api", "ia", "servidores"]:
             return self.rota_servidores(metodo, partes[3:])
+        if partes[:2] == ["api", "backup"]:
+            return self.rota_backup(metodo)
         if partes[:2] != ["api", "estudos"]:
             return False
         recurso = partes[2] if len(partes) > 2 else ""
@@ -231,6 +234,46 @@ class Handler(SimpleHTTPRequestHandler):
                 self.responder(404, {"erro": "Rota não encontrada"})
         except ValueError as erro:
             self.responder(400, {"erro": str(erro)})
+        return True
+
+    def rota_backup(self, metodo):
+        """GET baixa tudo (kanban + estudos); POST restaura, substituindo.
+        Mesmo formato do modo nuvem, então serve pra levar do celular pro PC.
+        Chaves de API não entram no arquivo."""
+        try:
+            if metodo == "GET":
+                with sqlite3.connect(DB) as con:
+                    categorias = [linha[0] for linha in con.execute("SELECT nome FROM categorias ORDER BY nome")]
+                return self.responder(200, {
+                    "app": "kaizen", "formato": 1,
+                    "criado_em": datetime.now().isoformat(timespec="seconds"),
+                    "kanban": {"tarefas": listar(), "categorias": categorias},
+                    "estudos": estudos.exportar(),
+                }) or True
+
+            if metodo == "POST":
+                tamanho = int(self.headers.get("Content-Length", 0))
+                dados = json.loads(self.rfile.read(tamanho) or b"{}")
+                if dados.get("app") != "kaizen":
+                    raise ValueError("Esse arquivo não é um backup do Kaizen.")
+                kanban = dados.get("kanban")
+                if isinstance(kanban, dict) and isinstance(kanban.get("tarefas"), list):
+                    with sqlite3.connect(DB) as con:
+                        con.execute("DELETE FROM tarefas")
+                        con.execute("DELETE FROM categorias")
+                        con.executemany(
+                            "INSERT INTO tarefas (id, titulo, status, prioridade, categoria, prazo) VALUES (?, ?, ?, ?, ?, ?)",
+                            [(t["id"], t["titulo"], t["status"], t["prioridade"], t.get("categoria", "Geral"), t["prazo"])
+                             for t in kanban["tarefas"]])
+                        con.executemany("INSERT OR IGNORE INTO categorias (nome) VALUES (?)",
+                                        [(nome,) for nome in kanban.get("categorias", [])])
+                if isinstance(dados.get("estudos"), dict):
+                    estudos.importar(dados["estudos"])
+                return self.responder(200, {"ok": True}) or True
+
+            self.responder(404, {"erro": "Rota não encontrada"})
+        except (KeyError, TypeError, ValueError, sqlite3.Error) as erro:
+            self.responder(400, {"erro": f"Não consegui restaurar: {erro}"})
         return True
 
     def responder(self, status, conteudo):
