@@ -21,8 +21,6 @@ import sqlite3
 import subprocess
 import tempfile
 import threading
-import urllib.error
-import urllib.request
 
 import busca
 import servidores
@@ -106,26 +104,28 @@ class ErroIA(Exception):
     pass
 
 
-# Motor = "ollama@<servidor>:<modelo>" (ex.: "ollama@local:qwen3:8b") ou "claude".
-# "ollama:<modelo>" (formato antigo) vale como servidor local.
+# Motor = "<tipo>@<destino>:<modelo>" ou "claude". Exemplos:
+#   "ollama@local:qwen3:8b", "ollama@1:qwen3:8b", "nuvem@gemini:gemini-…", "nuvem@openai:gpt-…"
+# "ollama:<modelo>" (formato antigo) vale como Ollama deste computador.
 
 def _separar_motor(motor):
-    if motor.startswith("ollama@"):
-        servidor, _, modelo = motor[len("ollama@"):].partition(":")
-        return servidor, modelo
+    tipo, arroba, resto = motor.partition("@")
+    if arroba and tipo in ("ollama", "nuvem"):
+        destino, _, modelo = resto.partition(":")
+        return destino, modelo
     return "local", motor.removeprefix("ollama:")
 
 
 def motores_disponiveis():
-    """(motores, padrao) — modelos de todos os servidores online + Claude, e o sugerido."""
-    servidores_ = servidores.listar_com_status()
+    """(motores, padrao) — modelos de todos os destinos online + Claude, e o sugerido."""
+    destinos = servidores.listar_com_status()
     motores = []
-    for s in sorted(servidores_, key=lambda s: not s["preferido"]):
-        for nome in s["modelos"]:
-            motores.append({"id": f"ollama@{s['id']}:{nome}", "modelo": nome, "servidor": s["nome"],
+    for d in sorted(destinos, key=lambda d: not d["preferido"]):
+        for nome in d["modelos"]:
+            motores.append({"id": f"{d['tipo']}@{d['id']}:{nome}", "modelo": nome, "servidor": d["nome"],
                             "recomendado": nome == MODELO_PADRAO})
     if os.path.exists(CLAUDE_BIN):
-        motores.append({"id": "claude", "modelo": "Claude (sua conta)", "servidor": "Nuvem", "recomendado": False})
+        motores.append({"id": "claude", "modelo": "Claude Code (sua conta)", "servidor": "Claude", "recomendado": False})
 
     # sugerido: o recomendado no servidor preferido; senão o recomendado em
     # qualquer um; senão um qwen3 qualquer; senão o primeiro que houver
@@ -169,45 +169,25 @@ def gerar_json(motor, sistema, pedido, esquema, progresso=None, limite_tokens=40
             raise ErroIA((proc.stderr or proc.stdout or "Claude retornou erro").strip()[-300:])
         return _json_do_texto(proc.stdout)
 
-    servidor_id, modelo = _separar_motor(motor)
-    corpo = json.dumps({
-        "model": modelo,
-        "messages": [{"role": "system", "content": sistema}, {"role": "user", "content": pedido}],
-        "format": esquema,
-        "stream": True,
-        "think": False,
-        "options": {"temperature": 0.3, "num_ctx": 8192, "num_predict": limite_tokens},
-    }).encode()
+    destino_id, modelo = _separar_motor(motor)
+    mensagens = [{"role": "system", "content": sistema}, {"role": "user", "content": pedido}]
 
-    # servidor escolhido primeiro; se ele estiver fora do ar, qualquer outro
-    # online que tenha o mesmo modelo (ex.: a máquina de casa desligou)
-    candidatos = [servidores.url_de(servidor_id)] + [
-        s["url"] for s in servidores.listar_com_status()
-        if s["id"] != servidor_id and s["online"] and modelo in s["modelos"]]
+    # destino escolhido primeiro; se for um Ollama fora do ar, qualquer outro
+    # Ollama online que tenha o mesmo modelo (ex.: a máquina de casa desligou)
+    candidatos = [destino_id] + [
+        d["id"] for d in servidores.listar_com_status()
+        if d["id"] != destino_id and d["tipo"] == "ollama" and d["online"] and modelo in d["modelos"]
+        and not motor.startswith("nuvem@")]
     erro_conexao = None
-    for url in candidatos:
-        req = urllib.request.Request(f"{url}/api/chat", corpo, {"Content-Type": "application/json"})
+    for candidato in candidatos:
         try:
-            texto = ""
-            # timeout vale entre pedaços, não pra resposta inteira: PC lento
-            # demora no total, mas nunca fica 5 min sem mandar nada
-            with urllib.request.urlopen(req, timeout=300) as r:
-                for linha in r:
-                    if not linha.strip():
-                        continue
-                    pedaco = json.loads(linha)
-                    texto += pedaco.get("message", {}).get("content", "")
-                    if progresso:
-                        progresso(texto)
-                    if pedaco.get("done"):
-                        break
-            return _json_do_texto(texto)
-        except urllib.error.HTTPError as erro:
-            raise ErroIA(f"Ollama respondeu {erro.code}: {erro.read()[:200].decode(errors='replace')}")
-        except (urllib.error.URLError, OSError) as erro:
+            return _json_do_texto(servidores.conversar(candidato, modelo, mensagens, formato=esquema,
+                                                       progresso=progresso, limite_tokens=limite_tokens,
+                                                       temperatura=0.3))
+        except servidores.ErroConexao as erro:
             erro_conexao = erro
-    nome = (servidores.obter(servidor_id) or {}).get("nome", servidor_id)
-    raise ErroIA(f"Não consegui falar com o Ollama em \"{nome}\" ({erro_conexao}). Ele está ligado e na mesma rede?")
+    nome = (servidores.obter(destino_id) or {}).get("nome", destino_id)
+    raise ErroIA(f"Não consegui usar \"{nome}\": {erro_conexao}")
 
 
 # ---------- Etapa 1: perguntas ----------

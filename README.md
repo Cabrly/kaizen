@@ -103,6 +103,11 @@ sessão). Nesse caso compensa usar a IA de outra máquina (veja abaixo) ou o
 Claude. Modelos menores que 4B (`qwen3:1.7b`, `qwen2.5:3b`) foram testados e
 não servem: repetem sessões ou entram em loop.
 
+**Pro chat** use `qwen3:4b-instruct` (`ollama pull qwen3:4b-instruct`): responde
+em ~2 s. O `qwen3:4b` comum sempre "pensa em voz alta" antes de responder e
+leva mais de um minuto numa conversa; nos planos isso não atrapalha (e ajuda).
+O instruct, por outro lado, monta planos piores (fugiu do assunto no teste).
+
 Qualquer modelo instalado no Ollama aparece pra escolher. Se você tiver o
 [Claude Code](https://claude.com/claude-code) instalado e logado, ele também
 aparece como opção.

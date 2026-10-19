@@ -20,7 +20,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="./style.css?v=srv2">
+    <link rel="stylesheet" href="./style.css?v=nuvem1">
 </head>
 
 <body>
@@ -715,12 +715,15 @@
                         <button type="submit" class="btn-secundario">Testar e adicionar</button>
                     </form>
 
+                    <div class="srv-nuvem" id="srv-nuvem"></div>
+
                     <p class="est-erro" id="srv-erro" role="alert"></p>
 
                     <p class="srv-dica">
                         No outro computador, o Ollama precisa aceitar conexões da rede:
                         <code>OLLAMA_HOST=&lt;IP do Tailscale&gt;:11434</code>.
                         Use só em rede privada — o Ollama não tem senha.
+                        Gemini tem uso gratuito com chave do Google AI Studio.
                     </p>
 
                 </section>
@@ -801,17 +804,17 @@
 
     <script
         type="module"
-        src="./js/chat.js?v=srv1"
+        src="./js/chat.js?v=nuvem2"
     ></script>
 
     <script
         type="module"
-        src="./js/servidores.js?v=srv2"
+        src="./js/servidores.js?v=nuvem1"
     ></script>
 
     <script
         type="module"
-        src="./js/estudos.js?v=srv1"
+        src="./js/estudos.js?v=nuvem1"
     ></script>
 
 </body>

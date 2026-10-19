@@ -55,51 +55,33 @@ def listar():
 
 
 def ollama_modelos():
-    """Modelos do servidor de IA preferido. Levanta exceção se ele estiver fora do ar."""
-    req = urllib.request.Request(f"{servidores.url_de(servidores.preferido())}/api/tags")
-    with urllib.request.urlopen(req, timeout=3) as resposta:
-        dados = json.loads(resposta.read())
-        return [modelo["name"] for modelo in dados.get("models", [])]
+    """Modelos do destino de IA preferido (Ollama ou nuvem). Levanta ErroConexao se estiver fora."""
+    destino = servidores.obter(servidores.preferido())
+    estado = servidores.status(destino)
+    if not estado["online"]:
+        raise servidores.ErroConexao(f"{destino['nome']} está fora do ar.")
+    return estado["modelos"]
 
 
 def ollama_chat(modelo, mensagens):
-    """Envia a conversa ao Ollama e devolve o texto da resposta do assistente.
+    """Manda a conversa pro destino preferido e devolve a resposta do assistente.
 
-    Sem streaming: o handler HTTP do stdlib não lida bem com chunked
-    responses de longa duração, então esperamos a resposta completa.
+    Se o preferido for um Ollama de outra máquina e ela estiver fora do ar,
+    tenta este computador.
     """
     personalidade = [{"role": "system" , "content":"Voce é um galanteador que gosta de flertar com o usuario antes de qualquer coisa. e sempre vai terminar falando: Vixe menina Beijoo"}]
 
-    corpo = json.dumps({
-        "model": modelo,
-        "messages": personalidade + mensagens,
-        "stream": False,
-        "think": False
-    }).encode("utf-8")
+    preferido = servidores.preferido()
+    tentativas = [preferido]
+    if preferido != "local" and servidores.obter(preferido)["tipo"] == "ollama":
+        tentativas.append("local")
 
-    # servidor preferido; se ele estiver fora do ar, tenta este computador
-    urls = [servidores.url_de(servidores.preferido())]
-    if urls[0] != servidores.URL_LOCAL:
-        urls.append(servidores.URL_LOCAL)
-
-    for i, url in enumerate(urls):
-        req = urllib.request.Request(
-            f"{url}/api/chat",
-            data=corpo,
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
+    for i, destino in enumerate(tentativas):
         try:
-            # Modelos de 14B em GPU de 12GB podem demorar; margem generosa.
-            with urllib.request.urlopen(req, timeout=180) as resposta:
-                dados = json.loads(resposta.read())
-                return dados["message"]["content"]
-        except urllib.error.HTTPError:
-            raise
-        except urllib.error.URLError:
-            if i == len(urls) - 1:
+            return servidores.conversar(destino, modelo, personalidade + mensagens)
+        except servidores.ErroConexao:
+            if i == len(tentativas) - 1:
                 raise
-
 
 class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -112,7 +94,7 @@ class Handler(SimpleHTTPRequestHandler):
             try:
                 modelos = ollama_modelos()
                 return self.responder(200, {"disponivel": True, "modelos": modelos, "servidor": servidor["nome"]})
-            except (urllib.error.URLError, OSError, json.JSONDecodeError):
+            except servidores.ErroConexao:
                 return self.responder(200, {"disponivel": False, "modelos": [], "servidor": servidor["nome"]})
         return super().do_GET()
 
@@ -133,12 +115,9 @@ class Handler(SimpleHTTPRequestHandler):
             return self.responder(400, {"erro": str(erro)})
         except TimeoutError:
             return self.responder(504, {"erro": "O modelo demorou demais para responder."})
-        except urllib.error.HTTPError as erro:
-            # ex.: o modelo escolhido não existe no servidor preferido
-            return self.responder(502, {"erro": f"O Ollama recusou: {erro.read()[:200].decode(errors='replace')}"})
-        except urllib.error.URLError:
+        except servidores.ErroConexao as erro:
             nome = servidores.obter(servidores.preferido())["nome"]
-            return self.responder(502, {"erro": f"Não foi possível falar com o Ollama (\"{nome}\"). Ele está rodando?"})
+            return self.responder(502, {"erro": f"Não foi possível usar \"{nome}\": {erro}"})
 
     def do_PUT(self):
         if self.path != "/api/tarefas":
@@ -229,7 +208,14 @@ class Handler(SimpleHTTPRequestHandler):
         ident = partes[0] if partes else None
         try:
             if metodo == "GET" and not ident:
-                self.responder(200, {"servidores": servidores.listar_com_status(usar_cache=False)})
+                nuvem = [{"id": prov, "nome": info["nome"], "onde_pegar": info["onde_pegar"],
+                          "conectado": bool(servidores.chave(prov))} for prov, info in servidores.NUVEM.items()]
+                self.responder(200, {"servidores": servidores.listar_com_status(usar_cache=False), "nuvem": nuvem})
+            elif metodo == "POST" and ident == "nuvem" and len(partes) == 2:
+                tamanho = int(self.headers.get("Content-Length", 0))
+                corpo = json.loads(self.rfile.read(tamanho) or b"{}") if tamanho else {}
+                servidores.conectar_nuvem(partes[1], corpo.get("chave"))
+                self.responder(200, {"servidores": servidores.listar_com_status()})
             elif metodo == "POST" and not ident:
                 tamanho = int(self.headers.get("Content-Length", 0))
                 corpo = json.loads(self.rfile.read(tamanho) or b"{}") if tamanho else {}

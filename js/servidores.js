@@ -2,9 +2,10 @@
    SERVIDORES DE IA — onde a IA roda
    ---------------------------------------------------------
    "Este computador" sempre existe. Dá pra cadastrar outras
-   máquinas com Ollama (ex.: pelo IP do Tailscale) e escolher
-   qual o chat usa. Os planos de estudo podem usar modelos
-   de qualquer servidor online.
+   máquinas com Ollama (ex.: pelo IP do Tailscale) e conectar
+   ChatGPT ou Gemini com uma chave de API, e escolher qual o
+   chat usa. Os planos de estudo podem usar modelos de
+   qualquer destino online.
 
    Quando algo muda, avisa o resto da página com o evento
    "kaizen:servidores-mudaram".
@@ -75,7 +76,7 @@ function iniciarServidores() {
                 avisarMudanca();
             }
 
-            if (remover && confirm(`Remover o servidor "${remover.dataset.nome}"?`)) {
+            if (remover && confirm(`Remover "${remover.dataset.nome}"?`)) {
                 const { servidores } = await api(`/${remover.dataset.remover}`, { method: "DELETE" });
                 renderizar(servidores);
                 avisarMudanca();
@@ -126,6 +127,53 @@ function iniciarServidores() {
     });
 
 
+    // contas na nuvem: botão abre o campo da chave; salvar testa e conecta
+    painel.querySelector("#srv-nuvem").addEventListener("click", (evento) => {
+
+        const abrir = evento.target.closest("[data-abrir-nuvem]");
+
+        if (abrir) {
+            const caixa = painel.querySelector(`[data-caixa-nuvem="${abrir.dataset.abrirNuvem}"]`);
+            caixa.hidden = !caixa.hidden;
+            if (!caixa.hidden) caixa.querySelector("input").focus();
+        }
+
+    });
+
+
+    painel.querySelector("#srv-nuvem").addEventListener("submit", async (evento) => {
+
+        evento.preventDefault();
+
+        const caixa = evento.target.closest("[data-caixa-nuvem]");
+        const botao = caixa.querySelector("button[type=submit]");
+
+        botao.disabled = true;
+        botao.textContent = "Testando…";
+        erro.textContent = "";
+
+        try {
+
+            const { servidores } = await api(`/nuvem/${caixa.dataset.caixaNuvem}`, {
+                method: "POST",
+                body: { chave: caixa.querySelector("input").value }
+            });
+
+            renderizar(servidores);
+            await carregar();
+            avisarMudanca();
+
+        } catch (falha) {
+
+            erro.textContent = falha.message;
+            botao.disabled = false;
+            botao.textContent = "Salvar";
+
+        }
+
+    });
+
+
     // status atualizado sempre que a aba do assistente é aberta
     document.querySelector('.nav-tab[data-tela="ia"]')?.addEventListener("click", carregar);
 
@@ -137,8 +185,9 @@ function iniciarServidores() {
 async function carregar() {
 
     try {
-        const { servidores } = await api("");
+        const { servidores, nuvem } = await api("");
         renderizar(servidores);
+        renderizarNuvem(nuvem || []);
     } catch (falha) {
         painel.querySelector("#srv-erro").textContent = "Não consegui listar os servidores.";
     }
@@ -152,7 +201,11 @@ function renderizar(servidores) {
 
         const situacao = s.online
             ? `${s.modelos.length} modelo${s.modelos.length === 1 ? "" : "s"} · ${s.ms} ms`
-            : "offline";
+            : (s.tipo === "nuvem" ? "chave recusada ou sem internet" : "offline");
+
+        const endereco = s.tipo === "nuvem"
+            ? "☁ nuvem — os textos vão pra esse serviço"
+            : s.url.replace(/^https?:\/\//, "");
 
         return `
             <div class="srv-item ${s.online ? "" : "srv-offline"}">
@@ -161,7 +214,7 @@ function renderizar(servidores) {
                     <span class="status-dot ${s.online ? "status-online" : "status-offline"}"></span>
                     <span class="srv-texto">
                         <strong>${esc(s.nome)}</strong>
-                        <small>${esc(s.url.replace(/^https?:\/\//, ""))}</small>
+                        <small>${esc(endereco)}</small>
                         <small>${situacao}</small>
                     </span>
                     ${s.preferido ? '<span class="srv-em-uso">em uso</span>' : ""}
@@ -172,5 +225,20 @@ function renderizar(servidores) {
             </div>`;
 
     }).join("");
+
+}
+
+
+function renderizarNuvem(nuvem) {
+
+    // só as que ainda não foram conectadas; as conectadas já estão na lista
+    painel.querySelector("#srv-nuvem").innerHTML = nuvem.filter((n) => !n.conectado).map((n) => `
+        <button type="button" class="srv-nuvem-botao" data-abrir-nuvem="${esc(n.id)}">☁ Conectar ${esc(n.nome)}</button>
+        <form class="srv-form srv-caixa-nuvem" data-caixa-nuvem="${esc(n.id)}" hidden>
+            <input type="password" required autocomplete="off" spellcheck="false"
+                   placeholder="Cole a chave de API" aria-label="Chave de API do ${esc(n.nome)}">
+            <a href="${esc(n.onde_pegar)}" target="_blank" rel="noopener noreferrer">Onde pegar a chave →</a>
+            <button type="submit" class="btn-secundario">Salvar</button>
+        </form>`).join("");
 
 }

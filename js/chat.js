@@ -421,9 +421,13 @@ async function verificarStatus() {
                     return opcao;
                 }));
 
+                // pra conversa, modelo que não "pensa em voz alta" responde em segundos
+                const preferidos = ["qwen3:4b-instruct", "qwen3:8b"];
+
                 seletorModelo.value = modelos.includes(atual)
                     ? atual
-                    : (modelos.find((m) => m.startsWith("qwen3")) || modelos[0]);
+                    : (preferidos.find((m) => modelos.includes(m))
+                        || modelos.find((m) => m.startsWith("qwen3")) || modelos[0]);
 
                 salvarModeloEscolhido(seletorModelo.value);
 
