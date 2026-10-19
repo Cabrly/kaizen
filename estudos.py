@@ -14,6 +14,7 @@ Item marcado como "não feito" ganha uma cópia na próxima sessão do mesmo
 plano (ou numa sessão de pendências criada no próximo dia de estudo).
 """
 from datetime import date, timedelta
+from pathlib import Path
 import json
 import os
 import shutil
@@ -26,6 +27,10 @@ import busca
 import servidores
 
 DB = None                 # o server.py aponta pro kaizen.sqlite3
+
+# Prompts e schemas ficam num arquivo só, que a versão no navegador
+# (js/nuvem) também lê — assim os dois nunca ficam diferentes.
+PROMPTS = json.loads((Path(__file__).parent / "prompts.json").read_text(encoding="utf-8"))
 MODELO_PADRAO = "qwen3:8b"
 MODELO_CLAUDE = "sonnet"
 CLAUDE_BIN = shutil.which("claude") or os.path.expanduser("~/.npm-global/bin/claude")
@@ -192,20 +197,8 @@ def gerar_json(motor, sistema, pedido, esquema, progresso=None, limite_tokens=40
 
 # ---------- Etapa 1: perguntas ----------
 
-ESQUEMA_PERGUNTAS = {
-    "type": "object",
-    "properties": {"perguntas": {"type": "array", "items": {
-        "type": "object",
-        "properties": {"pergunta": {"type": "string"}, "opcoes": {"type": "array", "items": {"type": "string"}}},
-        "required": ["pergunta", "opcoes"]}}},
-    "required": ["perguntas"],
-}
-
-SISTEMA_PERGUNTAS = """Você ajuda a montar um plano de estudos personalizado. Responda em português do Brasil.
-Faça EXATAMENTE 3 perguntas curtas pra entender: o nível atual da pessoa no assunto, o objetivo (o que quer
-conseguir fazer) e um conhecimento prévio importante pro assunto. NÃO pergunte sobre horários, dias ou tempo
-disponível (isso já é perguntado em outro lugar). Cada pergunta tem de 3 a 4 opções curtas (até 6 palavras),
-específicas do assunto."""
+ESQUEMA_PERGUNTAS = PROMPTS["esquema_perguntas"]
+SISTEMA_PERGUNTAS = PROMPTS["sistema_perguntas"]
 
 
 def perguntas(tema, motor):
@@ -222,42 +215,8 @@ def perguntas(tema, motor):
 
 # ---------- Etapa 2: roteiro ----------
 
-ESQUEMA_ROTEIRO = {
-    "type": "object",
-    "properties": {
-        "titulo": {"type": "string"},
-        "documentacao_oficial": {"type": "string"},
-        "sessoes": {"type": "array", "items": {
-            "type": "object",
-            "properties": {
-                "topico": {"type": "string"},
-                "objetivo": {"type": "string"},
-                "busca_video": {"type": "string"},
-                "termos_doc": {"type": "string"},
-                "atividades": {"type": "array", "items": {
-                    "type": "object",
-                    "properties": {"titulo": {"type": "string"}, "descricao": {"type": "string"},
-                                   "minutos": {"type": "integer"}},
-                    "required": ["titulo", "descricao", "minutos"]}},
-            },
-            "required": ["topico", "objetivo", "busca_video", "termos_doc", "atividades"]}},
-    },
-    "required": ["titulo", "documentacao_oficial", "sessoes"],
-}
-
-SISTEMA_ROTEIRO = """Você é um planejador de estudos. Responda SOMENTE com o JSON pedido.
-Regras:
-- "titulo", "topico", "objetivo" e "atividades" SEMPRE em português do Brasil, qualquer que seja o idioma dos materiais.
-- Gere EXATAMENTE o número de sessões pedido, em ordem didática, continuando de onde o roteiro parou, sem repetir tópicos já planejados.
-- "topico": título curto da sessão (máx. 6 palavras).
-- "objetivo": uma frase com o que a pessoa saberá fazer ao final da sessão.
-- "busca_video": 3 a 6 palavras NO IDIOMA DOS MATERIAIS indicado no pedido, pra achar uma aula em vídeo sobre o tópico (ex. em português: "react useState aula"; em inglês: "react useState tutorial"; em espanhol: "react useState clase").
-- "termos_doc": 2 a 5 palavras-chave técnicas EM INGLÊS do tópico, como aparecem na documentação (ex.: "state usestate hook").
-- "atividades": 1 a 3 exercícios práticos e concretos, com entrega clara, que somem cerca de metade do tempo da sessão (a outra metade é pra vídeo e leitura, que o app anexa sozinho). NÃO crie atividade de "assistir vídeo" ou "ler documentação".
-- Use ferramentas e práticas atuais do assunto; evite coisas obsoletas.
-- Quando o pedido disser que é o último bloco, a última sessão deve ser um mini projeto que junta o que foi visto.
-- "documentacao_oficial": domínio do site oficial de documentação do assunto (ex.: "react.dev"), ou "" se não houver.
-- Não escreva links nem datas."""
+ESQUEMA_ROTEIRO = PROMPTS["esquema_roteiro"]
+SISTEMA_ROTEIRO = PROMPTS["sistema_roteiro"]
 
 
 def _pedido_roteiro(plano, respostas, total, feitas, quantas):

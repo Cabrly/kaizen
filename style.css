@@ -3310,3 +3310,8 @@ dialog.modal {
 .srv-caixa-nuvem[hidden] {
     display: none;
 }
+
+/* display: flex das classes passava por cima do atributo hidden */
+.srv [hidden] {
+    display: none !important;
+}

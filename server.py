@@ -69,9 +69,7 @@ def ollama_chat(modelo, mensagens):
     Se o preferido for um Ollama de outra máquina e ela estiver fora do ar,
     tenta este computador.
     """
-    personalidade = [{"role": "system", "content": (
-        "Você é o assistente do Kaizen, um app de tarefas e estudos. "
-        "Responda sempre em português do Brasil, de forma clara e direta.")}]
+    personalidade = [{"role": "system", "content": estudos.PROMPTS["sistema_chat"]}]
 
     preferido = servidores.preferido()
     tentativas = [preferido]
@@ -211,12 +209,13 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             if metodo == "GET" and not ident:
                 nuvem = [{"id": prov, "nome": info["nome"], "onde_pegar": info["onde_pegar"],
-                          "conectado": bool(servidores.chave(prov))} for prov, info in servidores.NUVEM.items()]
+                          "pede_url": bool(info.get("pede_url")), "conectado": servidores.conectado(prov)}
+                         for prov, info in servidores.NUVEM.items()]
                 self.responder(200, {"servidores": servidores.listar_com_status(usar_cache=False), "nuvem": nuvem})
             elif metodo == "POST" and ident == "nuvem" and len(partes) == 2:
                 tamanho = int(self.headers.get("Content-Length", 0))
                 corpo = json.loads(self.rfile.read(tamanho) or b"{}") if tamanho else {}
-                servidores.conectar_nuvem(partes[1], corpo.get("chave"))
+                servidores.conectar_nuvem(partes[1], corpo.get("chave"), corpo.get("url"))
                 self.responder(200, {"servidores": servidores.listar_com_status()})
             elif metodo == "POST" and not ident:
                 tamanho = int(self.headers.get("Content-Length", 0))

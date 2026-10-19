@@ -156,7 +156,10 @@ function iniciarServidores() {
 
             const { servidores } = await api(`/nuvem/${caixa.dataset.caixaNuvem}`, {
                 method: "POST",
-                body: { chave: caixa.querySelector("input").value }
+                body: {
+                    chave: caixa.querySelector("[name=chave]").value,
+                    url: caixa.querySelector("[name=url]")?.value
+                }
             });
 
             renderizar(servidores);
@@ -185,9 +188,18 @@ function iniciarServidores() {
 async function carregar() {
 
     try {
-        const { servidores, nuvem } = await api("");
-        renderizar(servidores);
+
+        const { servidores, nuvem, modo } = await api("");
+
+        // sem servidor (celular, site estático) a IA é só na nuvem:
+        // nada de cadastrar Ollama
+        const soNuvem = modo === "nuvem";
+        painel.querySelector("#srv-form").hidden = soNuvem;
+        painel.querySelector(".srv-dica").hidden = soNuvem;
+
+        renderizar(servidores, soNuvem);
         renderizarNuvem(nuvem || []);
+
     } catch (falha) {
         painel.querySelector("#srv-erro").textContent = "Não consegui listar os servidores.";
     }
@@ -195,7 +207,14 @@ async function carregar() {
 }
 
 
-function renderizar(servidores) {
+function renderizar(servidores, soNuvem = false) {
+
+    if (soNuvem && servidores.length === 0) {
+        painel.querySelector("#srv-lista").innerHTML = `
+            <p class="srv-dica">Nenhuma IA conectada. Conecte o <b>Gemini</b> (tem uso gratuito)
+            ou o ChatGPT abaixo — a chave fica salva só neste aparelho.</p>`;
+        return;
+    }
 
     painel.querySelector("#srv-lista").innerHTML = servidores.map((s) => {
 
@@ -235,8 +254,11 @@ function renderizarNuvem(nuvem) {
     painel.querySelector("#srv-nuvem").innerHTML = nuvem.filter((n) => !n.conectado).map((n) => `
         <button type="button" class="srv-nuvem-botao" data-abrir-nuvem="${esc(n.id)}">☁ Conectar ${esc(n.nome)}</button>
         <form class="srv-form srv-caixa-nuvem" data-caixa-nuvem="${esc(n.id)}" hidden>
-            <input type="password" required autocomplete="off" spellcheck="false"
-                   placeholder="Cole a chave de API" aria-label="Chave de API do ${esc(n.nome)}">
+            ${n.pede_url ? `
+            <input name="url" type="url" required autocomplete="off" spellcheck="false"
+                   placeholder="URL da API (ex.: https://openrouter.ai/api/v1)" aria-label="URL da API">` : ""}
+            <input name="chave" type="password" ${n.pede_url ? "" : "required"} autocomplete="off" spellcheck="false"
+                   placeholder="Cole a chave de API${n.pede_url ? " (se precisar)" : ""}" aria-label="Chave de API do ${esc(n.nome)}">
             <a href="${esc(n.onde_pegar)}" target="_blank" rel="noopener noreferrer">Onde pegar a chave →</a>
             <button type="submit" class="btn-secundario">Salvar</button>
         </form>`).join("");

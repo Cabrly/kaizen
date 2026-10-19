@@ -255,8 +255,7 @@ async function enviarParaAssistente(historico, aoAtualizar) {
 
         mostrarErro(
             "Não foi possível falar com o assistente. " +
-            "Verifique se o Ollama está rodando (ollama serve) " +
-            "e se o modelo foi baixado. " +
+            "Confira a IA em uso em \"Onde a IA roda\". " +
             `Detalhe: ${erro.message}`
         );
 
@@ -444,7 +443,7 @@ async function verificarStatus() {
         statusPonto.className = "status-dot status-offline";
 
         statusTexto.textContent =
-            "IA offline. Confira se o Ollama está rodando no servidor em uso (abaixo).";
+            "IA indisponível. Confira a IA em uso (abaixo).";
 
     }
 

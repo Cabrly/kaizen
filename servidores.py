@@ -39,6 +39,13 @@ NUVEM = {
         "host": "generativelanguage.googleapis.com",
         "onde_pegar": "https://aistudio.google.com/apikey",
     },
+    # qualquer API no formato da OpenAI: OpenRouter, Groq, DeepSeek, LM Studio…
+    "compat": {
+        "nome": "Compatível com OpenAI",
+        "host": None,
+        "onde_pegar": "https://openrouter.ai/keys",
+        "pede_url": True,
+    },
 }
 
 
@@ -121,14 +128,26 @@ def chave(provedor):
     return _config(f"chave_{provedor}")
 
 
+def conectado(provedor):
+    return bool(_config(f"url_{provedor}") if NUVEM[provedor].get("pede_url") else chave(provedor))
+
+
+def _url_compat():
+    return (_config("url_compat") or "").rstrip("/")
+
+
 def _cabecalhos(provedor, chave_api):
-    if provedor == "openai":
-        return {"Authorization": f"Bearer {chave_api}"}
-    return {"x-goog-api-key": chave_api}
+    if provedor == "gemini":
+        return {"x-goog-api-key": chave_api}
+    return {"Authorization": f"Bearer {chave_api}"} if chave_api else {}
 
 
-def _modelos_nuvem(provedor, chave_api):
+def _modelos_nuvem(provedor, chave_api, url=None):
     """Só modelos de conversa, os mais novos primeiro (a lista crua tem dezenas)."""
+    if provedor == "compat":
+        dados = _http(f"{(url or _url_compat())}/models", cabecalhos=_cabecalhos(provedor, chave_api))
+        return sorted(m["id"] for m in dados.get("data", []))[:40]
+
     if provedor == "openai":
         dados = _http("https://api.openai.com/v1/models", cabecalhos=_cabecalhos(provedor, chave_api))
         fora = ("audio", "realtime", "transcribe", "tts", "image", "search", "embedding",
@@ -147,19 +166,25 @@ def _modelos_nuvem(provedor, chave_api):
     return sorted(nomes, reverse=True)[:8]
 
 
-def conectar_nuvem(provedor, chave_api):
+def conectar_nuvem(provedor, chave_api, url=None):
     if provedor not in NUVEM:
         raise ValueError("Provedor desconhecido.")
     chave_api = (chave_api or "").strip()
-    if len(chave_api) < 20:
+    if NUVEM[provedor].get("pede_url"):
+        url = (url or "").strip().rstrip("/")
+        if not re.match(r"^https?://", url):
+            raise ValueError("Informe a URL da API (ex.: https://openrouter.ai/api/v1).")
+    elif len(chave_api) < 20:
         raise ValueError("Cole a chave de API completa.")
     try:
-        modelos = _modelos_nuvem(provedor, chave_api)
+        modelos = _modelos_nuvem(provedor, chave_api, url)
     except ErroConexao as erro:
-        raise ValueError(f"A chave não funcionou ({erro}). Confira se copiou inteira.")
+        raise ValueError(f"Não funcionou ({erro}). Confira a chave{' e a URL' if url else ''}.")
     if not modelos:
-        raise ValueError("A chave funciona, mas a conta não tem nenhum modelo de conversa liberado.")
+        raise ValueError("Conectou, mas a conta não tem nenhum modelo de conversa liberado.")
     _config(f"chave_{provedor}", chave_api)
+    if url:
+        _config(f"url_{provedor}", url)
     _status_cache.pop(provedor, None)
 
 
@@ -171,8 +196,9 @@ def listar():
     with conectar() as con:
         cadastrados = [{"id": str(l["id"]), "nome": l["nome"], "url": l["url"], "tipo": "ollama", "removivel": True}
                        for l in con.execute("SELECT * FROM servidores_ia ORDER BY id")]
-    nuvem = [{"id": p, "nome": info["nome"], "url": f"https://{info['host']}", "tipo": "nuvem", "removivel": True}
-             for p, info in NUVEM.items() if chave(p)]
+    nuvem = [{"id": p, "nome": info["nome"], "url": _url_compat() if info.get("pede_url") else f"https://{info['host']}",
+              "tipo": "nuvem", "removivel": True}
+             for p, info in NUVEM.items() if conectado(p)]
     return ([{"id": "local", "nome": "Este computador", "url": URL_LOCAL, "tipo": "ollama", "removivel": False}]
             + cadastrados + nuvem)
 
@@ -254,6 +280,7 @@ def remover(destino_id):
         raise ValueError("\"Este computador\" não pode ser removido.")
     if destino_id in NUVEM:
         _config(f"chave_{destino_id}", apagar=True)
+        _config(f"url_{destino_id}", apagar=True)
         _status_cache.pop(destino_id, None)
     else:
         with conectar() as con:
@@ -331,13 +358,13 @@ def _conversar_nuvem(provedor, modelo, mensagens, formato):
                  + json.dumps(formato, ensure_ascii=False))
         mensagens = [{"role": "system", "content": aviso}] + mensagens
 
-    if provedor == "openai":
+    if provedor in ("openai", "compat"):
+        base = "https://api.openai.com/v1" if provedor == "openai" else _url_compat()
         corpo = {"model": modelo, "messages": mensagens}
         if formato:
             corpo["response_format"] = {"type": "json_object"}
-        dados = _http("https://api.openai.com/v1/chat/completions", corpo,
-                      _cabecalhos(provedor, chave_api), timeout=300)
-        return dados["choices"][0]["message"]["content"]
+        dados = _http(f"{base}/chat/completions", corpo, _cabecalhos(provedor, chave_api), timeout=300)
+        return _sem_raciocinio(dados["choices"][0]["message"]["content"] or "")
 
     sistema = "\n\n".join(m["content"] for m in mensagens if m["role"] == "system")
     corpo = {"contents": [{"role": "model" if m["role"] == "assistant" else "user", "parts": [{"text": m["content"]}]}

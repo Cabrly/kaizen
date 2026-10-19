@@ -3,7 +3,17 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+    <!-- App instalável (Android e iPhone) -->
+    <link rel="manifest" href="./manifest.webmanifest">
+    <meta name="theme-color" content="#c90016">
+    <link rel="icon" type="image/png" href="./icones/icone-192.png">
+    <link rel="apple-touch-icon" href="./icones/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Kaizen">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
     <title>Kanban | Kaizen</title>
 
@@ -20,7 +30,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="./style.css?v=nuvem2">
+    <link rel="stylesheet" href="./style.css?v=pwa1">
 </head>
 
 <body>
@@ -651,8 +661,8 @@
                 </h2>
 
                 <p>
-                    Converse com a IA rodando localmente no seu servidor,
-                    via Ollama. Escolha o modelo certo para cada tarefa.
+                    Converse com a IA — no seu computador (Ollama) ou na
+                    nuvem (Gemini, ChatGPT). Escolha onde ela roda ao lado.
                 </p>
 
             </div>
@@ -789,6 +799,11 @@
 
     <script
         type="module"
+        src="./js/modo.js?v=pwa1"
+    ></script>
+
+    <script
+        type="module"
         src="./js/main.js"
     ></script>
 
@@ -804,17 +819,17 @@
 
     <script
         type="module"
-        src="./js/chat.js?v=nuvem2"
+        src="./js/chat.js?v=pwa1"
     ></script>
 
     <script
         type="module"
-        src="./js/servidores.js?v=nuvem1"
+        src="./js/servidores.js?v=pwa1"
     ></script>
 
     <script
         type="module"
-        src="./js/estudos.js?v=nuvem1"
+        src="./js/estudos.js?v=pwa1"
     ></script>
 
 </body>
