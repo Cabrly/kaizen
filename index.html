@@ -30,7 +30,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="./style.css?v=backup1">
+    <link rel="stylesheet" href="./style.css?v=sinc1">
 </head>
 
 <body>
@@ -540,6 +540,61 @@
     </main>
 
 
+    <dialog class="modal sinc-modal" id="sinc-modal" aria-labelledby="sinc-titulo">
+
+        <h2 class="modal-titulo" id="sinc-titulo">Sincronizar aparelhos</h2>
+
+        <div id="sinc-desligada">
+
+            <p class="sinc-texto">
+                Use as mesmas tarefas e planos no PC e no celular. Gere um código aqui e use no outro aparelho.
+                Tudo vai criptografado: nem o servidor de sincronia consegue ler.
+            </p>
+
+            <button type="button" class="btn-primario sinc-largo" id="sinc-gerar">Gerar código neste aparelho</button>
+
+            <form id="sinc-form-codigo" class="sinc-entrar">
+                <label class="campo-modal">
+                    <span>Já tem um código?</span>
+                    <input id="sinc-codigo" placeholder="XXXX-XXXX-XXXX" maxlength="20" autocomplete="off"
+                           autocapitalize="characters" spellcheck="false">
+                </label>
+                <button type="submit" class="btn-secundario">Conectar</button>
+            </form>
+
+        </div>
+
+        <div id="sinc-ligada" hidden>
+
+            <p class="sinc-texto">
+                No outro aparelho, aponte a câmera pro QR, ou abra o Kaizen, toque em
+                “Sincronizar aparelhos” e digite o código:
+            </p>
+
+            <div class="sinc-qr" id="sinc-qr"></div>
+
+            <p class="sinc-codigo" id="sinc-codigo-mostrado"></p>
+
+            <p class="sinc-segredo">Quem tiver esse código vê seus dados: não mostre pra ninguém.</p>
+
+            <button type="button" class="est-link sinc-copiar" id="sinc-copiar">Copiar link</button>
+
+            <p class="sinc-status" id="sinc-status" role="status"></p>
+
+        </div>
+
+        <p class="est-erro" id="sinc-erro" role="alert"></p>
+
+        <div class="form-acoes">
+            <button type="button" class="btn-secundario" id="sinc-desligar" hidden>Desligar aqui</button>
+            <button type="button" class="btn-secundario" data-fechar>Fechar</button>
+        </div>
+
+        <button type="button" class="est-link sinc-apagar" id="sinc-apagar" hidden>Apagar os dados da nuvem</button>
+
+    </dialog>
+
+
     <dialog class="modal est-modal" id="est-assistente" aria-labelledby="est-modal-titulo">
 
         <form id="est-form-tema">
@@ -804,6 +859,10 @@
                 Restaurar backup
             </button>
             <input type="file" id="backup-arquivo" accept="application/json,.json" hidden>
+            <button type="button" class="btn-secundario" id="sinc-abrir"
+                    title="Usa as mesmas tarefas e planos no PC e no celular">
+                Sincronizar aparelhos
+            </button>
         </div>
 
     </footer>
@@ -817,6 +876,11 @@
     <script
         type="module"
         src="./js/backup.js?v=backup1"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/sincronia.js?v=sinc1"
     ></script>
 
     <script

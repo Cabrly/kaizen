@@ -70,9 +70,8 @@ se acontecer, use o OpenRouter.
 
 Sem servidor, o Kaizen funciona assim:
 
-- os dados (tarefas, planos, chaves) ficam **só no aparelho**, sem
-  sincronizar entre celular e PC — use **Fazer backup / Restaurar backup**,
-  no rodapé, pra levar de um pro outro (o arquivo serve nos dois);
+- os dados (tarefas, planos, chaves) ficam **no aparelho** — pra usar os
+  mesmos no PC e no celular, ligue a sincronia (abaixo);
 - a IA é só na nuvem (sem Ollama);
 - vídeos vêm do Invidious/Piped e a documentação é um link que cai direto na
   página do site oficial.
@@ -80,11 +79,33 @@ Sem servidor, o Kaizen funciona assim:
 O mesmo código decide sozinho: se encontra o `server.py`, usa ele; se não
 encontra, liga o "servidor de bolso" em `js/nuvem/`.
 
+### PC e celular com os mesmos dados
+
+No rodapé, **Sincronizar aparelhos → Gerar código neste aparelho**. Aparece
+um código (tipo `KZ7F-Q2MA-9XTD`) e um QR: aponte a câmera do celular pro QR,
+ou abra o Kaizen no outro aparelho e digite o código. A partir daí as tarefas
+e os planos de estudo seguem juntos sozinhos — vale pro PC com o `server.py`
+e pro app do celular. Se os dois mudarem sem internet, o Kaizen pergunta com
+qual versão ficar.
+
+Tudo é criptografado no navegador com uma chave tirada do próprio código: o
+servidor de sincronia ([`sync/`](sync/), um Cloudflare Worker) só guarda texto
+cifrado. Sem conta nem senha, então **quem tiver o código vê os dados** —
+não mostre pra ninguém. As chaves de IA não sincronizam (conecte em cada
+aparelho). **Fazer backup / Restaurar backup** continua lá pra guardar um
+arquivo.
+
 ### Publicar a sua versão
 
 Faça um fork (ou suba o código num repositório seu) e ative
 **Settings → Pages → Deploy from a branch → `main` / `(root)`**. Pronto: o
 endereço `https://<seu-usuario>.github.io/<repositório>/` já é o app.
+
+A sincronia usa o servidor do projeto por padrão. Pra ter o seu (grátis na
+Cloudflare): em `sync/`, rode `npm install`, `npx wrangler login`,
+`npx wrangler d1 create kaizen-sync` (cole o id no `wrangler.toml`),
+`npm run banco:nuvem` e `npm run deploy`; depois troque o `SERVIDOR_PADRAO`
+em `js/sincronia.js` pelo endereço que o deploy mostrar.
 
 ## Baixar e rodar no PC (versão completa)
 

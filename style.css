@@ -3439,3 +3439,208 @@ dialog.modal {
 @media (prefers-reduced-motion: reduce) {
     .aviso-instalar { animation: none; }
 }
+
+
+/* =========================================================
+   E15 — SINCRONIA ENTRE APARELHOS
+========================================================= */
+
+.rodape-backup #sinc-abrir[data-situacao="ok"] {
+    color: #1d7a3a;
+    border-color: #9fd3ae;
+}
+
+.rodape-backup #sinc-abrir[data-situacao="erro"] {
+    color: #a05a00;
+    border-color: #e8c48c;
+}
+
+.sinc-modal {
+    width: min(400px, 92vw);
+}
+
+.sinc-texto {
+    margin-bottom: 16px;
+
+    font-size: 13px;
+    line-height: 1.5;
+
+    color: #444;
+}
+
+.sinc-largo {
+    width: 100%;
+}
+
+.sinc-entrar {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+
+    margin-top: 18px;
+}
+
+.sinc-entrar .campo-modal {
+    flex: 1;
+
+    margin-bottom: 0;
+}
+
+.sinc-entrar input {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.sinc-entrar .btn-secundario {
+    min-height: 42px;
+}
+
+.sinc-qr {
+    width: min(220px, 70vw);
+    margin: 0 auto;
+
+    padding: 8px;
+
+    background: #ffffff;
+
+    border: 1px solid #e3e3e3;
+    border-radius: 10px;
+}
+
+.sinc-qr svg {
+    display: block;
+
+    width: 100%;
+    height: auto;
+}
+
+.sinc-codigo {
+    margin: 14px 0 4px;
+
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-align: center;
+
+    user-select: all;
+}
+
+.sinc-segredo {
+    font-size: 11px;
+    text-align: center;
+
+    color: #888;
+}
+
+.sinc-copiar {
+    display: block;
+
+    margin: 10px auto 0;
+}
+
+.sinc-status {
+    margin-top: 14px;
+    padding: 8px 10px;
+
+    font-size: 12px;
+
+    color: #1d7a3a;
+    background: #eef8f1;
+
+    border-radius: 6px;
+}
+
+.sinc-status[data-situacao="andando"] {
+    color: #555;
+    background: #f3f3f1;
+}
+
+.sinc-status[data-situacao="erro"] {
+    color: #8a4b00;
+    background: #fdf3e4;
+}
+
+.sinc-apagar {
+    display: block;
+
+    margin: 16px auto 0;
+
+    font-size: 11px;
+    font-weight: 400;
+
+    color: #888;
+}
+
+.sinc-modal .est-erro {
+    margin-top: 12px;
+}
+
+.sinc-modal [hidden] {
+    display: none;
+}
+
+.sinc-escolhas {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.sinc-escolhas .btn-secundario {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    padding: 14px 10px;
+
+    text-align: center;
+}
+
+.sinc-escolhas strong {
+    font-size: 13px;
+
+    color: #171717;
+}
+
+.sinc-escolhas span {
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.sinc-aviso {
+    position: fixed;
+    left: 50%;
+    top: 16px;
+    z-index: 10001;
+
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 10px 16px;
+
+    font-size: 12.5px;
+
+    color: #f2f2f2;
+    background: #171717;
+
+    border-left: 4px solid #1d7a3a;
+    border-radius: 8px;
+
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+
+    transform: translateX(-50%);
+
+    animation: sinc-desce 0.25s ease-out;
+}
+
+@keyframes sinc-desce {
+    from { opacity: 0; transform: translate(-50%, -10px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (max-width: 420px) {
+    .sinc-escolhas { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sinc-aviso { animation: none; }
+}

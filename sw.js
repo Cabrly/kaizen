@@ -16,6 +16,8 @@ const ARQUIVOS = [
     "./icones/icone-512.png",
     "./js/modo.js",
     "./js/backup.js",
+    "./js/sincronia.js",
+    "./js/vendor/qrcode.js",
     "./js/instalar.js",
     "./js/main.js",
     "./js/telas.js",
