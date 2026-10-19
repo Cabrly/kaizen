@@ -3315,3 +3315,35 @@ dialog.modal {
 .srv [hidden] {
     display: none !important;
 }
+
+/* ---------- celular: conversa primeiro, abas numa linha ---------- */
+
+@media (max-width: 900px) {
+
+    /* no celular a pessoa abre o assistente pra conversar;
+       a configuração vem depois */
+    .ia-chat {
+        order: -1;
+    }
+
+    .ia-config .srv {
+        flex-basis: 100%;
+    }
+
+}
+
+@media (max-width: 650px) {
+
+    .ia-chat {
+        height: 62vh;
+        min-height: 380px;
+    }
+
+    .nav-tab {
+        padding: 9px 6px;
+
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+}

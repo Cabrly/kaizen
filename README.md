@@ -37,6 +37,42 @@ Na outra máquina, o Ollama precisa aceitar conexões da rede:
 
 Com Docker: `docker compose up -d` (o container fala com o Ollama da máquina).
 
+## No celular (iPhone e Android)
+
+O Kaizen também roda inteiro no navegador, sem servidor nenhum: é só abrir o
+endereço do projeto publicado no GitHub Pages.
+
+- **iPhone:** no Safari, toque em Compartilhar → *Adicionar à Tela de Início*.
+- **Android:** no Chrome, menu ⋮ → *Instalar app*.
+
+Vira um app com ícone próprio, que abre até sem internet (só a IA precisa
+dela). Na primeira vez, vá em **Assistente IA → Onde a IA roda** e conecte o
+**Gemini** (a chave é grátis no [Google AI Studio](https://aistudio.google.com/apikey)),
+o **ChatGPT** ou qualquer API compatível com OpenAI (OpenRouter, Groq…).
+
+Sem servidor, o Kaizen funciona assim:
+
+- os dados (tarefas, planos, chaves) ficam **só no aparelho**, sem
+  sincronizar entre celular e PC;
+- a IA é só na nuvem (sem Ollama);
+- vídeos vêm do Invidious/Piped e a documentação é um link que cai direto na
+  página do site oficial.
+
+O mesmo código decide sozinho: se encontra o `server.py`, usa ele; se não
+encontra, liga o "servidor de bolso" em `js/nuvem/`.
+
+### Publicar a sua versão
+
+Faça um fork (ou suba o código num repositório seu) e ative
+**Settings → Pages → Deploy from a branch → `main` / `(root)`**. Pronto: o
+endereço `https://<seu-usuario>.github.io/<repositório>/` já é o app.
+
+## Baixar e rodar no PC (versão completa)
+
+No GitHub, **Code → Download ZIP** (ou `git clone`), extraia e dê dois cliques
+no `iniciar.bat` (Windows) ou rode `./iniciar.sh` (Linux/Mac). Precisa de
+Python 3.9+; com o Ollama instalado, a IA roda no seu computador.
+
 ## Aba Estudos
 
 1. **+ Novo plano** → escreva o assunto e escolha o **idioma dos materiais**
