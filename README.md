@@ -25,7 +25,10 @@ Com Docker: `docker compose up -d` (o container fala com o Ollama da máquina).
 
 ## Aba Estudos
 
-1. **+ Novo plano** → escreva o assunto.
+1. **+ Novo plano** → escreva o assunto e escolha o **idioma dos materiais**
+   (Português, English ou Español). Vídeos e documentação são buscados nesse
+   idioma, inclusive a versão traduzida do site oficial quando existe
+   (`pt-br.react.dev`, `es.react.dev`…). O texto do plano fica em português.
 2. A IA faz 3 perguntas rápidas (nível, objetivo, base). Clique numa das
    respostas prontas ou escreva a sua. Depois escolha os dias, o tempo por dia
    e por quantas semanas.
@@ -60,6 +63,19 @@ Teste com o mesmo plano (React, 12 sessões de 1h) numa RTX A2000 12 GB:
 | **`qwen3:8b`** | ~65 s | **recomendado**: melhor equilíbrio entre qualidade e velocidade |
 | `qwen3:14b` | ~145 s | mais lento e não foi melhor |
 | `gemma3:4b` | ~46 s | conteúdo desatualizado e estourava o tempo das sessões |
+
+### Que computador precisa
+
+O servidor em si é leve e roda em qualquer máquina. Quem pesa é a IA local:
+
+| Modelo | RAM | Com placa de vídeo | Só com processador |
+|---|---|---|---|
+| `qwen3:4b` | 8 GB | 4 GB de VRAM já fica rápido | funciona; plano de 12 sessões em ~2–4 min* |
+| `qwen3:8b` | 16 GB | 6–8 GB de VRAM (ex.: RTX 3050/3060) | funciona, mas lento: ~5–10 min* |
+| Claude | qualquer | não precisa | roda na nuvem (precisa da conta) |
+
+Cada modelo ocupa de 3 a 5 GB em disco. \*Tempos sem GPU são estimativa; os
+medidos foram numa RTX A2000 12 GB (4b ≈ 63 tokens/s, 8b ≈ 33 tokens/s).
 
 Qualquer modelo instalado no Ollama aparece pra escolher. Se você tiver o
 [Claude Code](https://claude.com/claude-code) instalado e logado, ele também

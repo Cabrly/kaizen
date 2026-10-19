@@ -57,6 +57,7 @@ def init():
                 inicio      TEXT NOT NULL,
                 semanas     INTEGER NOT NULL,
                 motor       TEXT NOT NULL,
+                idioma      TEXT NOT NULL DEFAULT 'pt',
                 cor         TEXT NOT NULL,
                 status      TEXT NOT NULL DEFAULT 'gerando',
                 etapa       TEXT,
@@ -89,6 +90,9 @@ def init():
             CREATE INDEX IF NOT EXISTS idx_sessoes_data ON sessoes(data);
             CREATE INDEX IF NOT EXISTS idx_itens_sessao ON itens(sessao_id);
         """)
+        # bancos criados antes da opção de idioma
+        if "idioma" not in {c[1] for c in con.execute("PRAGMA table_info(planos)")}:
+            con.execute("ALTER TABLE planos ADD COLUMN idioma TEXT NOT NULL DEFAULT 'pt'")
         # planos que estavam gerando quando o servidor caiu não vão terminar
         con.execute("UPDATE planos SET status = 'erro', erro = 'O servidor reiniciou no meio da geração.' "
                     "WHERE status = 'gerando'")
@@ -218,12 +222,13 @@ ESQUEMA_ROTEIRO = {
     "required": ["titulo", "documentacao_oficial", "sessoes"],
 }
 
-SISTEMA_ROTEIRO = """Você é um planejador de estudos. Responda SOMENTE com o JSON pedido, em português do Brasil.
+SISTEMA_ROTEIRO = """Você é um planejador de estudos. Responda SOMENTE com o JSON pedido.
 Regras:
+- "titulo", "topico", "objetivo" e "atividades" SEMPRE em português do Brasil, qualquer que seja o idioma dos materiais.
 - Gere EXATAMENTE o número de sessões pedido, em ordem didática, continuando de onde o roteiro parou, sem repetir tópicos já planejados.
 - "topico": título curto da sessão (máx. 6 palavras).
 - "objetivo": uma frase com o que a pessoa saberá fazer ao final da sessão.
-- "busca_video": 3 a 6 palavras em português pra achar uma aula em vídeo sobre o tópico (ex.: "react useState aula").
+- "busca_video": 3 a 6 palavras NO IDIOMA DOS MATERIAIS indicado no pedido, pra achar uma aula em vídeo sobre o tópico (ex. em português: "react useState aula"; em inglês: "react useState tutorial"; em espanhol: "react useState clase").
 - "termos_doc": 2 a 5 palavras-chave técnicas EM INGLÊS do tópico, como aparecem na documentação (ex.: "state usestate hook").
 - "atividades": 1 a 3 exercícios práticos e concretos, com entrega clara, que somem cerca de metade do tempo da sessão (a outra metade é pra vídeo e leitura, que o app anexa sozinho). NÃO crie atividade de "assistir vídeo" ou "ler documentação".
 - Use ferramentas e práticas atuais do assunto; evite coisas obsoletas.
@@ -238,12 +243,17 @@ def _pedido_roteiro(plano, respostas, total, feitas, quantas):
         if r.get("resposta"):
             linhas.append(f"{r['pergunta']} {r['resposta']}")
     linhas += [f"Duração de cada sessão: {plano['minutos']} minutos",
+               f"Idioma dos materiais (vídeos e documentação): {busca.IDIOMAS[plano['idioma']]['nome']}",
                f"O roteiro completo tem {total} sessões."]
     if feitas:
         linhas.append("Já planejado (não repita): " + "; ".join(f"{i}. {s['topico']}" for i, s in enumerate(feitas, 1)))
     ultimo = len(feitas) + quantas >= total
     linhas.append(f"Gere agora as sessões {len(feitas) + 1} a {len(feitas) + quantas} "
                   f"({quantas} sessões).{' Este é o último bloco.' if ultimo else ''}")
+    if plano["idioma"] != "pt":
+        # sem isso o modelo tende a escrever o plano todo no idioma dos materiais
+        linhas.append("Escreva título, tópicos, objetivos e atividades em PORTUGUÊS DO BRASIL; "
+                      "só o campo busca_video vai no idioma dos materiais.")
     return "\n".join(linhas)
 
 
@@ -289,22 +299,27 @@ def _gerar_plano(plano_id):
 
         # --- materiais ---
         _etapa(plano_id, "Buscando vídeos e documentação…")
+        idioma = busca.idioma_valido(plano["idioma"])
         ignorar = [plano["tema"]] + doc_oficial.split(".")[:1]
         minutos_video = max(8, round(plano["minutos"] * 0.5))
-        busca.paginas_oficiais(doc_oficial)  # baixa o índice uma vez antes do paralelo
+        busca.paginas_oficiais(doc_oficial, idioma)  # baixa o índice uma vez antes do paralelo
         feitos = [0]
         trava = threading.Lock()
 
         def materiais(sessao):
-            videos = busca.buscar_videos(sessao.get("busca_video") or f"{sessao['topico']} {plano['tema']} aula",
-                                         minutos_max=minutos_video, limite=3)
+            consulta = sessao.get("busca_video") or f"{sessao['topico']} {plano['tema']} {busca.IDIOMAS[idioma]['aula']}"
+            videos = busca.buscar_videos(consulta, minutos_max=minutos_video, limite=5, idioma=idioma)
             # título original (não o traduzido pelo YouTube) e, entre os que
-            # cabem na sessão, aula em português primeiro
+            # cabem na sessão, aula no idioma escolhido primeiro
             videos = [busca.titulo_original(v) for v in videos]
             videos.sort(key=lambda v: ((v.get("minutos") or 0) > minutos_video,
-                                       not busca.parece_portugues(v["titulo"])))
+                                       not busca.parece_idioma(v["titulo"], idioma)))
+            # sitemap: casa com tópico + termos; busca web: assunto + termos técnicos
+            # no idioma dos materiais (o tópico em português puxaria página em português)
             docs = busca.buscar_documentacao(
-                f"{sessao.get('termos_doc', '')} {sessao['topico']}", doc_oficial, ignorar=ignorar, limite=2)
+                f"{sessao.get('termos_doc', '')} {sessao['topico']}", doc_oficial, ignorar=ignorar, limite=2,
+                idioma=idioma,
+                consulta_web=f"{plano['tema']} {sessao.get('termos_doc', '')} {busca.IDIOMAS[idioma]['documentacao']}")
             with trava:
                 feitos[0] += 1
                 _etapa(plano_id, f"Buscando vídeos e documentação: {feitos[0]} de {len(roteiro)} sessões")
@@ -361,10 +376,11 @@ def criar_plano(dados):
     with conectar() as con:
         cor = CORES[con.execute("SELECT COUNT(*) FROM planos").fetchone()[0] % len(CORES)]
         plano_id = con.execute(
-            "INSERT INTO planos (tema, respostas, dias, minutos, horario, inicio, semanas, motor, cor, etapa) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Na fila…')",
+            "INSERT INTO planos (tema, respostas, dias, minutos, horario, inicio, semanas, motor, idioma, cor, etapa) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Na fila…')",
             (tema, json.dumps(dados.get("respostas", []), ensure_ascii=False), json.dumps(dias), minutos,
-             dados.get("horario") or None, inicio, semanas, dados.get("motor") or f"ollama:{MODELO_PADRAO}", cor)
+             dados.get("horario") or None, inicio, semanas, dados.get("motor") or f"ollama:{MODELO_PADRAO}",
+             busca.idioma_valido(dados.get("idioma")), cor)
         ).lastrowid
     threading.Thread(target=_gerar_plano, args=(plano_id,), daemon=True).start()
     return obter_plano(plano_id)

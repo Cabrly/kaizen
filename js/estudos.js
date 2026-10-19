@@ -26,6 +26,10 @@ const ICONES = { video: "🎥", doc: "📄", atividade: "📝" };
 
 const NOMES_TIPO = { video: "Vídeo", doc: "Documentação", atividade: "Atividades" };
 
+const SIGLAS_IDIOMA = { pt: "PT", en: "EN", es: "ES" };
+
+const CHAVE_IDIOMA = "kaizen.estudos.idioma.v1";
+
 
 const estado = {
     mes: inicioDoMes(new Date()),
@@ -220,6 +224,7 @@ function renderizarPlanos() {
             corpo = `
                 <div class="est-progresso"><div style="width:${pct}%; background:${esc(p.cor)}"></div></div>
                 <p class="est-plano-info">${pct}% · ${DIAS_CURTOS.filter((_, i) => p.dias.includes(i)).join(", ")} · ${duracao(p.minutos)}
+                · <span class="est-idioma" title="Idioma dos materiais">${SIGLAS_IDIOMA[p.idioma] || "PT"}</span>
                 ${p.ultima_data ? ` · até ${diaCurto(p.ultima_data)}` : ""}</p>`;
         }
 
@@ -710,6 +715,12 @@ async function abrirAssistente() {
 
     d.querySelector("#est-form-tema").reset();
     d.querySelector("#est-inicio").value = hojeIso();
+
+    try {
+        d.querySelector("#est-idioma").value = localStorage.getItem(CHAVE_IDIOMA) || "pt";
+    } catch (erro) {
+        /* sem localStorage: fica o padrão (português) */
+    }
     d.querySelector("#est-erro-tema").textContent = assistente.aviso || "";
 
     mostrarPasso(1);
@@ -889,6 +900,14 @@ async function gerarPlano() {
 
     botao.disabled = true;
 
+    const idioma = d.querySelector("#est-idioma").value;
+
+    try {
+        localStorage.setItem(CHAVE_IDIOMA, idioma);
+    } catch (erro) {
+        /* nada a fazer */
+    }
+
 
     try {
 
@@ -897,6 +916,7 @@ async function gerarPlano() {
             body: {
                 tema: d.querySelector("#est-tema").value.trim(),
                 motor: d.querySelector("#est-motor").value,
+                idioma,
                 respostas,
                 ...lerDisponibilidade()
             }
