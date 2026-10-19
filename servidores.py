@@ -519,9 +519,7 @@ def _conversar_gemini(modelo, chave_api, mensagens, formato):
         i += 1
 
     if teve_403 or json.loads(_config("gemini_negado") or "[]"):
-        raise ErroConexao("O Google recusou o acesso dessa chave à API do Gemini (o projeto dela está bloqueado). "
-                          "Gere uma chave nova em aistudio.google.com/apikey — de preferência num projeto novo, "
-                          "pela opção do próprio AI Studio (as chaves de lá começam com \"AIza\").", status=403)
+        raise ErroConexao("O Google barrou o acesso do projeto dessa chave à API do Gemini (403) — isso tem acontecido com projetos novos no nível gratuito. Tente: ativar a verificação por telefone e em 2 etapas na conta Google e criar outra chave; se continuar, use o OpenRouter (grátis) em “Onde a IA roda”.", status=403)
     if ultimo is not None and ultimo.sem_cota:
         raise ErroConexao("Nenhum modelo do Gemini na sua chave tem uso gratuito liberado agora. "
                           "Confira em aistudio.google.com se a chave é do nível gratuito, ou tente mais tarde.",

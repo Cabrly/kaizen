@@ -476,9 +476,7 @@ async function conversarGemini(modelo, conta, mensagens, formato) {
 
     if (teve403 || lerConfig().contas.gemini?.negado?.length) {
         throw new ErroIA(
-            "O Google recusou o acesso dessa chave à API do Gemini (o projeto dela está bloqueado). " +
-            "Gere uma chave nova em aistudio.google.com/apikey — de preferência num projeto novo, " +
-            "pela opção do próprio AI Studio (as chaves de lá começam com \"AIza\").", { status: 403 });
+            "O Google barrou o acesso do projeto dessa chave à API do Gemini (403) — isso tem acontecido com projetos novos no nível gratuito. Tente: ativar a verificação por telefone e em 2 etapas na conta Google e criar outra chave; se continuar, use o OpenRouter (grátis) em “Onde a IA roda”.", { status: 403 });
     }
 
     throw new ErroIA(ultimo?.semCota
