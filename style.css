@@ -3305,3 +3305,8 @@ dialog.modal {
 
     color: #ff8a96;
 }
+
+/* o display: flex do .srv-form passava por cima do atributo hidden */
+.srv-caixa-nuvem[hidden] {
+    display: none;
+}
