@@ -14,7 +14,7 @@
 ========================================================= */
 
 
-const SERVIDOR_PADRAO = "https://kaizen-sync.cabrly.workers.dev";
+const SERVIDOR_PADRAO = "https://kaizen-sync.kaizen-sync.workers.dev";
 const ENDERECO_APP = "https://cabrly.github.io/kaizen/";
 
 const CHAVE_ESTADO = "kaizen.sincronia.v1";

@@ -102,10 +102,10 @@ Faça um fork (ou suba o código num repositório seu) e ative
 endereço `https://<seu-usuario>.github.io/<repositório>/` já é o app.
 
 A sincronia usa o servidor do projeto por padrão. Pra ter o seu (grátis na
-Cloudflare): em `sync/`, rode `npm install`, `npx wrangler login`,
-`npx wrangler d1 create kaizen-sync` (cole o id no `wrangler.toml`),
-`npm run banco:nuvem` e `npm run deploy`; depois troque o `SERVIDOR_PADRAO`
-em `js/sincronia.js` pelo endereço que o deploy mostrar.
+Cloudflare): em `sync/`, rode `npm install`, `npx wrangler login` e
+`npm run deploy`; depois troque o `SERVIDOR_PADRAO` em `js/sincronia.js`
+pelo endereço que o deploy mostrar. Cada código vira um Durable Object
+(SQLite, incluso no plano grátis), então não tem banco pra criar.
 
 ## Baixar e rodar no PC (versão completa)
 
