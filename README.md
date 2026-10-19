@@ -141,6 +141,7 @@ caber nela, além do que o sistema já ocupa (~0,5–1 GB no Windows).
 
 | Nível | Placa | Exemplos | Modelo |
 |---|---|---|---|
+| **PC fraco** | sem placa boa, 8 GB de RAM | notebook comum | `llama3.2:3b` (2 GB) ou `qwen3:1.7b` (1,4 GB) — mais lento e planos mais simples |
 | **Mínimo** | 6 GB de VRAM, 8 GB de RAM | GTX 1660, RTX 2060, RTX 3050 | `qwen3:4b` inteiro na placa |
 | **Recomendado** | 12 GB de VRAM, 16 GB de RAM | RTX 3060 12 GB, RTX 4070 | `qwen3:8b` com folga |
 | Mac | M1 ou mais novo, 16 GB | — | `qwen3:8b` (memória compartilhada) |
@@ -155,8 +156,17 @@ O que foi medido (plano de React):
 
 Abaixo do mínimo funciona, só que devagar (a tela mostra o progresso sessão a
 sessão). Nesse caso compensa usar a IA de outra máquina (veja abaixo) ou o
-Claude. Modelos menores que 4B (`qwen3:1.7b`, `qwen2.5:3b`) foram testados e
-não servem: repetem sessões ou entram em loop.
+Claude (ou o OpenRouter, de graça).
+
+Modelos leves, testados montando 12 sessões de React (o app descarta tópico
+repetido e pede outro no lugar):
+
+| Modelo | Tamanho | Resultado |
+|---|---|---|
+| `llama3.2:3b` | 2,0 GB | 12 sessões coerentes, com o mini projeto |
+| `qwen3:1.7b` | 1,4 GB | 12 sessões, progressão boa, fecha no mini projeto |
+| `gemma3:1b` | 0,8 GB | não serve: quebra o formato da resposta |
+| `qwen2.5:3b` | 1,9 GB | não serve: entra em loop |
 
 **Pro chat** use `qwen3:4b-instruct` (`ollama pull qwen3:4b-instruct`): responde
 em ~2 s. O `qwen3:4b` comum sempre "pensa em voz alta" antes de responder e

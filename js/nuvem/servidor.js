@@ -133,6 +133,19 @@ async function carregarPrompts() {
 }
 
 
+// Pra achar tópico repetido: sem acento, maiúscula, pontuação e prefixo como "Sessão 11:"
+function chaveTopico(topico) {
+    return topico.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+        .replace(/^\s*(sessao|aula|dia|semana|modulo|parte)\s*\d+\s*[:.\-]*\s*/, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+}
+
+
+// "Sessão 11: Mini projeto" -> "Mini projeto" (a data já diz qual é)
+const PREFIXO_TOPICO = /^\s*(sess[aã]o|aula|dia|semana|m[oó]dulo|parte)\s*\d+\s*[:.\-–]*\s*/i;
+
+
 function separarMotor(motor) {
     const [, provedor, modelo] = (motor || "").match(/^nuvem@([^:]+):(.+)$/) || [];
     return { provedor, modelo };
@@ -362,9 +375,17 @@ async function gerarPlano(id) {
         let titulo = null;
         let docOficial = "";
 
+        // modelo pequeno repete tópico; a repetida é descartada e o próximo
+        // pedido repõe — com um teto, pra nunca ficar em loop
+        const vistos = new Set();
+        const maxPedidos = Math.ceil(total / BLOCO) + 3;
+        let pedidos = 0;
+
 
         // --- roteiro, em blocos ---
-        while (roteiro.length < total) {
+        while (roteiro.length < total && pedidos < maxPedidos) {
+
+            pedidos += 1;
 
             const quantas = Math.min(BLOCO, total - roteiro.length);
 
@@ -373,15 +394,22 @@ async function gerarPlano(id) {
             const dados = await gerarJson(plano.motor, sistema_roteiro,
                                           pedidoRoteiro(plano, total, roteiro, quantas), esquema_roteiro);
 
-            const novas = (dados.sessoes || []).filter((s) => String(s.topico || "").trim()).slice(0, quantas);
+            const novas = (dados.sessoes || []).filter((s) => {
+                const chave = chaveTopico(String(s.topico || ""));
+                if (!chave || vistos.has(chave)) return false;
+                vistos.add(chave);
+                s.topico = String(s.topico).replace(PREFIXO_TOPICO, "").trim() || s.topico;
+                return true;
+            });
 
-            if (!novas.length) throw new ErroIA("A IA devolveu um bloco vazio.");
-
-            roteiro = roteiro.concat(novas);
+            roteiro = roteiro.concat(novas.slice(0, quantas));
             titulo = titulo || dados.titulo;
             docOficial = docOficial || dados.documentacao_oficial || "";
 
         }
+
+
+        if (!roteiro.length) throw new ErroIA("A IA não conseguiu montar o roteiro.");
 
 
         // --- materiais ---

@@ -17,11 +17,13 @@ from datetime import date, timedelta
 from pathlib import Path
 import json
 import os
+import re
 import shutil
 import sqlite3
 import subprocess
 import tempfile
 import threading
+import unicodedata
 
 import busca
 import servidores
@@ -255,6 +257,16 @@ def datas_de_estudo(inicio, dias, quantidade, depois_de=None):
     return datas
 
 
+def _chave_topico(topico):
+    """Pra achar tópico repetido: sem acento, maiúscula, pontuação e prefixo como "Sessão 11:"."""
+    t = unicodedata.normalize("NFKD", topico).encode("ascii", "ignore").decode().lower()
+    t = re.sub(r"^\s*(sessao|aula|dia|semana|modulo|parte)\s*\d+\s*[:.\-]*\s*", "", t)
+    return re.sub(r"[^a-z0-9]+", " ", t).strip()
+
+
+PREFIXO_TOPICO = re.compile(r"^\s*(sess[aã]o|aula|dia|semana|m[oó]dulo|parte)\s*\d+\s*[:.\-–]*\s*", re.IGNORECASE)
+
+
 def _etapa(plano_id, texto):
     with conectar() as con:
         con.execute("UPDATE planos SET etapa = ? WHERE id = ?", (texto, plano_id))
@@ -270,7 +282,12 @@ def _gerar_plano(plano_id):
 
         # --- roteiro, em blocos ---
         roteiro, titulo, doc_oficial = [], None, ""
-        while len(roteiro) < total:
+        vistos = set()
+        # modelo pequeno repete tópico; a repetida é descartada e o próximo pedido
+        # repõe — com um teto, pra nunca ficar em loop
+        pedidos, max_pedidos = 0, -(-total // BLOCO) + 3
+        while len(roteiro) < total and pedidos < max_pedidos:
+            pedidos += 1
             quantas = min(BLOCO, total - len(roteiro))
             inicio_bloco = len(roteiro)
             ultima = [-1]
@@ -286,12 +303,20 @@ def _gerar_plano(plano_id):
             dados = gerar_json(plano["motor"], SISTEMA_ROTEIRO,
                                _pedido_roteiro(plano, respostas, total, roteiro, quantas), ESQUEMA_ROTEIRO,
                                progresso=ao_escrever, limite_tokens=350 * quantas + 600)
-            novas = [s for s in dados.get("sessoes", []) if str(s.get("topico", "")).strip()][:quantas]
-            if not novas:
-                raise ErroIA("A IA devolveu um bloco vazio.")
-            roteiro += novas
+            novas = []
+            for sessao in dados.get("sessoes", []):
+                chave = _chave_topico(str(sessao.get("topico", "")))
+                if chave and chave not in vistos:
+                    vistos.add(chave)
+                    # "Sessão 11: Mini projeto" -> "Mini projeto" (a data já diz qual é)
+                    sessao["topico"] = PREFIXO_TOPICO.sub("", sessao["topico"]).strip() or sessao["topico"]
+                    novas.append(sessao)
+            roteiro += novas[:quantas]
             titulo = titulo or dados.get("titulo")
             doc_oficial = doc_oficial or dados.get("documentacao_oficial", "")
+
+        if not roteiro:
+            raise ErroIA("A IA não conseguiu montar o roteiro.")
 
         # --- materiais ---
         _etapa(plano_id, "Buscando vídeos e documentação…")
