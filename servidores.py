@@ -196,7 +196,7 @@ def _modelos_nuvem(provedor, chave_api, url=None):
 
     dados = _http("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200",
                   cabecalhos=_cabecalhos(provedor, chave_api))
-    fora = ("embedding", "image", "tts", "live", "audio", "robotics", "computer", "vision", "aqa")
+    fora = ("embedding", "image", "imagen", "banana", "veo", "tts", "live", "audio", "robotics", "computer", "vision", "aqa")
     nomes = [m["name"].removeprefix("models/") for m in dados.get("models", [])
              if "generateContent" in m.get("supportedGenerationMethods", [])
              and "gemini" in m["name"] and not any(f in m["name"] for f in fora)]
@@ -475,10 +475,12 @@ def _conversar_gemini(modelo, chave_api, mensagens, formato):
                     _config("gemini_modelo_ok", ordem[i])  # da próxima vez já começa por ele
                 return texto
             except ErroConexao as erro:
-                if erro.status != 429:
+                # 403 = o projeto da chave não tem acesso a esse modelo; 429 = sem cota/limite.
+                # Nos dois casos, vale tentar os outros modelos da chave.
+                if erro.status not in (403, 429):
                     raise
                 ultimo = erro
-                if erro.sem_cota:
+                if erro.sem_cota or erro.status == 403:
                     _config("gemini_sem_cota", json.dumps(sorted(_gemini_sem_cota() | {ordem[i]})))
                 elif erro.espera is not None and erro.espera <= 20 and tentativa == 0:
                     time.sleep(erro.espera + 0.3)  # limite por minuto: espera o que o Google pediu
@@ -493,6 +495,10 @@ def _conversar_gemini(modelo, chave_api, mensagens, formato):
                 pass
         i += 1
 
+    if ultimo is not None and ultimo.status == 403:
+        raise ErroConexao("O Google recusou o acesso dessa chave à API do Gemini (o projeto dela está bloqueado). "
+                          "Gere uma chave nova em aistudio.google.com/apikey — de preferência num projeto novo, "
+                          "pela opção do próprio AI Studio (as chaves de lá começam com \"AIza\").", status=403)
     if ultimo is not None and ultimo.sem_cota:
         raise ErroConexao("Nenhum modelo do Gemini na sua chave tem uso gratuito liberado agora. "
                           "Confira em aistudio.google.com se a chave é do nível gratuito, ou tente mais tarde.",

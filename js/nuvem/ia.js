@@ -182,7 +182,7 @@ export async function listarModelos(provedor, conta) {
         const dados = await pedir(
             `https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${encodeURIComponent(conta.chave)}`);
 
-        const fora = /embedding|image|tts|live|audio|robotics|computer|vision|aqa/;
+        const fora = /embedding|image|imagen|banana|veo|tts|live|audio|robotics|computer|vision|aqa/;
 
         return (dados.models || [])
             .filter((m) => (m.supportedGenerationMethods || []).includes("generateContent"))
@@ -397,11 +397,13 @@ async function conversarGemini(modelo, conta, mensagens, formato) {
 
             } catch (erro) {
 
-                if (!(erro instanceof ErroIA) || erro.status !== 429) throw erro;
+                // 403 = o projeto da chave não tem acesso a esse modelo; 429 = sem cota/limite.
+                // Nos dois casos, vale tentar os outros modelos da chave.
+                if (!(erro instanceof ErroIA) || ![403, 429].includes(erro.status)) throw erro;
 
                 ultimo = erro;
 
-                if (erro.semCota) {
+                if (erro.semCota || erro.status === 403) {
                     const config = lerConfig();
                     const conhecidos = new Set(config.contas.gemini?.semCota || []);
                     if (config.contas.gemini && !conhecidos.has(ordem[i])) {
@@ -433,6 +435,13 @@ async function conversarGemini(modelo, conta, mensagens, formato) {
             }
         }
 
+    }
+
+    if (ultimo?.status === 403) {
+        throw new ErroIA(
+            "O Google recusou o acesso dessa chave à API do Gemini (o projeto dela está bloqueado). " +
+            "Gere uma chave nova em aistudio.google.com/apikey — de preferência num projeto novo, " +
+            "pela opção do próprio AI Studio (as chaves de lá começam com \"AIza\").", { status: 403 });
     }
 
     throw new ErroIA(ultimo?.semCota
