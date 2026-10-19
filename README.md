@@ -80,16 +80,28 @@ Teste com o mesmo plano (React, 12 sessões de 1h) numa RTX A2000 12 GB:
 
 ### Que computador precisa
 
-O servidor em si é leve e roda em qualquer máquina. Quem pesa é a IA local:
+O servidor em si é leve e roda em qualquer máquina. Quem pesa é a IA local, e
+o que manda é a **memória da placa de vídeo (VRAM)**: o modelo inteiro precisa
+caber nela, além do que o sistema já ocupa (~0,5–1 GB no Windows).
 
-| Modelo | RAM | Com placa de vídeo | Só com processador |
+| Nível | Placa | Exemplos | Modelo |
 |---|---|---|---|
-| `qwen3:4b` | 8 GB | 4 GB de VRAM já fica rápido | funciona; plano de 12 sessões em ~2–4 min* |
-| `qwen3:8b` | 16 GB | 6–8 GB de VRAM (ex.: RTX 3050/3060) | funciona, mas lento: ~5–10 min* |
-| Claude | qualquer | não precisa | roda na nuvem (precisa da conta) |
+| **Mínimo** | 6 GB de VRAM, 8 GB de RAM | GTX 1660, RTX 2060, RTX 3050 | `qwen3:4b` inteiro na placa |
+| **Recomendado** | 12 GB de VRAM, 16 GB de RAM | RTX 3060 12 GB, RTX 4070 | `qwen3:8b` com folga |
+| Mac | M1 ou mais novo, 16 GB | — | `qwen3:8b` (memória compartilhada) |
 
-Cada modelo ocupa de 3 a 5 GB em disco. \*Tempos sem GPU são estimativa; os
-medidos foram numa RTX A2000 12 GB (4b ≈ 63 tokens/s, 8b ≈ 33 tokens/s).
+O que foi medido (plano de React):
+
+| Máquina | Modelo | Velocidade | Plano |
+|---|---|---|---|
+| RTX A2000 12 GB (nível RTX 3060) | `qwen3:8b` | ~33 tokens/s | 12 sessões em ~65 s |
+| RTX A2000 12 GB | `qwen3:4b` | ~63 tokens/s | 12 sessões em ~45 s |
+| GTX 1060 3 GB + 8 GB RAM | `qwen3:4b` | ~7,5 tokens/s (metade na CPU) | 3 sessões em ~2,5 min |
+
+Abaixo do mínimo funciona, só que devagar (a tela mostra o progresso sessão a
+sessão). Nesse caso compensa usar a IA de outra máquina (veja abaixo) ou o
+Claude. Modelos menores que 4B (`qwen3:1.7b`, `qwen2.5:3b`) foram testados e
+não servem: repetem sessões ou entram em loop.
 
 Qualquer modelo instalado no Ollama aparece pra escolher. Se você tiver o
 [Claude Code](https://claude.com/claude-code) instalado e logado, ele também

@@ -150,7 +150,10 @@ def _json_do_texto(texto):
         raise ErroIA(f"JSON inválido da IA: {erro}")
 
 
-def gerar_json(motor, sistema, pedido, esquema):
+def gerar_json(motor, sistema, pedido, esquema, progresso=None, limite_tokens=4096):
+    """Pede um JSON à IA. `progresso(texto_parcial)` é chamado enquanto o
+    Ollama escreve (streaming) — em PC lento a tela mostra que está andando.
+    `limite_tokens` corta modelo que entra em repetição e não para."""
     if motor == "claude":
         prompt = (f"{sistema}\n\nResponda SOMENTE com um objeto JSON que siga este JSON Schema:\n"
                   f"{json.dumps(esquema, ensure_ascii=False)}\n\n{pedido}")
@@ -171,9 +174,9 @@ def gerar_json(motor, sistema, pedido, esquema):
         "model": modelo,
         "messages": [{"role": "system", "content": sistema}, {"role": "user", "content": pedido}],
         "format": esquema,
-        "stream": False,
+        "stream": True,
         "think": False,
-        "options": {"temperature": 0.3, "num_ctx": 8192},
+        "options": {"temperature": 0.3, "num_ctx": 8192, "num_predict": limite_tokens},
     }).encode()
 
     # servidor escolhido primeiro; se ele estiver fora do ar, qualquer outro
@@ -185,8 +188,20 @@ def gerar_json(motor, sistema, pedido, esquema):
     for url in candidatos:
         req = urllib.request.Request(f"{url}/api/chat", corpo, {"Content-Type": "application/json"})
         try:
-            with urllib.request.urlopen(req, timeout=900) as r:
-                return _json_do_texto(json.loads(r.read())["message"]["content"])
+            texto = ""
+            # timeout vale entre pedaços, não pra resposta inteira: PC lento
+            # demora no total, mas nunca fica 5 min sem mandar nada
+            with urllib.request.urlopen(req, timeout=300) as r:
+                for linha in r:
+                    if not linha.strip():
+                        continue
+                    pedaco = json.loads(linha)
+                    texto += pedaco.get("message", {}).get("content", "")
+                    if progresso:
+                        progresso(texto)
+                    if pedaco.get("done"):
+                        break
+            return _json_do_texto(texto)
         except urllib.error.HTTPError as erro:
             raise ErroIA(f"Ollama respondeu {erro.code}: {erro.read()[:200].decode(errors='replace')}")
         except (urllib.error.URLError, OSError) as erro:
@@ -214,7 +229,7 @@ específicas do assunto."""
 
 
 def perguntas(tema, motor):
-    dados = gerar_json(motor, SISTEMA_PERGUNTAS, f"Assunto: {tema}", ESQUEMA_PERGUNTAS)
+    dados = gerar_json(motor, SISTEMA_PERGUNTAS, f"Assunto: {tema}", ESQUEMA_PERGUNTAS, limite_tokens=1024)
     saida = []
     for p in dados.get("perguntas", [])[:4]:
         if isinstance(p, dict) and str(p.get("pergunta", "")).strip():
@@ -315,9 +330,20 @@ def _gerar_plano(plano_id):
         roteiro, titulo, doc_oficial = [], None, ""
         while len(roteiro) < total:
             quantas = min(BLOCO, total - len(roteiro))
-            _etapa(plano_id, f"Montando o roteiro: sessões {len(roteiro) + 1}–{len(roteiro) + quantas} de {total}")
+            inicio_bloco = len(roteiro)
+            ultima = [-1]
+            _etapa(plano_id, f"Montando o roteiro: sessão {inicio_bloco + 1} de {total}")
+
+            def ao_escrever(parcial):
+                # cada "topico" que aparece no texto parcial é uma sessão nova
+                n = min(parcial.count('"topico"'), quantas)
+                if n != ultima[0] and n > 0:
+                    ultima[0] = n
+                    _etapa(plano_id, f"Montando o roteiro: sessão {inicio_bloco + n} de {total}")
+
             dados = gerar_json(plano["motor"], SISTEMA_ROTEIRO,
-                               _pedido_roteiro(plano, respostas, total, roteiro, quantas), ESQUEMA_ROTEIRO)
+                               _pedido_roteiro(plano, respostas, total, roteiro, quantas), ESQUEMA_ROTEIRO,
+                               progresso=ao_escrever, limite_tokens=350 * quantas + 600)
             novas = [s for s in dados.get("sessoes", []) if str(s.get("topico", "")).strip()][:quantas]
             if not novas:
                 raise ErroIA("A IA devolveu um bloco vazio.")
