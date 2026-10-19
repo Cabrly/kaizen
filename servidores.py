@@ -225,6 +225,7 @@ def conectar_nuvem(provedor, chave_api, url=None):
     # chave nova: o que funcionava (ou não) com a antiga não vale mais
     _config(f"{provedor}_modelo_ok", apagar=True)
     _config(f"{provedor}_sem_cota", apagar=True)
+    _config(f"{provedor}_negado", apagar=True)
     _status_cache.pop(provedor, None)
 
 
@@ -323,6 +324,7 @@ def remover(destino_id):
         _config(f"url_{destino_id}", apagar=True)
         _config(f"{destino_id}_modelo_ok", apagar=True)
         _config(f"{destino_id}_sem_cota", apagar=True)
+        _config(f"{destino_id}_negado", apagar=True)
         _status_cache.pop(destino_id, None)
     else:
         with conectar() as con:
@@ -484,6 +486,8 @@ def _conversar_gemini(modelo, chave_api, mensagens, formato):
                 teve_403 = teve_403 or erro.status == 403
                 if erro.sem_cota or erro.status == 403:
                     _config("gemini_sem_cota", json.dumps(sorted(_gemini_sem_cota() | {ordem[i]})))
+                if erro.status == 403:  # guardado à parte: muda a explicação final
+                    _config("gemini_negado", json.dumps(sorted(set(json.loads(_config("gemini_negado") or "[]")) | {ordem[i]})))
                 elif erro.espera is not None and erro.espera <= 20 and tentativa == 0:
                     time.sleep(erro.espera + 0.3)  # limite por minuto: espera o que o Google pediu
                     continue
@@ -497,7 +501,7 @@ def _conversar_gemini(modelo, chave_api, mensagens, formato):
                 pass
         i += 1
 
-    if teve_403:
+    if teve_403 or json.loads(_config("gemini_negado") or "[]"):
         raise ErroConexao("O Google recusou o acesso dessa chave à API do Gemini (o projeto dela está bloqueado). "
                           "Gere uma chave nova em aistudio.google.com/apikey — de preferência num projeto novo, "
                           "pela opção do próprio AI Studio (as chaves de lá começam com \"AIza\").", status=403)
