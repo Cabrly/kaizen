@@ -1,0 +1,17 @@
+{
+  "name": "kaizen-sync",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "banco:local": "wrangler d1 execute kaizen-sync --local --file=schema.sql",
+    "banco:nuvem": "wrangler d1 execute kaizen-sync --remote --file=schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261012.1": true
+  }
+}

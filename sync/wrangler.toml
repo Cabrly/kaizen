@@ -1,0 +1,12 @@
+name = "kaizen-sync"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+
+# limpa cofres esquecidos (sem uso há mais de um ano), uma vez por mês
+[triggers]
+crons = ["0 4 1 * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kaizen-sync"
+database_id = "COLOQUE_AQUI_O_ID_DO_D1"
