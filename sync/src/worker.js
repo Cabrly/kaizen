@@ -14,6 +14,15 @@
    1 MB (o armazenamento aceita valores de até 2 MB cada), então um cofre
    aguenta até TAMANHO_MAXIMO, com as entregas das atividades e tudo.
 
+   Estatísticas anônimas (um Durable Object só, "Estatisticas"): contagens por
+   dia, sem nenhum identificador de pessoa ou aparelho.
+
+   POST /v1/uso     { abertura, plataforma, versao, novo, semana, mes, eventos }
+                    o app manda "abri hoje" uma vez por dia e, de vez em quando,
+                    quantas vezes usou cada função (ver js/uso.js)
+   POST /v1/visita  { acao, origem }  o site conta visitas e cliques
+   GET  /v1/painel  Authorization: Bearer <PAINEL_CHAVE> → as contagens
+
    Limite por IP: 120 pedidos por minuto no total, 10 por minuto em cofre que
    não existe (404) e 3 cofres novos por minuto. Quem tenta adivinhar códigos
    bate no segundo logo; o terceiro impede alguém de encher o armazenamento
@@ -28,7 +37,7 @@ const UM_ANO = 365 * 24 * 60 * 60 * 1000;
 const CORS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Max-Age": "86400"
 };
 
@@ -124,6 +133,120 @@ export class Cofre extends DurableObject {
 }
 
 
+/* ---------- estatísticas anônimas ---------- */
+
+const PLATAFORMAS = ["pc", "navegador", "celular"];
+const EVENTOS = ["plano_criado", "plano_importado", "plano_compartilhado", "item_feito", "entrega", "cartao_revisado",
+                 "chat", "agenda", "resumo", "acessibilidade"];
+const ACOES_SITE = ["visita", "baixar_windows", "baixar_mac", "baixar_linux", "navegador", "demo"];
+const ORIGENS = ["direto", "whatsapp", "instagram", "google", "facebook", "x", "linkedin", "github", "youtube",
+                 "tiktok", "telegram", "discord", "outro"];
+const DIAS_NO_PAINEL = 180;
+
+
+// o dia no horário de Brasília (sem horário de verão desde 2019)
+function hojeBr() {
+    return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+
+export class Estatisticas extends DurableObject {
+
+    constructor(ctx, env) {
+        super(ctx, env);
+        ctx.storage.sql.exec(`CREATE TABLE IF NOT EXISTS contagem (
+            dia TEXT NOT NULL, chave TEXT NOT NULL, valor INTEGER NOT NULL, PRIMARY KEY (dia, chave))`);
+    }
+
+    somar(mudancas) {
+        const dia = hojeBr();
+        for (const [chave, valor] of Object.entries(mudancas)) {
+            this.ctx.storage.sql.exec(`INSERT INTO contagem (dia, chave, valor) VALUES (?, ?, ?)
+                ON CONFLICT (dia, chave) DO UPDATE SET valor = valor + excluded.valor`, dia, chave, valor);
+        }
+    }
+
+    ler() {
+        const desde = new Date(Date.now() - DIAS_NO_PAINEL * 86400000).toISOString().slice(0, 10);
+        return this.ctx.storage.sql.exec("SELECT dia, chave, valor FROM contagem WHERE dia >= ? ORDER BY dia", desde).toArray();
+    }
+
+}
+
+
+/* Só passa o que está na lista; número fora do esperado é cortado. Nada da pessoa é guardado. */
+function mudancasDoUso(corpo) {
+
+    const m = {};
+
+    if (corpo.abertura === true) {
+        const plataforma = PLATAFORMAS.includes(corpo.plataforma) ? corpo.plataforma : "navegador";
+        m.ativos = 1;
+        m[`ativos:${plataforma}`] = 1;
+        if (corpo.novo === true) { m.novos = 1; m[`novos:${plataforma}`] = 1; }
+        if (corpo.semana === true) m.semana = 1;
+        if (corpo.mes === true) m.mes = 1;
+        if (/^\d{1,2}\.\d{1,3}\.\d{1,3}$/.test(corpo.versao || "")) m[`versao:${corpo.versao}`] = 1;
+    }
+
+    for (const [nome, vezes] of Object.entries(corpo.eventos && typeof corpo.eventos === "object" ? corpo.eventos : {})) {
+        const n = Math.floor(Number(vezes));
+        if (EVENTOS.includes(nome) && n > 0) m[`evento:${nome}`] = Math.min(n, 300);
+    }
+
+    return m;
+
+}
+
+
+function mudancasDaVisita(corpo) {
+    const acao = ACOES_SITE.includes(corpo.acao) ? corpo.acao : null;
+    if (!acao) return {};
+    const m = { [`site:${acao}`]: 1 };
+    if (acao === "visita") m[`origem:${ORIGENS.includes(corpo.origem) ? corpo.origem : "outro"}`] = 1;
+    return m;
+}
+
+
+function chaveCerta(recebida, certa) {
+    if (!certa || typeof recebida !== "string" || recebida.length !== certa.length) return false;
+    let diferenca = 0;
+    for (let i = 0; i < certa.length; i++) diferenca |= recebida.charCodeAt(i) ^ certa.charCodeAt(i);
+    return diferenca === 0;
+}
+
+
+async function estatisticas(pedido, env, recurso, ip) {
+
+    const contador = env.ESTATISTICAS.get(env.ESTATISTICAS.idFromName("geral"));
+
+    if (recurso === "painel") {
+        if (pedido.method !== "GET") return json(405, { erro: "Método não permitido." });
+        const recebida = (pedido.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+        if (!chaveCerta(recebida, env.PAINEL_CHAVE)) {
+            await dentroDoLimite(env.LIMITE_ERROS, ip);   // chute de chave gasta a cota de erros
+            return json(401, { erro: "Chave do painel errada." });
+        }
+        return json(200, { hoje: hojeBr(), contagens: await contador.ler() });
+    }
+
+    if (pedido.method !== "POST") return json(405, { erro: "Método não permitido." });
+    if (!(await dentroDoLimite(env.LIMITE_USO, ip))) return MUITAS_TENTATIVAS();
+
+    let corpo;
+    try {
+        corpo = JSON.parse((await pedido.text()).slice(0, 4000));
+    } catch {
+        return json(400, { erro: "JSON inválido." });
+    }
+
+    const mudancas = recurso === "uso" ? mudancasDoUso(corpo || {}) : mudancasDaVisita(corpo || {});
+    if (Object.keys(mudancas).length) await contador.somar(mudancas);
+    return json(200, { ok: true });
+
+}
+
+
 const MUITAS_TENTATIVAS = () => json(429, { erro: "Muitas tentativas. Espere um minuto e tente de novo." });
 
 // IPs que estouraram a cota de erros (por instância do Worker; o limite da Cloudflare cobre o resto)
@@ -146,6 +269,17 @@ export default {
         const [, versaoApi, recurso, id] = url.pathname.split("/");
 
         if (url.pathname === "/") return json(200, { app: "kaizen-sync", ok: true });
+
+        if (versaoApi === "v1" && ["uso", "visita", "painel"].includes(recurso) && !id) {
+            const ip = pedido.headers.get("CF-Connecting-IP") || "sem-ip";
+            if ((bloqueados.get(ip) || 0) > Date.now()) return MUITAS_TENTATIVAS();
+            try {
+                return await estatisticas(pedido, env, recurso, ip);
+            } catch (erro) {
+                console.error(erro);
+                return json(500, { erro: "Falhou. Tente de novo daqui a pouco." });
+            }
+        }
         if (versaoApi !== "v1" || recurso !== "cofre" || !/^[a-f0-9]{32,64}$/.test(id || "")) {
             return json(404, { erro: "Rota não encontrada." });
         }

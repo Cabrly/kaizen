@@ -7,9 +7,18 @@ compatibility_date = "2026-09-01"
 name = "COFRES"
 class_name = "Cofre"
 
+# contagens anônimas de uso (um objeto só, "geral")
+[[durable_objects.bindings]]
+name = "ESTATISTICAS"
+class_name = "Estatisticas"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Cofre"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Estatisticas"]
 
 # limites por IP (grátis): um geral, folgado pro uso normal, e um apertado pra
 # código que não existe — é o que alguém tentando adivinhar códigos faria
@@ -27,3 +36,9 @@ simple = { limit = 10, period = 60 }
 name = "LIMITE_NOVOS"
 namespace_id = "1003"
 simple = { limit = 3, period = 60 }
+
+# o app manda 1 abertura por dia e poucos pacotes de contagem; o site, uma visita por sessão
+[[ratelimits]]
+name = "LIMITE_USO"
+namespace_id = "1004"
+simple = { limit = 20, period = 60 }
