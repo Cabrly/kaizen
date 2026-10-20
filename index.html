@@ -525,6 +525,10 @@
             </div>
 
             <div class="est-topo-acoes">
+                <button type="button" class="est-atalho" id="resumo-abrir"
+                        title="O que você estudou nos últimos 7 dias e o que fazer na próxima semana">
+                    📊 Semana
+                </button>
                 <button type="button" class="est-atalho" id="pets-abrir"
                         title="Cada plano vira um pet que você cuida estudando">
                     🐾 Pets
@@ -714,6 +718,18 @@
 
         <div class="form-acoes">
             <button type="button" class="btn-secundario" data-fechar>Fechar</button>
+        </div>
+
+    </dialog>
+
+    <dialog class="modal resumo-modal" id="resumo-modal" aria-labelledby="resumo-titulo">
+
+        <h2 class="modal-titulo" id="resumo-titulo">Sua semana</h2>
+
+        <div id="resumo-corpo" aria-live="polite"></div>
+
+        <div class="form-acoes">
+            <button type="button" class="btn-primario" data-fechar>Bora!</button>
         </div>
 
     </dialog>
@@ -1338,6 +1354,11 @@
     <script
         type="module"
         src="./js/agenda.js?v=1"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/resumo.js?v=1"
     ></script>
 
     <script

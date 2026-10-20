@@ -6388,3 +6388,113 @@ html.travado body > *:not(.pin-tela) {
     display: block;
     margin-top: 6px;
 }
+
+/* ---------- resumo da semana (js/resumo.js) ---------- */
+
+.resumo-modal {
+    width: min(520px, 94vw);
+    max-height: 90vh;
+
+    overflow-y: auto;
+}
+
+.resumo-periodo {
+    margin: -4px 0 14px;
+
+    font-size: 13px;
+    color: #777;
+}
+
+.resumo-blocos {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.resumo-bloco {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    padding: 12px 14px;
+
+    background: #f7f7f5;
+    border-radius: 12px;
+}
+
+.resumo-bloco strong {
+    font-size: 26px;
+    line-height: 1.1;
+}
+
+.resumo-bloco strong small {
+    font-size: 15px;
+    color: #888;
+}
+
+.resumo-bloco span {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.resumo-bloco > small {
+    font-size: 12px;
+    color: #777;
+}
+
+.resumo-sub {
+    margin: 20px 0 8px;
+
+    font-size: 14px;
+}
+
+.resumo-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    list-style: none;
+}
+
+.resumo-lista li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    font-size: 14px;
+}
+
+.resumo-lista li span:nth-child(2) {
+    flex: 1;
+}
+
+.resumo-lista small {
+    color: #888;
+}
+
+.resumo-ponto {
+    width: 8px;
+    height: 8px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+}
+
+.resumo-dicas {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    padding-left: 18px;
+
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.resumo-proximas {
+    margin-top: 14px;
+
+    font-size: 13px;
+    color: #777;
+}
