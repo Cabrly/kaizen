@@ -43,6 +43,10 @@ assinatura do Claude, do Gemini ou do ChatGPT. Não precisa criar conta.
   que passa a reforçar os pontos em que você teve dificuldade
 - **IA que conhece seu progresso**: explica a partir do que você já estudou
 - **Pets de estudo** (opcional): cada plano vira um bichinho que fica feliz quando você estuda
+- **Compartilhe um plano com a turma** por link ou QR Code: vai cifrado, sem o seu progresso
+- **Sessões na agenda do celular** (Google Agenda, iPhone, Outlook), com aviso antes
+- **Resumo da semana**: o que você estudou, suas notas e o que fazer na próxima
+- **Acessibilidade**: texto maior, alto contraste, menos movimento, texto espaçado e leitura em voz alta
 - **Assistente** que conversa olhando suas tarefas
 - **Cenas animadas** que evoluem a cada tarefa concluída
 - **IA local** ([Ollama](https://ollama.com)) instalada em um clique, ou na nuvem ([OpenRouter](https://openrouter.ai), Claude, ChatGPT, Gemini)

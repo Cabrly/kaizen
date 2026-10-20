@@ -230,6 +230,37 @@ guardada e você pede a correção depois de conectar uma IA melhor.
 Limites: até 500 mil caracteres por arquivo, e a IA lê até 200 mil por
 entrega. Projeto grande: mande o link do GitHub.
 
+### Compartilhar um plano com a turma
+
+O 🔗 de cada plano gera um link e um QR Code. Quem abre ganha uma cópia do
+plano: o roteiro, os vídeos, as atividades e os flashcards. O seu progresso, as
+suas entregas e as suas notas não vão junto. A pessoa escolhe os dias, a data
+de início e o horário, e o plano entra como um plano novo dela. Os flashcards
+de cada sessão só aparecem na revisão depois que ela estuda aquela sessão.
+Quem não usa o Kaizen pode abrir o link direto no celular, sem instalar nada.
+
+O plano vai cifrado pro mesmo servidor da sincronia, com uma chave que só
+existe no link, e o link vale por 1 ano. **Parar de compartilhar** apaga o
+plano do servidor (quem já abriu continua com a cópia). Também dá pra colar o
+link em **+ Novo plano → Recebeu o link de um plano?**.
+
+### Agenda do celular
+
+O 📅 de cada plano baixa um arquivo `.ics` com as sessões de hoje em diante,
+que o Google Agenda, o calendário do iPhone e o Outlook abrem. Com horário no
+plano, cada sessão vira um evento com duração e um aviso antes (de 5 minutos a
+1 hora). Sem horário, vira um evento de dia inteiro que avisa às 9h. Mudou o
+plano? É só baixar de novo: as sessões são atualizadas, não duplicadas.
+
+### Resumo da semana
+
+O **📊 Semana** mostra os últimos 7 dias: as sessões estudadas do que estava
+planejado, os itens concluídos e o tempo, as entregas com a média das notas e
+os flashcards dominados. Também mostra até três dicas pra próxima semana, como
+sessões atrasadas, assuntos em que as correções acharam dificuldade, uma nota
+baixa pra refazer ou cartões esperando revisão. No domingo ou na segunda ele
+abre sozinho, uma vez por semana. É tudo calculado no aparelho, sem IA.
+
 ### Pets de estudo (opcional)
 
 Em **🐾 Pets → Ativar os pets**, cada plano ganha um bichinho. Ao criar um
@@ -297,9 +328,24 @@ que enche com o progresso, há cenas que mudam a cada tarefa concluída:
 | Bambuzal com vaga-lumes | mais vaga-lumes acendem | a lanterna de pedra brilha forte |
 | Montanhas ao pôr do sol | a paisagem é pintada em aguada | o sol pousa na crista e doura o lago |
 
-Aperte **Z** (ou o botão de olho no canto) pra ver a cena sem o quadro. Parado
-por 3 minutos, o app entra sozinho em descanso de tela. Tudo é desenhado em
-código (SVG), sem imagem pra baixar.
+Aperte **Z** (ou o botão de olho no canto) pra ver a cena sem o quadro. O
+descanso de tela (entra sozinho depois de 3 minutos parado) vem desligado: quem
+quiser liga no menu de fundos. Tudo é desenhado em código (SVG), sem imagem pra
+baixar.
+
+## Acessibilidade
+
+No botão **Acessibilidade** do rodapé:
+
+- **Tamanho do texto**: normal, grande ou maior, no app inteiro.
+- **Alto contraste**: fundo branco liso, texto preto, bordas fortes e foco bem visível.
+- **Menos movimento**: sem animações nem o rastro do mouse. O Kaizen já liga
+  sozinho se o sistema estiver com "reduzir movimento".
+- **Texto mais espaçado**: mais espaço entre linhas, letras e palavras, o que
+  ajuda na dislexia.
+- **Leitura em voz alta**: 🔊 nas respostas do assistente, na sessão aberta e
+  nos flashcards, e um botão **Ler** em cima de qualquer texto que você
+  selecionar. Usa a voz do próprio aparelho, em português e sem internet.
 
 ## Seus dados
 
