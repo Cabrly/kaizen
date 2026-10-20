@@ -718,6 +718,34 @@
 
     </dialog>
 
+    <dialog class="modal comp-modal" id="agenda-modal" aria-labelledby="agenda-titulo">
+
+        <h2 class="modal-titulo" id="agenda-titulo">Pôr na agenda</h2>
+
+        <p class="sinc-texto" id="agenda-resumo"></p>
+
+        <label class="campo-modal" id="agenda-aviso-linha">
+            <span>Avisar antes de cada sessão</span>
+            <select id="agenda-aviso">
+                <option value="5">5 minutos antes</option>
+                <option value="10" selected>10 minutos antes</option>
+                <option value="30">30 minutos antes</option>
+                <option value="60">1 hora antes</option>
+            </select>
+        </label>
+
+        <p class="sinc-segredo">Baixa um arquivo que o Google Agenda, o calendário do iPhone e o Outlook abrem.
+            No celular, toque no arquivo baixado e confirme. Mudou o plano? Baixe de novo: as sessões são atualizadas, não duplicadas.</p>
+
+        <p class="est-erro" id="agenda-erro" role="alert"></p>
+
+        <div class="form-acoes">
+            <button type="button" class="btn-secundario" data-fechar>Fechar</button>
+            <button type="button" class="btn-primario" id="agenda-baixar">Baixar pra agenda</button>
+        </div>
+
+    </dialog>
+
     <dialog class="modal comp-modal" id="imp-modal" aria-labelledby="imp-titulo">
 
         <form id="imp-form">
@@ -1305,6 +1333,11 @@
     <script
         type="module"
         src="./js/compartilhar.js?v=1"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/agenda.js?v=1"
     ></script>
 
     <script

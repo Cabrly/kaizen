@@ -6379,7 +6379,8 @@ html.travado body > *:not(.pin-tela) {
     border-radius: 8px;
 }
 
-#imp-campo-link[hidden] {
+#imp-campo-link[hidden],
+#agenda-aviso-linha[hidden] {
     display: none;
 }
 

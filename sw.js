@@ -23,6 +23,7 @@ const ARQUIVOS = [
     "./js/apoio.js",
     "./js/cofre.js",
     "./js/compartilhar.js",
+    "./js/agenda.js",
     "./js/novidades.js",
     "./novidades.json",
     "./js/vendor/qrcode.js",
