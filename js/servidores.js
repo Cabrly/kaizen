@@ -417,6 +417,19 @@ function renderizar(servidores, soNuvem = false) {
 
     painel.querySelector("#srv-lista").innerHTML = servidores.map((s) => {
 
+        if (s.tipo === "agente" && !s.instalado) return `
+            <div class="srv-item srv-offline">
+                <div class="srv-usar">
+                    <span class="status-dot status-offline"></span>
+                    <span class="srv-texto">
+                        <strong>${esc(s.nome)}</strong>
+                        <small>⌨ não instalado neste computador</small>
+                        <small><a href="${esc(s.como_instalar)}" target="_blank" rel="noopener noreferrer">Como instalar</a>
+                            (depois faça login no terminal e reabra o Kaizen)</small>
+                    </span>
+                </div>
+            </div>`;
+
         const situacao = s.online
             ? `${s.modelos.length} modelo${s.modelos.length === 1 ? "" : "s"}${s.ms == null ? "" : ` · ${s.ms} ms`}`
             : ({ nuvem: "chave recusada ou sem internet", pc: "PC desligado, Kaizen fechado ou Tailscale desligado" }[s.tipo] || "offline");

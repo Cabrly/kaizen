@@ -260,9 +260,10 @@ def listar():
     nuvem = [{"id": p, "nome": info["nome"], "url": _url_compat() if info.get("pede_url") else f"https://{info['host']}",
               "tipo": "nuvem", "removivel": True}
              for p, info in NUVEM.items() if conectado(p)]
-    ferramentas = [{"id": a, "nome": agentes.AGENTES[a]["nome"], "url": "login da sua conta", "tipo": "agente",
-                    "removivel": False}
-                   for a in agentes.instalados()]
+    # as três aparecem sempre; as que faltam mostram como instalar
+    ferramentas = [{"id": a, "nome": info["nome"], "url": "login da sua conta", "tipo": "agente", "removivel": False,
+                    "instalado": bool(agentes.caminho(a)), "como_instalar": info["como_instalar"]}
+                   for a, info in agentes.AGENTES.items()]
     return ([{"id": "local", "nome": "Este computador", "url": URL_LOCAL, "tipo": "ollama", "removivel": False}]
             + cadastrados + nuvem + ferramentas)
 
@@ -278,12 +279,16 @@ def url_de(destino_id):
 
 def preferido():
     destino_id = _config("servidor_preferido") or "local"
-    return destino_id if obter(destino_id) else "local"
+    destino = obter(destino_id)
+    return destino_id if destino and destino.get("instalado", True) else "local"
 
 
 def definir_preferido(destino_id):
-    if not obter(destino_id):
+    destino = obter(destino_id)
+    if not destino:
         raise ValueError("Destino não encontrado.")
+    if not destino.get("instalado", True):
+        raise ValueError(f"Instale o {destino['nome']} e faça login nele pelo terminal primeiro.")
     _config("servidor_preferido", str(destino_id))
 
 
@@ -291,7 +296,8 @@ def status(destino, usar_cache=True):
     """{online, modelos, ms} do destino (Ollama, nuvem ou agente)."""
     if destino["tipo"] == "agente":
         # instalado = online; se faltar login, o erro aparece na primeira conversa
-        return {"online": True, "modelos": agentes.AGENTES[destino["id"]]["modelos"], "ms": None}
+        instalado = destino.get("instalado", True)
+        return {"online": instalado, "modelos": agentes.AGENTES[destino["id"]]["modelos"] if instalado else [], "ms": None}
 
     chave_cache = destino["id"] if destino["tipo"] == "nuvem" else destino["url"]
     validade = CACHE_NUVEM if destino["tipo"] == "nuvem" else CACHE_SEGUNDOS

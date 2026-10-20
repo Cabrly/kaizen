@@ -46,9 +46,10 @@ class ErroAgente(Exception):
 def caminho(agente):
     """Onde o programa está, ou None. O npm global nem sempre está no PATH do serviço."""
     programa = AGENTES[agente]["programa"]
-    extras = [os.path.expanduser(f"~/.npm-global/bin/{programa}"),
-              os.path.expanduser(f"~/.local/bin/{programa}"),
-              os.path.join(os.environ.get("APPDATA", ""), "npm", f"{programa}.cmd")]
+    pastas = [os.path.expanduser("~/.npm-global/bin"), os.path.expanduser("~/.local/bin"),
+              os.path.join(os.environ.get("APPDATA", ""), "npm"),
+              os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "OpenAI", "Codex", "bin")]
+    extras = [os.path.join(p, programa + ext) for p in pastas for ext in ("", ".exe", ".cmd")]
     return shutil.which(programa) or next((c for c in extras if os.path.isfile(c)), None)
 
 
@@ -102,7 +103,9 @@ def conversar(agente, modelo, mensagens, formato=None):
         comando, arquivo_saida = _comando(agente, programa, modelo, pasta)
         try:
             proc = subprocess.run(comando, input=_texto_da_conversa(mensagens, formato), capture_output=True,
-                                  text=True, encoding="utf-8", errors="replace", timeout=TEMPO_MAXIMO, cwd=pasta)
+                                  text=True, encoding="utf-8", errors="replace", timeout=TEMPO_MAXIMO, cwd=pasta,
+                                  # no app de computador, sem isso pisca uma janela preta a cada pergunta
+                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         except subprocess.TimeoutExpired:
             raise ErroAgente(f"O {AGENTES[agente]['nome']} demorou demais pra responder.")
         except OSError as erro:
