@@ -118,7 +118,7 @@ export function iniciarFundo() {
     reduzir =
         window.matchMedia(
             "(prefers-reduced-motion: reduce)"
-        ).matches;
+        ).matches || document.documentElement.classList.contains("menos-movimento");   // opção da acessibilidade
 
 
     /* Recupera o modo salvo. */

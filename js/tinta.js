@@ -17,7 +17,7 @@ export function iniciarTinta() {
     const reduzirMovimento =
         window.matchMedia(
             "(prefers-reduced-motion: reduce)"
-        ).matches;
+        ).matches || document.documentElement.classList.contains("menos-movimento");
 
     if (reduzirMovimento) {
         return;

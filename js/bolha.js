@@ -197,7 +197,7 @@ function quadro(tempo) {
 
     const t = tempo / 1000;
     const raioBase = alvo.altura / 2;
-    const parado = menosMovimento.matches;
+    const parado = menosMovimento.matches || document.documentElement.classList.contains("menos-movimento");
 
 
     corpo.forEach((c, i) => {

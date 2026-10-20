@@ -44,6 +44,16 @@
             }
         } catch (erro) { /* aba privada */ }
 
+        // acessibilidade (js/acessibilidade.js) antes da primeira pintura: sem pulo de tamanho ou de cor
+        try {
+            const aces = JSON.parse(localStorage.getItem("kaizen.acessibilidade.v1") || "{}");
+            const raiz = document.documentElement.classList;
+            if (aces.texto === "grande" || aces.texto === "maior") raiz.add(`texto-${aces.texto}`);
+            if (aces.contraste) raiz.add("alto-contraste");
+            if (aces.movimento) raiz.add("menos-movimento");
+            if (aces.espaco) raiz.add("texto-espacado");
+        } catch (erro) { /* aba privada ou valor estragado: tudo no padrão */ }
+
         // antes de qualquer tela gravar algo: já tinha Kaizen neste navegador? (js/novidades.js)
         try {
             window.kaizenJaUsado = Object.keys(localStorage).some((chave) => chave.startsWith("kaizen."));
@@ -722,6 +732,51 @@
 
     </dialog>
 
+    <dialog class="modal comp-modal" id="aces-modal" aria-labelledby="aces-titulo">
+
+        <h2 class="modal-titulo" id="aces-titulo">Acessibilidade</h2>
+
+        <div class="est-pergunta">
+            <span class="est-rotulo">Tamanho do texto</span>
+            <div class="est-chips">
+                <button type="button" class="est-chip" data-texto="normal">Normal</button>
+                <button type="button" class="est-chip" data-texto="grande">Grande</button>
+                <button type="button" class="est-chip" data-texto="maior">Maior</button>
+            </div>
+        </div>
+
+        <div class="aces-opcoes">
+            <label class="aces-opcao"><input type="checkbox" data-opcao="contraste">
+                <span><strong>Alto contraste</strong><small>Fundo branco liso, texto preto e bordas fortes.</small></span></label>
+            <label class="aces-opcao"><input type="checkbox" data-opcao="movimento">
+                <span><strong>Menos movimento</strong><small>Sem animações nem rastro do mouse. Os fundos animados param ao reabrir o app.</small></span></label>
+            <label class="aces-opcao"><input type="checkbox" data-opcao="espaco">
+                <span><strong>Texto mais espaçado</strong><small>Mais espaço entre linhas e letras. Ajuda na dislexia.</small></span></label>
+            <label class="aces-opcao"><input type="checkbox" data-opcao="voz">
+                <span><strong>Leitura em voz alta</strong><small>🔊 nas respostas da IA, na sessão e nos flashcards. Selecione qualquer texto pra ouvir.</small></span></label>
+        </div>
+
+        <p class="est-erro" id="aces-voz-aviso" hidden>Este navegador não tem leitura em voz alta.</p>
+
+        <div class="est-linha" id="aces-velocidade-linha" hidden>
+            <label class="campo-modal">
+                <span>Velocidade da voz</span>
+                <select id="aces-velocidade">
+                    <option value="0.8">Devagar</option>
+                    <option value="1">Normal</option>
+                    <option value="1.25">Rápida</option>
+                    <option value="1.5">Bem rápida</option>
+                </select>
+            </label>
+            <button type="button" class="btn-secundario aces-testar" id="aces-testar">🔊 Testar</button>
+        </div>
+
+        <div class="form-acoes">
+            <button type="button" class="btn-primario" data-fechar>Pronto</button>
+        </div>
+
+    </dialog>
+
     <dialog class="modal resumo-modal" id="resumo-modal" aria-labelledby="resumo-titulo">
 
         <h2 class="modal-titulo" id="resumo-titulo">Sua semana</h2>
@@ -1304,6 +1359,10 @@
                     title="Usa as mesmas tarefas e planos no PC e no celular">
                 Sincronizar aparelhos
             </button>
+            <button type="button" class="btn-secundario" id="aces-abrir"
+                    title="Texto maior, alto contraste, menos movimento e leitura em voz alta">
+                Acessibilidade
+            </button>
             <button type="button" class="btn-secundario" id="pin-abrir"
                     title="Pede um PIN pra abrir o Kaizen neste aparelho">
                 PIN
@@ -1359,6 +1418,11 @@
     <script
         type="module"
         src="./js/resumo.js?v=1"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/acessibilidade.js?v=1"
     ></script>
 
     <script

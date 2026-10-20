@@ -6498,3 +6498,202 @@ html.travado body > *:not(.pin-tela) {
     font-size: 13px;
     color: #777;
 }
+
+/* ---------- acessibilidade (js/acessibilidade.js) ---------- */
+
+.aces-opcoes {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    margin: 18px 0 8px;
+}
+
+.aces-opcao {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+
+    padding: 10px 12px;
+
+    background: #f7f7f5;
+    border-radius: 10px;
+
+    cursor: pointer;
+}
+
+.aces-opcao input {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+
+    flex-shrink: 0;
+
+    accent-color: #c90016;
+}
+
+.aces-opcao span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.aces-opcao strong {
+    font-size: 14px;
+}
+
+.aces-opcao small {
+    font-size: 12px;
+    color: #666;
+}
+
+#aces-velocidade-linha {
+    align-items: end;
+}
+
+#aces-velocidade-linha[hidden] {
+    display: none;
+}
+
+.aces-testar {
+    min-height: 42px;
+    margin-bottom: 14px;
+}
+
+.aces-ouvir {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    margin: 6px 0;
+    padding: 4px 10px;
+
+    font: inherit;
+    font-size: 12px;
+
+    color: #171717;
+    background: #ffffff;
+    border: 1px solid #d6d6d6;
+    border-radius: 99px;
+
+    cursor: pointer;
+}
+
+.aces-ouvir[aria-pressed="true"] {
+    color: #ffffff;
+    background: #c90016;
+    border-color: #c90016;
+}
+
+.aces-ler-selecao {
+    position: absolute;
+    z-index: 9999;
+
+    padding: 6px 12px;
+
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+
+    color: #ffffff;
+    background: #171717;
+    border: 0;
+    border-radius: 99px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+
+    cursor: pointer;
+}
+
+/* tamanho do texto: amplia o app inteiro (os fundos de canvas ficam fora) */
+html.texto-grande .header,
+html.texto-grande main,
+html.texto-grande footer,
+html.texto-grande dialog {
+    zoom: 1.15;
+}
+
+html.texto-maior .header,
+html.texto-maior main,
+html.texto-maior footer,
+html.texto-maior dialog {
+    zoom: 1.3;
+}
+
+html.texto-grande dialog,
+html.texto-maior dialog {
+    max-width: 92vw;
+}
+
+/* texto mais espaçado (recomendação da British Dyslexia Association) */
+html.texto-espacado body * {
+    line-height: 1.7 !important;
+    letter-spacing: 0.03em !important;
+    word-spacing: 0.12em !important;
+}
+
+/* menos movimento: nada desliza, pisca ou anima */
+html.menos-movimento *,
+html.menos-movimento *::before,
+html.menos-movimento *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
+
+html.menos-movimento #tinta-canvas {
+    display: none;
+}
+
+/* alto contraste: fundo liso, texto preto, bordas e foco fortes */
+html.alto-contraste body {
+    background: #ffffff !important;
+}
+
+html.alto-contraste #fundo-tinta,
+html.alto-contraste #fundo-cena,
+html.alto-contraste #fundo-arte,
+html.alto-contraste #tinta-canvas {
+    display: none !important;
+}
+
+html.alto-contraste body *:not(.btn-primario):not(.btn-primario *):not(.est-chip.ativo):not(.nav-tab.ativa):not(.aces-ler-selecao):not(.aces-ouvir[aria-pressed="true"]):not(svg *) {
+    color: #000000 !important;
+    text-shadow: none !important;
+}
+
+html.alto-contraste .header,
+html.alto-contraste .intro,
+html.alto-contraste footer,
+html.alto-contraste .modal {
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+}
+
+html.alto-contraste .btn-secundario,
+html.alto-contraste .est-chip,
+html.alto-contraste .est-atalho,
+html.alto-contraste .est-icone,
+html.alto-contraste .aces-opcao,
+html.alto-contraste input,
+html.alto-contraste select,
+html.alto-contraste textarea,
+html.alto-contraste .modal {
+    border: 2px solid #000000 !important;
+}
+
+html.alto-contraste .btn-primario,
+html.alto-contraste .est-chip.ativo {
+    color: #ffffff !important;
+    background: #000000 !important;
+    border: 2px solid #000000 !important;
+}
+
+html.alto-contraste a {
+    text-decoration: underline !important;
+}
+
+html.alto-contraste :focus-visible {
+    outline: 3px solid #0050ff !important;
+    outline-offset: 2px !important;
+}
