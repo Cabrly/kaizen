@@ -14,8 +14,10 @@
    1 MB (o armazenamento aceita valores de até 2 MB cada), então um cofre
    aguenta até TAMANHO_MAXIMO, com as entregas das atividades e tudo.
 
-   Limite por IP: 120 pedidos por minuto no total e 10 por minuto em cofre que
-   não existe (404). Quem tenta adivinhar códigos bate no segundo logo. */
+   Limite por IP: 120 pedidos por minuto no total, 10 por minuto em cofre que
+   não existe (404) e 3 cofres novos por minuto. Quem tenta adivinhar códigos
+   bate no segundo logo; o terceiro impede alguém de encher o armazenamento
+   da conta criando cofre atrás de cofre. */
 
 import { DurableObject } from "cloudflare:workers";
 
@@ -96,6 +98,11 @@ export class Cofre extends DurableObject {
         if (dados.length > TAMANHO_MAXIMO) return json(413, { erro: "Dados grandes demais pra sincronizar." });
 
         const atual = await this.ler();
+
+        if (!atual && base === 0) {
+            const ip = pedido.headers.get("CF-Connecting-IP") || "sem-ip";
+            if (!(await dentroDoLimite(this.env.LIMITE_NOVOS, ip))) return MUITAS_TENTATIVAS();
+        }
 
         // alguém gravou antes: devolve o que está lá pra o aparelho decidir
         if ((atual?.versao || 0) !== base) {

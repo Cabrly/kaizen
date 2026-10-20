@@ -22,3 +22,8 @@ simple = { limit = 120, period = 60 }
 name = "LIMITE_ERROS"
 namespace_id = "1002"
 simple = { limit = 10, period = 60 }
+
+[[ratelimits]]
+name = "LIMITE_NOVOS"
+namespace_id = "1003"
+simple = { limit = 3, period = 60 }
