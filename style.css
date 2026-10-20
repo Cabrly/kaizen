@@ -4330,3 +4330,50 @@ body.contemplando .contemplar-aviso.some {
         transition: none !important;
     }
 }
+
+/* Resposta da IA em markdown (js/chat.js, formatarMarkdown). */
+.ia-md {
+    white-space: normal;
+}
+
+.ia-md > * + * {
+    margin-top: 8px;
+}
+
+.ia-md ul,
+.ia-md ol {
+    padding-left: 20px;
+}
+
+.ia-md li + li {
+    margin-top: 3px;
+}
+
+.ia-md code {
+    padding: 1px 5px;
+
+    font-size: 12px;
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 4px;
+}
+
+.ia-md pre {
+    padding: 10px 12px;
+    overflow-x: auto;
+
+    background: #1d1b19;
+    border-radius: 6px;
+}
+
+.ia-md pre code {
+    padding: 0;
+
+    color: #f2efe9;
+    background: none;
+}
+
+.ia-md .ia-md-titulo {
+    font-weight: 700;
+}

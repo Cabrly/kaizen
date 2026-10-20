@@ -318,14 +318,71 @@ function criarBolha(mensagem) {
         (mensagem.papel === "usuario" ? "ia-bolha-usuario" : "ia-bolha-assistente");
 
 
-    const texto = document.createElement("p");
+    const texto = document.createElement(mensagem.papel === "usuario" ? "p" : "div");
 
-    texto.textContent = mensagem.texto;
+    if (mensagem.papel === "usuario") {
+        texto.textContent = mensagem.texto;
+    } else {
+        // a IA responde em markdown: sem isso, aparecem os ** e os - na tela
+        texto.className = "ia-md";
+        texto.innerHTML = formatarMarkdown(mensagem.texto);
+    }
 
     bolha.append(texto);
 
 
     return bolha;
+
+}
+
+
+
+/* Markdown simples e seguro: escapa o HTML antes e só então aplica negrito,
+   itálico, código, títulos e listas (o que os modelos costumam usar). */
+function formatarMarkdown(bruto) {
+
+    const escapar = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const emLinha = (t) => escapar(t)
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
+
+    const saida = [];
+    let lista = null;
+    let blocoCodigo = null;
+    const fecharLista = () => {
+        if (lista) saida.push(`</${lista}>`);
+        lista = null;
+    };
+
+    for (const linha of String(bruto ?? "").split("\n")) {
+        if (linha.trim().startsWith("```")) {
+            if (blocoCodigo === null) { fecharLista(); blocoCodigo = []; }
+            else { saida.push(`<pre><code>${escapar(blocoCodigo.join("\n"))}</code></pre>`); blocoCodigo = null; }
+            continue;
+        }
+        if (blocoCodigo !== null) { blocoCodigo.push(linha); continue; }
+
+        const marcador = linha.match(/^\s*[-*•]\s+(.*)$/);
+        const numero = linha.match(/^\s*\d+[.)]\s+(.*)$/);
+        const titulo = linha.match(/^\s*#{1,6}\s+(.*)$/);
+        if (marcador || numero) {
+            const tipo = marcador ? "ul" : "ol";
+            if (lista !== tipo) { fecharLista(); saida.push(`<${tipo}>`); lista = tipo; }
+            saida.push(`<li>${emLinha((marcador || numero)[1])}</li>`);
+        } else if (titulo) {
+            fecharLista();
+            saida.push(`<p class="ia-md-titulo">${emLinha(titulo[1])}</p>`);
+        } else if (linha.trim() === "") {
+            fecharLista();
+        } else {
+            fecharLista();
+            saida.push(`<p>${emLinha(linha)}</p>`);
+        }
+    }
+    if (blocoCodigo !== null) saida.push(`<pre><code>${escapar(blocoCodigo.join("\n"))}</code></pre>`);
+    fecharLista();
+    return saida.join("");
 
 }
 
