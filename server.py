@@ -33,6 +33,18 @@ HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 
+# O navegador só baixa daqui o próprio app (o mesmo que o desktop/empacotar_servidor.py leva).
+# O resto da pasta (o banco com as chaves de API, sync/.env, o código, o .git) nunca sai.
+ARQUIVOS_PUBLICOS = {"index.html", "style.css", "sw.js", "manifest.webmanifest", "dados.json", "prompts.json", "novidades.json"}
+PASTAS_PUBLICAS = ("js/", "icones/")
+CORPO_MAXIMO = 100_000_000   # backup com todas as entregas cabe folgado
+
+# Rodando só neste PC, o Host tem que ser este PC: barra o "DNS rebinding" (um site
+# que aponta o próprio domínio pra 127.0.0.1 e lê a API). KAIZEN_HOSTS libera outros nomes.
+HOSTS_LOCAIS = {"127.0.0.1", "localhost", "::1"}
+HOSTS_EXTRAS = {h.strip().lower() for h in os.environ.get("KAIZEN_HOSTS", "").split(",") if h.strip()}
+SO_LOCAL = HOST in HOSTS_LOCAIS
+
 busca.CACHE_DB = DB
 estudos.DB = DB
 servidores.DB = DB
@@ -137,7 +149,48 @@ class Handler(SimpleHTTPRequestHandler):
         if remoto.veio_pelo_tunel(self.headers) and urllib.parse.urlparse(self.path).path not in remoto.ROTAS_LIBERADAS:
             self.send_error(403, "Pelo celular, só a IA deste PC fica liberada.")
             return False
+        if not self.origem_confiavel():
+            self.send_error(403, "Pedido de fora do Kaizen.")
+            return False
         return True
+
+    def origem_confiavel(self):
+        """Outro site aberto no navegador não pode mexer no Kaizen (CSRF) nem ler a API.
+
+        O Host tem que ser este PC e, em pedido que muda algo, a Origin tem que ser
+        o próprio Kaizen (o navegador sempre manda a Origin em POST/PUT/PATCH/DELETE).
+        As rotas da IA remota têm chave e valem de qualquer origem (o celular).
+        """
+        if urllib.parse.urlparse(self.path).path in remoto.ROTAS_LIBERADAS:
+            return True
+        host = self.headers.get("Host", "")
+        nome = (urllib.parse.urlsplit(f"//{host}").hostname or "").lower()
+        if SO_LOCAL and nome not in HOSTS_LOCAIS | HOSTS_EXTRAS:
+            return False
+        origem = self.headers.get("Origin")
+        if self.command not in ("GET", "HEAD") and origem is not None:
+            return urllib.parse.urlsplit(origem).netloc.lower() == host.lower()
+        return True
+
+    def send_head(self):
+        caminho = urllib.parse.unquote(urllib.parse.urlsplit(self.path).path).lstrip("/")
+        publico = caminho in ("", *ARQUIVOS_PUBLICOS) or (caminho.startswith(PASTAS_PUBLICAS)
+                                                          and ".." not in caminho and "\\" not in caminho)
+        if not publico:
+            self.send_error(404, "Arquivo não encontrado")
+            return None
+        return super().send_head()
+
+    def list_directory(self, path):
+        self.send_error(404, "Arquivo não encontrado")
+        return None
+
+    def ler_json(self):
+        """Corpo do pedido em JSON ({} se vier vazio). Recusa corpo absurdo antes de ler."""
+        tamanho = int(self.headers.get("Content-Length") or 0)
+        if tamanho > CORPO_MAXIMO:
+            raise ValueError("Pedido grande demais.")
+        return json.loads(self.rfile.read(tamanho) or b"{}") if tamanho > 0 else {}
 
     def do_OPTIONS(self):
         if not self.path.startswith("/api/remoto/"):
@@ -175,14 +228,14 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path == "/api/ia/local/instalar":
             try:
-                dados = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+                dados = self.ler_json()
                 return self.responder(202, ia_local.instalar(dados.get("modelo"), dados.get("aceito") is True))
             except ValueError as erro:
                 return self.responder(400, {"erro": str(erro)})
         if self.path != "/api/chat":
             return self.responder(404, {"erro": "Rota não encontrada"})
         try:
-            dados = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
+            dados = self.ler_json()
             modelo = dados.get("modelo") or "qwen3:14b"
             mensagens = dados.get("mensagens")
             if not isinstance(mensagens, list) or not mensagens:
@@ -200,14 +253,14 @@ class Handler(SimpleHTTPRequestHandler):
     def do_PUT(self):
         if self.path == "/api/guardados":
             try:
-                guardar(json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0)))))
+                guardar(self.ler_json())
                 return self.responder(200, {"ok": True})
             except (TypeError, ValueError, sqlite3.Error) as erro:
                 return self.responder(400, {"erro": str(erro)})
         if self.path != "/api/tarefas":
             return self.responder(404, {"erro": "Rota não encontrada"})
         try:
-            dados = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
+            dados = self.ler_json()
             tarefas = dados["tarefas"]
             categorias = dados.get("categorias", [])
             with sqlite3.connect(DB) as con:
@@ -250,8 +303,7 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             corpo = {}
             if metodo in ("POST", "PATCH"):
-                tamanho = int(self.headers.get("Content-Length", 0))
-                corpo = json.loads(self.rfile.read(tamanho) or b"{}") if tamanho else {}
+                corpo = self.ler_json()
 
             if metodo == "GET" and recurso == "motores":
                 motores, padrao = estudos.motores_disponiveis()
@@ -349,13 +401,11 @@ class Handler(SimpleHTTPRequestHandler):
                          for prov, info in servidores.NUVEM.items()]
                 self.responder(200, {"servidores": servidores.listar_com_status(usar_cache=False), "nuvem": nuvem})
             elif metodo == "POST" and ident == "nuvem" and len(partes) == 2:
-                tamanho = int(self.headers.get("Content-Length", 0))
-                corpo = json.loads(self.rfile.read(tamanho) or b"{}") if tamanho else {}
+                corpo = self.ler_json()
                 servidores.conectar_nuvem(partes[1], corpo.get("chave"), corpo.get("url"))
                 self.responder(200, {"servidores": servidores.listar_com_status()})
             elif metodo == "POST" and not ident:
-                tamanho = int(self.headers.get("Content-Length", 0))
-                corpo = json.loads(self.rfile.read(tamanho) or b"{}") if tamanho else {}
+                corpo = self.ler_json()
                 self.responder(201, {"servidor": servidores.adicionar(corpo.get("nome"), corpo.get("url"))})
             elif metodo == "POST" and ident and partes[1:] == ["preferido"]:
                 servidores.definir_preferido(ident)
@@ -379,7 +429,7 @@ class Handler(SimpleHTTPRequestHandler):
                 if metodo == "GET" and acao == "modelos":
                     return self.responder(200, {"modelos": remoto.modelos()}) or True
                 if metodo == "POST" and acao == "conversar":
-                    corpo = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+                    corpo = self.ler_json()
                     resposta = remoto.conversar(corpo.get("modelo"), corpo.get("mensagens"), corpo.get("formato"))
                     return self.responder(200, {"resposta": resposta}) or True
             elif metodo == "GET" and not acao:
@@ -415,8 +465,7 @@ class Handler(SimpleHTTPRequestHandler):
                 }) or True
 
             if metodo == "POST":
-                tamanho = int(self.headers.get("Content-Length", 0))
-                dados = json.loads(self.rfile.read(tamanho) or b"{}")
+                dados = self.ler_json()
                 if dados.get("app") != "kaizen":
                     raise ValueError("Esse arquivo não é um backup do Kaizen.")
                 kanban = dados.get("kanban")
