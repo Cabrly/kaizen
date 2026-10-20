@@ -898,7 +898,7 @@ COLUNAS_ITEM = ["id", "sessao_id", "tipo", "titulo", "url", "descricao", "fonte"
 COLUNAS_CARTAO = ["id", "sessao_id", "frente", "verso", "caixa", "revisar_em"]
 
 
-def exportar():
+def exportar(com_entregas=True):
     with conectar() as con:
         planos = []
         for linha in con.execute("SELECT * FROM planos ORDER BY id"):
@@ -910,7 +910,7 @@ def exportar():
         itens = [dict(l) for l in con.execute("SELECT * FROM itens ORDER BY id")]
         flashcards = [dict(l) for l in con.execute("SELECT * FROM flashcards ORDER BY id")]
         import entregas
-        lista_entregas = entregas.exportar(con)
+        lista_entregas = entregas.exportar(con) if com_entregas else []
     return {"planos": planos, "sessoes": sessoes, "itens": itens, "flashcards": flashcards,
             "entregas": lista_entregas, "perfil": {"sobre": obter_sobre()}, "pets": obter_pets()}
 

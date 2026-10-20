@@ -238,7 +238,7 @@ class Handler(SimpleHTTPRequestHandler):
         if partes[:3] == ["api", "ia", "servidores"]:
             return self.rota_servidores(metodo, partes[3:])
         if partes[:2] == ["api", "backup"]:
-            return self.rota_backup(metodo, sincronia="sincronia=1" in url.query)
+            return self.rota_backup(metodo, sincronia="sincronia=1" in url.query, leve="leve=1" in url.query)
         if partes[:2] == ["api", "remoto"]:
             return self.rota_remoto(metodo, partes[2:])
         if partes[:2] != ["api", "estudos"]:
@@ -303,6 +303,9 @@ class Handler(SimpleHTTPRequestHandler):
             if metodo == "POST" and recurso == "pets":
                 return self.responder(200, {"dados": estudos.salvar_pets(corpo.get("dados"))}) or True
             # entregas das atividades e correção pela IA
+            if metodo == "GET" and recurso == "entregas" and "planos=" in url.query:
+                planos = [int(p) for p in urllib.parse.parse_qs(url.query)["planos"][0].split(",") if p.isdigit()]
+                return self.responder(200, {"entregas": entregas.dos_planos(planos)}) or True
             if metodo == "GET" and recurso == "entregas" and ident is None:
                 item = int(urllib.parse.parse_qs(url.query)["item"][0])
                 return self.responder(200, {"entregas": entregas.listar(item),
@@ -393,11 +396,12 @@ class Handler(SimpleHTTPRequestHandler):
             self.responder(400, {"erro": str(erro)})
         return True
 
-    def rota_backup(self, metodo, sincronia=False):
+    def rota_backup(self, metodo, sincronia=False, leve=False):
         """GET baixa tudo (kanban + estudos); POST restaura, substituindo.
         Mesmo formato do modo nuvem, então serve pra levar do celular pro PC.
         Chaves de API não entram no arquivo. Pra sincronia (?sincronia=1), os
-        arquivos das entregas seguem a opção "O que vai pro celular"."""
+        arquivos das entregas seguem a opção "O que vai pro celular". ?leve=1 vem sem
+        as entregas (os pets só precisam dos planos pra contar pontos)."""
         try:
             if metodo == "GET":
                 with sqlite3.connect(DB) as con:
@@ -406,7 +410,8 @@ class Handler(SimpleHTTPRequestHandler):
                     "app": "kaizen", "formato": 1,
                     "criado_em": datetime.now().isoformat(timespec="seconds"),
                     "kanban": {"tarefas": listar(), "categorias": categorias},
-                    "estudos": entregas.para_sincronia(estudos.exportar()) if sincronia else estudos.exportar(),
+                    "estudos": entregas.para_sincronia(estudos.exportar()) if sincronia
+                    else estudos.exportar(com_entregas=not leve),
                 }) or True
 
             if metodo == "POST":

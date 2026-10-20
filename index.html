@@ -30,7 +30,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="./style.css?v=entregas1">
+    <link rel="stylesheet" href="./style.css?v=biblioteca1">
 
     <!-- com PIN, esconde o app antes de desenhar qualquer coisa (js/pin.js destrava) -->
     <script>
@@ -522,6 +522,10 @@
             </div>
 
             <div class="est-topo-acoes">
+                <button type="button" class="est-atalho" id="biblioteca-abrir"
+                        title="Cada plano vira um livro com tudo o que você estudou, entregou e as notas">
+                    📚 Biblioteca
+                </button>
                 <button type="button" class="est-atalho" id="pets-abrir"
                         title="Cada plano vira um pet que você cuida estudando">
                     🐾 Pets
@@ -686,6 +690,26 @@
 
     </dialog>
 
+
+    <dialog class="modal biblioteca-modal" id="biblioteca-modal" aria-labelledby="biblioteca-titulo">
+
+        <div class="pets-topo">
+            <h2 class="modal-titulo" id="biblioteca-titulo">📚 Biblioteca</h2>
+            <span class="pets-pontos" id="biblioteca-pontos"></span>
+        </div>
+
+        <nav class="pets-abas" role="tablist">
+            <button type="button" role="tab" class="pets-aba biblioteca-aba ativa" data-aba="estante">Estante</button>
+            <button type="button" role="tab" class="pets-aba biblioteca-aba" data-aba="loja">Loja dos livros</button>
+        </nav>
+
+        <div id="biblioteca-corpo"></div>
+
+        <div class="form-acoes">
+            <button type="button" class="btn-secundario" data-fechar>Fechar</button>
+        </div>
+
+    </dialog>
 
     <dialog class="modal entrega-modal" id="entrega-modal" aria-labelledby="entrega-titulo">
 
@@ -1278,7 +1302,12 @@
 
     <script
         type="module"
-        src="./js/pets.js?v=4"
+        src="./js/pets.js?v=5"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/biblioteca.js?v=1"
     ></script>
 
     <script

@@ -125,6 +125,20 @@ def obter(entrega_id):
     return _entrega(linha) if linha else None
 
 
+def dos_planos(plano_ids):
+    """Entregas de uma corrente de planos, sem o conteúdo dos arquivos (pro histórico da Biblioteca)."""
+    if not plano_ids:
+        return []
+    marcas = ",".join("?" * len(plano_ids))
+    with estudos.conectar() as con:
+        linhas = con.execute(f"""
+            SELECT e.id, e.item_id, e.criado_em, e.situacao, e.nota, e.correcao, e.link,
+                   s.id AS sessao_id, s.topico, i.descricao AS atividade
+            FROM entregas e JOIN itens i ON i.id = e.item_id JOIN sessoes s ON s.id = i.sessao_id
+            WHERE s.plano_id IN ({marcas}) ORDER BY e.id""", list(plano_ids)).fetchall()
+    return [{**dict(l), "correcao": json.loads(l["correcao"]) if l["correcao"] else None} for l in linhas]
+
+
 def resumo_dos_itens(con, item_ids):
     """{item_id: {entregas, nota, situacao}} da entrega mais recente, pros selos na sessão."""
     if not item_ids:

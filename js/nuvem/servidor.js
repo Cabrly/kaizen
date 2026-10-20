@@ -18,7 +18,7 @@ import { PROVEDORES, ErroIA, lerConfig, salvarConfig, contasConectadas,
 import { IDIOMAS, buscarVideos, linkDocumentacao } from "./busca.js";
 
 import { ligarEntregas, listar as listarEntregas, obter as obterEntrega, criar as criarEntrega, corrigirDeNovo,
-         excluir as excluirEntrega, sobreCorretor, resumoDosItens, linhaDoPerfil,
+         excluir as excluirEntrega, sobreCorretor, resumoDosItens, linhaDoPerfil, dosPlanos,
          exportar as exportarEntregas, importar as importarEntregas } from "./entregas.js";
 
 
@@ -841,7 +841,7 @@ function lerJson(chave, padrao) {
 }
 
 
-async function exportarBackup() {
+async function exportarBackup(leve = false) {
 
     const dados = completar(ler());
 
@@ -851,7 +851,7 @@ async function exportarBackup() {
         criado_em: agora().replace(" ", "T"),
         kanban: { tarefas: lerJson(CHAVE_TAREFAS, []), categorias: lerJson(CHAVE_CATEGORIAS, []) },
         estudos: { planos: dados.planos, sessoes: dados.sessoes, itens: dados.itens,
-                   flashcards: dados.flashcards, entregas: await exportarEntregas(dados),
+                   flashcards: dados.flashcards, entregas: leve ? [] : await exportarEntregas(dados),
                    perfil: dados.perfil, pets: dados.pets }
     };
 
@@ -1200,7 +1200,7 @@ export async function rotear(url, opcoes = {}) {
     try {
 
         if (area === "chat" && metodo === "POST") return json(200, await chat(corpo));
-        if (area === "backup" && metodo === "GET") return json(200, await exportarBackup());
+        if (area === "backup" && metodo === "GET") return json(200, await exportarBackup(url.searchParams.has("leve")));
         if (area === "backup" && metodo === "POST") { await restaurarBackup(corpo); return json(200, { ok: true }); }
         if (area === "ia" && recurso === "status") return json(200, await statusChat());
 
@@ -1232,6 +1232,9 @@ export async function rotear(url, opcoes = {}) {
             if (metodo === "POST" && recurso === "flashcards" && acao === "refazer") { pedirFlashcards(id, true); return json(202, { ok: true }); }
             if (metodo === "GET" && recurso === "pets") return json(200, { dados: completar(ler()).pets });
             if (metodo === "POST" && recurso === "pets") return json(200, { dados: salvarPets(corpo.dados) });
+            if (metodo === "GET" && recurso === "entregas" && url.searchParams.has("planos")) {
+                return json(200, { entregas: dosPlanos(url.searchParams.get("planos").split(",").map(Number)) });
+            }
             if (metodo === "GET" && recurso === "entregas" && !ident) {
                 return json(200, { entregas: await listarEntregas(Number(url.searchParams.get("item"))), corretor: await sobreCorretor() });
             }

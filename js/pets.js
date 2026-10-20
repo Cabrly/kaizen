@@ -18,6 +18,7 @@
 ========================================================= */
 
 import { ESPECIES, TONS, FUNDOS, ACESSORIOS, REACOES, desenharPet, normalizar, imagemDe } from "./pets-arte.js?v=3";
+import { custoLivro } from "./livros-arte.js?v=1";
 
 
 const API = "./api";
@@ -55,7 +56,7 @@ async function api(caminho, opcoes = {}) {
 
 
 async function carregar() {
-    const [pets, backup] = await Promise.all([api("/estudos/pets"), api("/backup")]);
+    const [pets, backup] = await Promise.all([api("/estudos/pets"), api("/backup?leve=1")]);
     estado = { ligado: false, compras: [], pets: {}, encerrados: [], ...(pets.dados || {}) };
     dados = backup.estudos || dados;
 }
@@ -201,6 +202,7 @@ function custo(id) {
     if (id.startsWith("tom:")) return TONS[id.slice(4)]?.custo ?? 0;
     if (id.startsWith("fundo:")) return FUNDOS[id.slice(6)]?.custo ?? 0;
     if (id.startsWith("meme:")) return REACOES[id.slice(5)]?.custo ?? 0;
+    if (id.startsWith("livro:")) return custoLivro(id);
     return ESPECIES[id]?.custo ?? ACESSORIOS[id]?.custo ?? 0;
 }
 
@@ -685,6 +687,28 @@ function iniciar() {
     atualizar();
 
 }
+
+
+/* ---------- a Biblioteca (js/biblioteca.js) usa os mesmos pontos e o mesmo estado guardado ---------- */
+
+window.kaizenColecao = {
+    async carregar() { await carregar(); return { estado, dados }; },
+    raiz,
+    pontos,
+    custo,
+    tem,
+    concluido,
+    progresso,
+    foiEstudada,
+    comprar(id) {
+        if (pontos() < custo(id) || estado.compras.includes(id)) return false;
+        estado.compras.push(id);
+        salvar();
+        return true;
+    },
+    livros() { return (estado.livros ||= {}); },
+    salvar
+};
 
 
 if ($("pets-modal") && $("tela-estudos")) iniciar();

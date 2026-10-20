@@ -134,6 +134,20 @@ export async function obter(id) {
 }
 
 
+// sem o conteúdo dos arquivos, pro histórico da Biblioteca
+export function dosPlanos(planoIds) {
+    const dados = deps.ler();
+    const sessoes = new Map(dados.sessoes.filter((s) => planoIds.includes(s.plano_id)).map((s) => [s.id, s]));
+    const itens = new Map(dados.itens.filter((i) => sessoes.has(i.sessao_id)).map((i) => [i.id, i]));
+    return (dados.entregas || []).filter((e) => itens.has(e.item_id)).sort((a, b) => a.id - b.id).map((e) => {
+        const item = itens.get(e.item_id);
+        const sessao = sessoes.get(item.sessao_id);
+        return { id: e.id, item_id: e.item_id, criado_em: e.criado_em, situacao: e.situacao, nota: e.nota,
+                 correcao: e.correcao, link: e.link, sessao_id: sessao.id, topico: sessao.topico, atividade: item.descricao };
+    });
+}
+
+
 export function resumoDosItens(dados, itemIds) {
     const resumo = {};
     (dados.entregas || []).filter((e) => itemIds.includes(e.item_id)).sort((a, b) => a.id - b.id).forEach((e) => {
