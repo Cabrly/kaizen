@@ -18,7 +18,6 @@
 ========================================================= */
 
 import { ESPECIES, TONS, FUNDOS, ACESSORIOS, REACOES, desenharPet, normalizar, imagemDe } from "./pets-arte.js?v=3";
-import { custoLivro } from "./livros-arte.js?v=1";
 
 
 const API = "./api";
@@ -202,7 +201,6 @@ function custo(id) {
     if (id.startsWith("tom:")) return TONS[id.slice(4)]?.custo ?? 0;
     if (id.startsWith("fundo:")) return FUNDOS[id.slice(6)]?.custo ?? 0;
     if (id.startsWith("meme:")) return REACOES[id.slice(5)]?.custo ?? 0;
-    if (id.startsWith("livro:")) return custoLivro(id);
     return ESPECIES[id]?.custo ?? ACESSORIOS[id]?.custo ?? 0;
 }
 
@@ -432,7 +430,7 @@ async function mostrarEntregas(ficha, planoIds) {
         const origem = dados.itens.find((o) => o.id === item?.origem_id);
         const li = ficha.querySelector(`[data-historico="${e.sessao_id}"]`) || ficha.querySelector(`[data-historico="${origem?.sessao_id}"]`);
         li?.insertAdjacentHTML("beforeend", `
-            <div class="biblioteca-entrega">
+            <div class="pets-entrega">
                 ${e.situacao === "corrigida" ? `<span class="est-nota est-nota-${e.nota >= 7 ? "boa" : e.nota >= 5 ? "media" : "baixa"}">Nota ${e.nota}/10</span>`
                     : `<span class="est-nota">Entregue</span>`}
                 <span>${esc(e.correcao?.resumo || "Atividade entregue.")}</span>
@@ -715,28 +713,6 @@ function iniciar() {
     atualizar();
 
 }
-
-
-/* ---------- a Biblioteca (js/biblioteca.js) usa os mesmos pontos e o mesmo estado guardado ---------- */
-
-window.kaizenColecao = {
-    async carregar() { await carregar(); return { estado, dados }; },
-    raiz,
-    pontos,
-    custo,
-    tem,
-    concluido,
-    progresso,
-    foiEstudada,
-    comprar(id) {
-        if (pontos() < custo(id) || estado.compras.includes(id)) return false;
-        estado.compras.push(id);
-        salvar();
-        return true;
-    },
-    livros() { return (estado.livros ||= {}); },
-    salvar
-};
 
 
 if ($("pets-modal") && $("tela-estudos")) iniciar();

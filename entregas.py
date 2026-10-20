@@ -126,7 +126,7 @@ def obter(entrega_id):
 
 
 def dos_planos(plano_ids):
-    """Entregas de uma corrente de planos, sem o conteúdo dos arquivos (pro histórico da Biblioteca)."""
+    """Entregas de uma corrente de planos, sem o conteúdo dos arquivos (pro histórico da ficha do pet)."""
     if not plano_ids:
         return []
     marcas = ",".join("?" * len(plano_ids))

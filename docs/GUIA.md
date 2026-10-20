@@ -230,18 +230,6 @@ guardada e você pede a correção depois de conectar uma IA melhor.
 Limites: até 500 mil caracteres por arquivo, e a IA lê até 200 mil por
 entrega. Projeto grande: mande o link do GitHub.
 
-### Biblioteca
-
-Em **📚 Biblioteca**, cada plano (com os que continuam ele) é um livro na
-estante. Abrindo o livro você vê tudo: as sessões estudadas, os materiais, as
-atividades entregues com nota e correção, a nota média e os pontos pra
-reforçar. Plano concluído ganha selo dourado. Funciona com ou sem os pets.
-
-A capa se personaliza na **Loja dos livros**, com os mesmos pontos dos pets:
-16 capas (couro, jeans, xadrez, mármore, pixel retrô, galáxia, folha de
-ouro...), margens (filetes, cantoneiras, pergaminho, arabesco...), título
-gravado em ouro, prata, carimbo ou neon, fitilhos e adesivos.
-
 ### Pets de estudo (opcional)
 
 Em **🐾 Pets → Ativar os pets**, cada plano ganha um bichinho. Ao criar um

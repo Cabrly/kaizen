@@ -41,7 +41,6 @@ assinatura do Claude, do Gemini ou do ChatGPT. Não precisa criar conta.
 - **Flashcards prontos** do que você estudou nos últimos dias, com revisão espaçada
 - **Entregue as atividades** (texto, arquivos ou link do GitHub) e receba **nota e correção** da IA,
   que passa a reforçar os pontos em que você teve dificuldade
-- **Biblioteca**: cada plano vira um livro com todo o histórico, e a capa se personaliza na loja
 - **IA que conhece seu progresso**: explica a partir do que você já estudou
 - **Pets de estudo** (opcional): cada plano vira um bichinho que fica feliz quando você estuda
 - **Assistente** que conversa olhando suas tarefas

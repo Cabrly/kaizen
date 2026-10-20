@@ -134,7 +134,7 @@ export async function obter(id) {
 }
 
 
-// sem o conteúdo dos arquivos, pro histórico da Biblioteca
+// sem o conteúdo dos arquivos, pro histórico da ficha do pet
 export function dosPlanos(planoIds) {
     const dados = deps.ler();
     const sessoes = new Map(dados.sessoes.filter((s) => planoIds.includes(s.plano_id)).map((s) => [s.id, s]));
