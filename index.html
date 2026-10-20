@@ -595,6 +595,33 @@
     </dialog>
 
 
+    <dialog class="modal apoio-modal" id="apoio-modal" aria-labelledby="apoio-titulo">
+
+        <h2 class="modal-titulo" id="apoio-titulo">Apoie o Kaizen</h2>
+
+        <p class="sinc-texto">
+            O Kaizen é grátis e vai continuar assim. Se ele te ajuda, um Pix de qualquer valor
+            mantém o projeto andando. Aponte a câmera do app do banco pro QR ou copie a chave.
+        </p>
+
+        <div class="sinc-qr" id="apoio-qr"></div>
+
+        <p class="apoio-chave" id="apoio-chave"></p>
+
+        <div class="apoio-botoes">
+            <button type="button" class="btn-primario" id="apoio-copiar-chave">Copiar chave</button>
+            <button type="button" class="btn-secundario" id="apoio-copiar-codigo">Pix copia e cola</button>
+        </div>
+
+        <p class="sinc-segredo">Obrigado! Uma ⭐ no GitHub também ajuda.</p>
+
+        <div class="form-acoes">
+            <button type="button" class="btn-secundario" data-fechar>Fechar</button>
+        </div>
+
+    </dialog>
+
+
     <dialog class="modal est-modal" id="est-assistente" aria-labelledby="est-modal-titulo">
 
         <form id="est-form-tema">
@@ -876,6 +903,10 @@
                     title="Usa as mesmas tarefas e planos no PC e no celular">
                 Sincronizar aparelhos
             </button>
+            <button type="button" class="btn-secundario btn-apoiar" id="apoio-abrir" hidden
+                    title="O Kaizen é grátis: apoie com um Pix de qualquer valor">
+                Apoiar ♥
+            </button>
         </div>
 
     </footer>
@@ -894,6 +925,11 @@
     <script
         type="module"
         src="./js/sincronia.js?v=sinc1"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/apoio.js?v=apoio1"
     ></script>
 
     <script

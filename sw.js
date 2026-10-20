@@ -3,7 +3,7 @@
    Rede primeiro (online pega sempre a versão nova; offline usa a cópia
    guardada). /api e outros sites nunca passam por aqui. */
 
-const CACHE = "kaizen-v13";
+const CACHE = "kaizen-v14";
 
 const ARQUIVOS = [
     "./",
@@ -17,6 +17,7 @@ const ARQUIVOS = [
     "./js/modo.js",
     "./js/backup.js",
     "./js/sincronia.js",
+    "./js/apoio.js",
     "./js/vendor/qrcode.js",
     "./js/instalar.js",
     "./js/main.js",

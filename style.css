@@ -4377,3 +4377,36 @@ body.contemplando .contemplar-aviso.some {
 .ia-md .ia-md-titulo {
     font-weight: 700;
 }
+
+/* Apoiar (js/apoio.js): o botão do rodapé e a janela do Pix. */
+.rodape-backup .btn-apoiar {
+    color: #c90016;
+    border-color: #c90016;
+}
+
+.rodape-backup .btn-apoiar[hidden] {
+    display: none;
+}
+
+.apoio-modal {
+    width: min(400px, 92vw);
+}
+
+.apoio-chave {
+    margin: 14px 0 12px;
+
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 15px;
+    text-align: center;
+    overflow-wrap: anywhere;
+
+    user-select: all;
+}
+
+.apoio-botoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+
+    margin-bottom: 10px;
+}
