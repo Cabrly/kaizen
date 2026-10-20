@@ -30,7 +30,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="./style.css?v=memes">
+    <link rel="stylesheet" href="./style.css?v=novidades1">
 
     <!-- com PIN, esconde o app antes de desenhar qualquer coisa (js/pin.js destrava) -->
     <script>
@@ -39,6 +39,11 @@
                 && !new URLSearchParams(location.search).has("demo")) {
                 document.documentElement.classList.add("travado");
             }
+        } catch (erro) { /* aba privada */ }
+
+        // antes de qualquer tela gravar algo: já tinha Kaizen neste navegador? (js/novidades.js)
+        try {
+            window.kaizenJaUsado = Object.keys(localStorage).some((chave) => chave.startsWith("kaizen."));
         } catch (erro) { /* aba privada */ }
     </script>
 </head>
@@ -672,6 +677,18 @@
     </dialog>
 
 
+    <dialog class="modal novidades-modal" id="novidades-modal" aria-labelledby="novidades-titulo">
+
+        <h2 class="modal-titulo" id="novidades-titulo">Novidades do Kaizen</h2>
+
+        <div class="novidades-lista" id="novidades-lista"></div>
+
+        <div class="form-acoes">
+            <button type="button" class="btn-primario" data-fechar autofocus>Entendi!</button>
+        </div>
+
+    </dialog>
+
     <dialog class="modal apoio-modal" id="apoio-modal" aria-labelledby="apoio-titulo">
 
         <h2 class="modal-titulo" id="apoio-titulo">Apoie o Kaizen</h2>
@@ -1119,6 +1136,10 @@
                     title="Pede um PIN pra abrir o Kaizen neste aparelho">
                 PIN
             </button>
+            <button type="button" class="btn-secundario" id="novidades-abrir" hidden
+                    title="O que mudou nas últimas versões">
+                Novidades
+            </button>
             <button type="button" class="btn-secundario btn-apoiar" id="apoio-abrir" hidden
                     title="O Kaizen é grátis: apoie com um Pix de qualquer valor">
                 Apoiar ♥
@@ -1156,6 +1177,11 @@
     <script
         type="module"
         src="./js/apoio.js?v=apoio1"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/novidades.js?v=1"
     ></script>
 
     <script

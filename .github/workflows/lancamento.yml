@@ -73,6 +73,22 @@ jobs:
       - run: npm ci
         working-directory: desktop
 
+      # o que mudou nesta versão, tirado do novidades.json (o mesmo que o app mostra)
+      - name: Notas da versão
+        id: notas
+        shell: bash
+        run: |
+          {
+            echo "texto<<FIM_NOTAS"
+            node -e '
+              const v = (process.env.GITHUB_REF_NAME || "").replace(/^v/, "");
+              const lista = require("./novidades.json");
+              const nota = lista.find((n) => n.versao === v) || lista[0];
+              console.log(nota.itens.map((i) => "- " + i).join("\n"));
+            '
+            echo "FIM_NOTAS"
+          } >> "$GITHUB_OUTPUT"
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -83,6 +99,10 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Kaizen ${{ github.ref_name }}"
           releaseBody: |
+            ${{ steps.notas.outputs.texto }}
+
+            ---
+
             Baixe o instalador do seu sistema em **Assets**, logo abaixo:
             - **Windows:** `Kaizen_..._x64-setup.exe`
             - **Linux:** `.deb` (Ubuntu/Debian) ou `.AppImage` (qualquer distro)

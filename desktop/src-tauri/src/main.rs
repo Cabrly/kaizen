@@ -171,9 +171,14 @@ fn mostrar_erro(janela: &WebviewWindow, texto: &str) {
 async fn procurar_atualizacao(app: AppHandle) {
     let Ok(atualizador) = app.updater() else { return };
     let Ok(Some(nova)) = atualizador.check().await else { return };
+    // as notas vêm do novidades.json; o que vem depois do "---" é o texto de download da página
+    let novidades = nova.body.as_deref().unwrap_or("").split("\n---").next().unwrap_or("").trim();
+    let novidades: String = novidades.chars().take(900).collect();
     let texto = format!(
-        "A versão {} do Kaizen está disponível (você está na {}).\n\nAtualizar agora? O app reinicia sozinho e suas tarefas continuam onde estão.",
-        nova.version, nova.current_version
+        "A versão {} do Kaizen está disponível (você está na {}).\n\n{}Atualizar agora? O app reinicia sozinho e suas tarefas continuam onde estão.",
+        nova.version,
+        nova.current_version,
+        if novidades.is_empty() { String::new() } else { format!("O que tem de novo:\n{novidades}\n\n") }
     );
     let handle = app.clone();
     app.dialog()

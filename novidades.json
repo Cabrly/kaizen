@@ -1,0 +1,23 @@
+[
+    {
+        "versao": "1.2.0",
+        "data": "2026-10-20",
+        "itens": [
+            "Depois de cada atualização, esta janela mostra o que mudou. Dá pra reabrir pelo botão Novidades, no rodapé.",
+            "A janela de atualização do app de computador já conta o que vem na versão nova antes de você atualizar."
+        ]
+    },
+    {
+        "versao": "1.1.0",
+        "data": "2026-10-20",
+        "itens": [
+            "Claude Code, Gemini CLI e Codex como IA, usando o login da sua assinatura, sem chave de API. Os que não estiverem instalados aparecem com o link de como instalar.",
+            "Pets de estudo: cada plano ganha um bichinho que fica feliz quando você estuda e tristinho quando atrasa. Tem loja com 24 bichos, mais de 80 acessórios, tons de pelo, cenários e status (o gatinho chorando no banho, o giro OIIA, stonks…).",
+            "Flashcards gerados a partir do que você estudou, com revisão espaçada.",
+            "Perfil de estudos: a IA conhece seu jeito de aprender e monta planos e cartões pensando nisso.",
+            "Use a IA do seu PC no celular pelo Tailscale, configurando tudo pela tela.",
+            "PIN opcional pra abrir o app e sincronização entre PC e celular.",
+            "As respostas do chat aparecem formatadas, e o chat e as preferências ficam guardados no banco do PC."
+        ]
+    }
+]

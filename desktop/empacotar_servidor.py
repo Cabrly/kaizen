@@ -15,7 +15,7 @@ SAIDA = DESKTOP / "src-tauri" / "binarios"
 NOME = "kaizen-servidor"
 
 # Tudo que o navegador pede ao servidor (o resto do repositório não vai junto).
-ARQUIVOS = ["index.html", "style.css", "sw.js", "manifest.webmanifest", "dados.json", "prompts.json"]
+ARQUIVOS = ["index.html", "style.css", "sw.js", "manifest.webmanifest", "dados.json", "prompts.json", "novidades.json"]
 PASTAS = ["js", "icones"]   # js/ inclui js/cenas/
 
 

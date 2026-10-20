@@ -4500,6 +4500,41 @@ body.contemplando .contemplar-aviso.some {
     margin-bottom: 10px;
 }
 
+/* O que mudou em cada versão (js/novidades.js) */
+.novidades-modal {
+    width: min(520px, 92vw);
+}
+
+.novidades-lista {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.novidades-versao h3 {
+    margin: 14px 0 6px;
+
+    font-size: 15px;
+}
+
+.novidades-versao h3 small {
+    font-size: 12px;
+    font-weight: 400;
+
+    color: #888888;
+}
+
+.novidades-versao ul {
+    margin: 0;
+    padding-left: 20px;
+
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.novidades-versao li + li {
+    margin-top: 6px;
+}
+
 /* Demonstração (js/demo.js, index.html?demo): sem backup, sincronia nem apoio no rodapé. */
 [data-demo] .rodape-backup {
     display: none;
