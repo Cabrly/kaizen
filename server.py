@@ -118,6 +118,12 @@ def ollama_chat(modelo, mensagens):
                 raise
 
 class Handler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        # o navegador sempre confere se o arquivo mudou (responde 304 se não): sem isso ele
+        # guarda o js antigo e um módulo novo importando um velho quebra a tela depois de atualizar
+        self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
+
     def do_GET(self):
         if self.rota_estudos("GET"):
             return
