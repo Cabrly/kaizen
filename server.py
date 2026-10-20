@@ -236,7 +236,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.responder(200 if sessao else 404, {"sessao": sessao}) or True
             if metodo == "POST" and recurso == "perguntas":
                 return self.responder(200, {"perguntas": estudos.perguntas(
-                    str(corpo.get("tema", "")).strip(), corpo.get("motor") or estudos.motor_padrao())}) or True
+                    str(corpo.get("tema", "")).strip(), corpo.get("motor") or estudos.motor_padrao(),
+                    corpo.get("continua_de"))}) or True
             if metodo == "POST" and recurso == "planos":
                 return self.responder(201, {"plano": estudos.criar_plano(corpo)}) or True
             if metodo == "POST" and recurso == "sessoes" and ident and acao == "adiar":
@@ -263,6 +264,10 @@ class Handler(SimpleHTTPRequestHandler):
             if metodo == "POST" and recurso == "flashcards" and ident and acao == "refazer":
                 estudos.pedir_flashcards(ident, forcar=True)
                 return self.responder(202, {"ok": True}) or True
+            if metodo == "GET" and recurso == "pets":
+                return self.responder(200, {"dados": estudos.obter_pets()}) or True
+            if metodo == "POST" and recurso == "pets":
+                return self.responder(200, {"dados": estudos.salvar_pets(corpo.get("dados"))}) or True
             if metodo == "PATCH" and recurso == "cartoes" and ident:
                 cartao = estudos.responder_cartao(ident, corpo.get("acertou") is True)
                 return self.responder(200 if cartao else 404, {"cartao": cartao}) or True

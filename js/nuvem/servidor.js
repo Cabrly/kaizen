@@ -294,10 +294,42 @@ function atualizarPlano(id, mudancas) {
 }
 
 
-async function perguntas(tema, motor) {
+/* O plano anterior de uma continuação (pet reativado): título e o que já foi estudado. */
+function estudadoAntes(dados, planoId) {
+
+    const titulos = [];
+    let topicos = [];
+    const vistos = new Set();
+
+    while (planoId && !vistos.has(planoId)) {
+        vistos.add(planoId);
+        const plano = dados.planos.find((p) => p.id === planoId);
+        if (!plano) break;
+        titulos.push(plano.titulo || plano.tema);
+        topicos = dados.sessoes
+            .filter((x) => x.plano_id === plano.id && !x.extra && foiEstudada(dados, x.id))
+            .sort((a, b) => a.data.localeCompare(b.data) || a.id - b.id)
+            .map((x) => x.topico)
+            .concat(topicos);
+        planoId = plano.pai_id;
+    }
+
+    if (!titulos.length) return "";
+
+    return `Continuação de "${titulos[0]}". Já estudou: ${[...new Set(topicos)].join(", ") || "pouca coisa"}.`;
+
+}
+
+
+async function perguntas(tema, motor, continuaDe = null) {
 
     const { sistema_perguntas, esquema_perguntas } = await carregarPrompts();
-    const dados = await gerarJson(motor || (await motores()).padrao, sistema_perguntas, `Assunto: ${tema}`, esquema_perguntas);
+    const anterior = continuaDe ? estudadoAntes(completar(ler()), Number(continuaDe)) : "";
+    const pedido = anterior
+        ? `Assunto: ${tema}\n${anterior}\nO estudante quer ir além do que já viu: faça as perguntas pensando no ` +
+          "próximo passo, mais aprofundado, sem perguntar o básico que ele já estudou."
+        : `Assunto: ${tema}`;
+    const dados = await gerarJson(motor || (await motores()).padrao, sistema_perguntas, pedido, esquema_perguntas);
 
     const lista = (dados.perguntas || [])
         .filter((p) => p && String(p.pergunta || "").trim())
@@ -325,6 +357,9 @@ function pedidoRoteiro(plano, total, feitas, quantas) {
     linhas.push(`Duração de cada sessão: ${plano.minutos} minutos`);
     linhas.push(`Idioma dos materiais (vídeos e documentação): ${IDIOMAS[plano.idioma].nome}`);
     linhas.push(`O roteiro completo tem ${total} sessões.`);
+
+    const anterior = plano.pai_id ? estudadoAntes(completar(ler()), plano.pai_id) : "";
+    if (anterior) linhas.push(`${anterior} Este plano aprofunda: comece de onde ele parou e não repita esses tópicos.`);
 
     const historico = perfilTexto(completar(ler()), plano.id);
     if (historico) {
@@ -508,12 +543,13 @@ function criarPlano(corpo) {
 
     const dados = ler();
     const id = novoId(dados, "plano");
+    const pai = dados.planos.find((p) => p.id === Number(corpo.pai_id));
 
     dados.planos.push({
         id, tema, respostas: corpo.respostas || [], dias, minutos, horario: corpo.horario || null, inicio, semanas,
         motor: corpo.motor, idioma: IDIOMAS[corpo.idioma] ? corpo.idioma : "pt",
-        cor: CORES[dados.planos.length % CORES.length], status: "gerando", etapa: "Na fila…",
-        erro: null, titulo: null, doc_oficial: null, criado_em: agora()
+        cor: pai ? pai.cor : CORES[dados.planos.length % CORES.length], status: "gerando", etapa: "Na fila…",
+        erro: null, titulo: null, doc_oficial: null, criado_em: agora(), pai_id: pai ? pai.id : null
     });
 
     gravar(dados);
@@ -800,7 +836,7 @@ function exportarBackup() {
         criado_em: agora().replace(" ", "T"),
         kanban: { tarefas: lerJson(CHAVE_TAREFAS, []), categorias: lerJson(CHAVE_CATEGORIAS, []) },
         estudos: { planos: dados.planos, sessoes: dados.sessoes, itens: dados.itens,
-                   flashcards: dados.flashcards, perfil: dados.perfil }
+                   flashcards: dados.flashcards, perfil: dados.perfil, pets: dados.pets }
     };
 
 }
@@ -833,7 +869,8 @@ function restaurarBackup(corpo) {
         gravar({
             seq: { plano: maior(planos), sessao: maior(e.sessoes), item: maior(e.itens), cartao: maior(flashcards) },
             planos, sessoes: e.sessoes, itens: e.itens, flashcards,
-            perfil: e.perfil && typeof e.perfil.sobre === "string" ? { sobre: e.perfil.sobre } : antes.perfil
+            perfil: e.perfil && typeof e.perfil.sobre === "string" ? { sobre: e.perfil.sobre } : antes.perfil,
+            pets: e.pets && typeof e.pets === "object" ? e.pets : antes.pets
         });
 
     }
@@ -858,6 +895,7 @@ function completar(dados) {
     // dados gravados antes dos flashcards
     dados.flashcards ||= [];
     dados.perfil ||= { sobre: "" };
+    dados.pets ||= {};
     dados.seq.cartao ||= dados.flashcards.reduce((m, f) => Math.max(m, f.id), 0);
     return dados;
 }
@@ -1079,6 +1117,8 @@ function cartoes(sessaoId = null) {
     const topico = (id) => dados.sessoes.find((s) => s.id === id)?.topico;
     const data = (id) => dados.sessoes.find((s) => s.id === id)?.data || "";
 
+    if (sessaoId && !dados.flashcards.some((f) => f.sessao_id === sessaoId)) pedirFlashcards(sessaoId);
+
     const lista = sessaoId
         ? dados.flashcards.filter((f) => f.sessao_id === sessaoId)
             .sort((a, b) => (a.revisar_em > hoje) - (b.revisar_em > hoje) || a.caixa - b.caixa || a.id - b.id)
@@ -1087,6 +1127,15 @@ function cartoes(sessaoId = null) {
 
     return lista.map((f) => ({ ...f, topico: topico(f.sessao_id) }));
 
+}
+
+
+function salvarPets(estado) {
+    if (!estado || typeof estado !== "object" || Array.isArray(estado)) throw new RangeError("Estado dos pets inválido.");
+    const dados = completar(ler());
+    dados.pets = estado;
+    gravar(dados);
+    return estado;
 }
 
 
@@ -1145,7 +1194,7 @@ export async function rotear(url, opcoes = {}) {
             if (metodo === "GET" && recurso === "planos") return json(200, { plano: obterPlano(id) });
             if (metodo === "GET" && recurso === "calendario") return json(200, { sessoes: calendario(url.searchParams.get("inicio"), url.searchParams.get("fim")) });
             if (metodo === "GET" && recurso === "sessoes") return json(200, { sessao: obterSessao(id) });
-            if (metodo === "POST" && recurso === "perguntas") return json(200, { perguntas: await perguntas(String(corpo.tema || "").trim(), corpo.motor) });
+            if (metodo === "POST" && recurso === "perguntas") return json(200, { perguntas: await perguntas(String(corpo.tema || "").trim(), corpo.motor, corpo.continua_de) });
             if (metodo === "POST" && recurso === "planos") return json(201, { plano: criarPlano(corpo) });
             if (metodo === "POST" && recurso === "sessoes" && acao === "adiar") return json(200, { sessao: adiarPendentes(id) });
             if (metodo === "PATCH" && recurso === "itens") return json(200, { sessao: marcarItem(id, corpo.estado) });
@@ -1157,6 +1206,8 @@ export async function rotear(url, opcoes = {}) {
             if (metodo === "GET" && recurso === "flashcards") return json(200, { cartoes: cartoes(id) });
             if (metodo === "GET" && recurso === "revisao") return json(200, { cartoes: cartoes() });
             if (metodo === "POST" && recurso === "flashcards" && acao === "refazer") { pedirFlashcards(id, true); return json(202, { ok: true }); }
+            if (metodo === "GET" && recurso === "pets") return json(200, { dados: completar(ler()).pets });
+            if (metodo === "POST" && recurso === "pets") return json(200, { dados: salvarPets(corpo.dados) });
             if (metodo === "PATCH" && recurso === "cartoes") {
                 const cartao = responderCartao(id, corpo.acertou === true);
                 return json(cartao ? 200 : 404, { cartao });

@@ -108,13 +108,21 @@ def init():
                 id    INTEGER PRIMARY KEY CHECK (id = 1),
                 sobre TEXT NOT NULL DEFAULT ''
             );
+            CREATE TABLE IF NOT EXISTS pets_estado (
+                id    INTEGER PRIMARY KEY CHECK (id = 1),
+                dados TEXT NOT NULL DEFAULT '{}'
+            );
             CREATE INDEX IF NOT EXISTS idx_flashcards_sessao ON flashcards(sessao_id);
             CREATE INDEX IF NOT EXISTS idx_sessoes_data ON sessoes(data);
             CREATE INDEX IF NOT EXISTS idx_itens_sessao ON itens(sessao_id);
         """)
         # bancos criados antes da opção de idioma
-        if "idioma" not in {c[1] for c in con.execute("PRAGMA table_info(planos)")}:
+        colunas = {c[1] for c in con.execute("PRAGMA table_info(planos)")}
+        if "idioma" not in colunas:
             con.execute("ALTER TABLE planos ADD COLUMN idioma TEXT NOT NULL DEFAULT 'pt'")
+        # plano que continua outro (pet reativado): a IA sabe o que já foi estudado
+        if "pai_id" not in colunas:
+            con.execute("ALTER TABLE planos ADD COLUMN pai_id INTEGER")
         # planos que estavam gerando quando o servidor caiu não vão terminar
         con.execute("UPDATE planos SET status = 'erro', erro = 'O servidor reiniciou no meio da geração.' "
                     "WHERE status = 'gerando'")
@@ -207,8 +215,34 @@ ESQUEMA_PERGUNTAS = PROMPTS["esquema_perguntas"]
 SISTEMA_PERGUNTAS = PROMPTS["sistema_perguntas"]
 
 
-def perguntas(tema, motor):
-    dados = gerar_json(motor, SISTEMA_PERGUNTAS, f"Assunto: {tema}", ESQUEMA_PERGUNTAS, limite_tokens=1024)
+def estudado_antes(plano_id):
+    """O plano anterior de uma continuação: título e tópicos já estudados (de toda a corrente)."""
+    titulos, topicos, vistos = [], [], set()
+    with conectar() as con:
+        while plano_id and plano_id not in vistos:
+            vistos.add(plano_id)
+            plano = con.execute("SELECT id, tema, titulo, pai_id FROM planos WHERE id = ?", (plano_id,)).fetchone()
+            if not plano:
+                break
+            titulos.append(plano["titulo"] or plano["tema"])
+            topicos[:0] = [l["topico"] for l in con.execute("""
+                SELECT topico FROM sessoes s WHERE plano_id = ? AND extra = 0
+                  AND EXISTS (SELECT 1 FROM itens i WHERE i.sessao_id = s.id AND (i.estado = 'feito'
+                       OR EXISTS (SELECT 1 FROM itens c WHERE c.origem_id = i.id AND c.estado = 'feito')))
+                ORDER BY data, id""", (plano["id"],))]
+            plano_id = plano["pai_id"]
+    if not titulos:
+        return ""
+    return (f"Continuação de \"{titulos[0]}\". Já estudou: " + (", ".join(dict.fromkeys(topicos)) or "pouca coisa") + ".")
+
+
+def perguntas(tema, motor, continua_de=None):
+    pedido = f"Assunto: {tema}"
+    anterior = estudado_antes(continua_de) if continua_de else ""
+    if anterior:
+        pedido += (f"\n{anterior}\nO estudante quer ir além do que já viu: faça as perguntas pensando no "
+                   "próximo passo, mais aprofundado, sem perguntar o básico que ele já estudou.")
+    dados = gerar_json(motor, SISTEMA_PERGUNTAS, pedido, ESQUEMA_PERGUNTAS, limite_tokens=1024)
     saida = []
     for p in dados.get("perguntas", [])[:4]:
         if isinstance(p, dict) and str(p.get("pergunta", "")).strip():
@@ -233,6 +267,9 @@ def _pedido_roteiro(plano, respostas, total, feitas, quantas):
     linhas += [f"Duração de cada sessão: {plano['minutos']} minutos",
                f"Idioma dos materiais (vídeos e documentação): {busca.IDIOMAS[plano['idioma']]['nome']}",
                f"O roteiro completo tem {total} sessões."]
+    anterior = estudado_antes(plano.get("pai_id")) if plano.get("pai_id") else ""
+    if anterior:
+        linhas.append(anterior + " Este plano aprofunda: comece de onde ele parou e não repita esses tópicos.")
     historico = perfil_texto(excluir_plano=plano["id"])
     if historico:
         linhas.append("O que o estudante já estudou em outros planos (aproveite e não repita o básico que ele já sabe):\n"
@@ -398,15 +435,20 @@ def criar_plano(dados):
         raise ValueError("Escolha pelo menos um dia da semana.")
     if not 10 <= minutos <= 480 or not 1 <= semanas <= 26:
         raise ValueError("Minutos ou semanas fora do intervalo.")
+    pai_id = int(dados["pai_id"]) if str(dados.get("pai_id") or "").isdigit() else None
 
     with conectar() as con:
-        cor = CORES[con.execute("SELECT COUNT(*) FROM planos").fetchone()[0] % len(CORES)]
+        if pai_id and not con.execute("SELECT 1 FROM planos WHERE id = ?", (pai_id,)).fetchone():
+            pai_id = None
+        # a continuação fica com a cor do plano anterior (é o mesmo pet)
+        pai = con.execute("SELECT cor FROM planos WHERE id = ?", (pai_id,)).fetchone() if pai_id else None
+        cor = pai["cor"] if pai else CORES[con.execute("SELECT COUNT(*) FROM planos").fetchone()[0] % len(CORES)]
         plano_id = con.execute(
-            "INSERT INTO planos (tema, respostas, dias, minutos, horario, inicio, semanas, motor, idioma, cor, etapa) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Na fila…')",
+            "INSERT INTO planos (tema, respostas, dias, minutos, horario, inicio, semanas, motor, idioma, cor, etapa, pai_id) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Na fila…', ?)",
             (tema, json.dumps(dados.get("respostas", []), ensure_ascii=False), json.dumps(dias), minutos,
              dados.get("horario") or None, inicio, semanas, dados.get("motor") or motor_padrao(),
-             busca.idioma_valido(dados.get("idioma")), cor)
+             busca.idioma_valido(dados.get("idioma")), cor, pai_id)
         ).lastrowid
     threading.Thread(target=_gerar_plano, args=(plano_id,), daemon=True).start()
     return obter_plano(plano_id)
@@ -758,17 +800,20 @@ def listar_flashcards():
 
 
 def cartoes(sessao_id=None):
-    """Cartões de um conteúdo (os de hoje primeiro) ou, sem conteúdo, todos os de hoje."""
+    """Cartões de um conteúdo (os de hoje primeiro) ou, sem conteúdo, todos os de hoje.
+    Conteúdo antigo sem cartões (aberto pelo jardim dos pets) entra na fila."""
     hoje = date.today().isoformat()
     with conectar() as con:
         if sessao_id:
             linhas = con.execute("""
                 SELECT f.*, s.topico FROM flashcards f JOIN sessoes s ON s.id = f.sessao_id
-                WHERE f.sessao_id = ? ORDER BY f.revisar_em > ?, f.caixa, f.id""", (sessao_id, hoje))
+                WHERE f.sessao_id = ? ORDER BY f.revisar_em > ?, f.caixa, f.id""", (sessao_id, hoje)).fetchall()
+            if not linhas:
+                pedir_flashcards(sessao_id)
         else:
             linhas = con.execute("""
                 SELECT f.*, s.topico FROM flashcards f JOIN sessoes s ON s.id = f.sessao_id
-                WHERE f.revisar_em <= ? ORDER BY f.caixa, s.data, f.id""", (hoje,))
+                WHERE f.revisar_em <= ? ORDER BY f.caixa, s.data, f.id""", (hoje,)).fetchall()
         return [dict(l) for l in linhas]
 
 
@@ -785,12 +830,34 @@ def responder_cartao(cartao_id, acertou):
 
 
 # =========================================================
+#   Pets (opcional): o servidor só guarda; a regra fica no js/pets.js
+# =========================================================
+
+def obter_pets():
+    with conectar() as con:
+        linha = con.execute("SELECT dados FROM pets_estado WHERE id = 1").fetchone()
+    return json.loads(linha["dados"]) if linha else {}
+
+
+def salvar_pets(dados):
+    if not isinstance(dados, dict):
+        raise ValueError("Estado dos pets inválido.")
+    texto = json.dumps(dados, ensure_ascii=False)
+    if len(texto) > 200_000:
+        raise ValueError("Estado dos pets grande demais.")
+    with conectar() as con:
+        con.execute("INSERT INTO pets_estado (id, dados) VALUES (1, ?) "
+                    "ON CONFLICT(id) DO UPDATE SET dados = excluded.dados", (texto,))
+    return dados
+
+
+# =========================================================
 #   Backup (mesmo formato do modo nuvem: dá pra levar do
 #   celular pro PC e vice-versa)
 # =========================================================
 
 COLUNAS_PLANO = ["id", "tema", "respostas", "dias", "minutos", "horario", "inicio", "semanas", "motor", "idioma",
-                 "cor", "status", "etapa", "erro", "titulo", "doc_oficial", "criado_em"]
+                 "cor", "status", "etapa", "erro", "titulo", "doc_oficial", "criado_em", "pai_id"]
 COLUNAS_SESSAO = ["id", "plano_id", "data", "topico", "objetivo", "extra"]
 COLUNAS_ITEM = ["id", "sessao_id", "tipo", "titulo", "url", "descricao", "fonte", "minutos", "estado", "origem_id"]
 COLUNAS_CARTAO = ["id", "sessao_id", "frente", "verso", "caixa", "revisar_em"]
@@ -808,7 +875,7 @@ def exportar():
         itens = [dict(l) for l in con.execute("SELECT * FROM itens ORDER BY id")]
         flashcards = [dict(l) for l in con.execute("SELECT * FROM flashcards ORDER BY id")]
     return {"planos": planos, "sessoes": sessoes, "itens": itens, "flashcards": flashcards,
-            "perfil": {"sobre": obter_sobre()}}
+            "perfil": {"sobre": obter_sobre()}, "pets": obter_pets()}
 
 
 def importar(dados):
@@ -846,3 +913,5 @@ def importar(dados):
                             f"VALUES ({', '.join('?' * len(COLUNAS_CARTAO))})", [f.get(c) for c in COLUNAS_CARTAO])
     if isinstance(dados.get("perfil"), dict) and "sobre" in dados["perfil"]:
         salvar_sobre(dados["perfil"]["sobre"])
+    if isinstance(dados.get("pets"), dict):
+        salvar_pets(dados["pets"])
