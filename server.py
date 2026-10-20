@@ -326,6 +326,8 @@ class Handler(SimpleHTTPRequestHandler):
                     corpo.get("continua_de"))}) or True
             if metodo == "POST" and recurso == "planos":
                 return self.responder(201, {"plano": estudos.criar_plano(corpo)}) or True
+            if metodo == "POST" and recurso == "importar-plano":
+                return self.responder(201, {"plano": estudos.importar_plano(corpo)}) or True
             if metodo == "POST" and recurso == "sessoes" and ident and acao == "adiar":
                 return self.responder(200, {"sessao": estudos.adiar_pendentes(ident)}) or True
             if metodo == "PATCH" and recurso == "itens" and ident:

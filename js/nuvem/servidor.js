@@ -25,6 +25,7 @@ import { ligarEntregas, listar as listarEntregas, obter as obterEntrega, criar a
 const CHAVE_DADOS = "kaizen.nuvem.dados.v1";
 const BLOCO = 10;
 const CORES = ["#c90016", "#2f6f4f", "#3b5bdb", "#b8860b", "#7b2cbf", "#0b7285", "#5c5f66"];
+const DORMINDO = "9999-12-31";   // cartão de plano importado: só entra na revisão quando a sessão é estudada
 
 let prompts = null;
 const modelosEmCache = {};
@@ -565,6 +566,78 @@ function criarPlano(corpo) {
 }
 
 
+// os cartões que vieram num plano importado entram na revisão de hoje
+function acordarCartoes(sessaoId) {
+    const dados = completar(ler());
+    const dormindo = dados.flashcards.filter((f) => f.sessao_id === sessaoId && f.revisar_em === DORMINDO);
+    if (!dormindo.length) return;
+    dormindo.forEach((f) => { f.revisar_em = hojeIso(); });
+    gravar(dados);
+}
+
+
+/* Plano que alguém compartilhou (js/compartilhar.js) vira um plano novo daqui:
+   progresso zerado, datas a partir de `inicio` nos `dias` escolhidos. */
+async function importarPlano(corpo) {
+
+    const pacote = corpo.plano && typeof corpo.plano === "object" ? corpo.plano : {};
+    if (pacote.app !== "kaizen-plano") throw new RangeError("Isso não é um plano do Kaizen.");
+
+    const texto = (valor, maximo) => String(valor ?? "").trim().slice(0, maximo);
+    const link = (url) => /^https?:\/\//i.test(String(url || "")) ? texto(url, 1000) : null;
+    const sessoes = (Array.isArray(pacote.sessoes) ? pacote.sessoes : []).slice(0, 400)
+        .filter((s) => s && typeof s === "object" && texto(s.topico, 200));
+    if (!sessoes.length) throw new RangeError("O plano veio vazio.");
+
+    const dias = [...new Set((corpo.dias || pacote.dias || []).map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort();
+    if (!dias.length) throw new RangeError("Escolha pelo menos um dia da semana.");
+    const inicio = /^\d{4}-\d{2}-\d{2}$/.test(corpo.inicio || "") ? corpo.inicio : hojeIso();
+    const horario = /^\d{2}:\d{2}$/.test(corpo.horario ?? pacote.horario ?? "") ? (corpo.horario ?? pacote.horario) : null;
+    const tema = texto(pacote.tema, 200) || texto(pacote.titulo, 200) || "Plano compartilhado";
+
+    const padrao = await motores().then((m) => m.padrao).catch(() => "");   // sem IA conectada, o plano vem igual
+    const dados = completar(ler());
+    const id = novoId(dados, "plano");
+
+    dados.planos.push({
+        id, tema, respostas: [], dias, minutos: Math.min(480, Math.max(10, Number(pacote.minutos) || 60)), horario, inicio,
+        semanas: Math.ceil(sessoes.length / dias.length), motor: padrao, idioma: IDIOMAS[pacote.idioma] ? pacote.idioma : "pt",
+        cor: CORES[dados.planos.length % CORES.length], status: "pronto", etapa: null, erro: null,
+        titulo: texto(pacote.titulo, 200) || tema, doc_oficial: texto(pacote.doc_oficial, 200), criado_em: agora(), pai_id: null
+    });
+
+    const datas = datasDeEstudo(inicio, dias, sessoes.length);
+
+    sessoes.forEach((sessao, i) => {
+
+        const sessaoId = novoId(dados, "sessao");
+        dados.sessoes.push({ id: sessaoId, plano_id: id, data: datas[i], topico: texto(sessao.topico, 200),
+                             objetivo: texto(sessao.objetivo, 1000), extra: 0 });
+
+        (Array.isArray(sessao.itens) ? sessao.itens : []).slice(0, 12)
+            .filter((item) => item && ["video", "doc", "atividade"].includes(item.tipo) && texto(item.titulo, 200))
+            .forEach((item) => dados.itens.push({
+                id: novoId(dados, "item"), sessao_id: sessaoId, tipo: item.tipo, titulo: texto(item.titulo, 200),
+                url: link(item.url), descricao: texto(item.descricao, 4000) || null, fonte: texto(item.fonte, 100) || null,
+                minutos: Number.isInteger(item.minutos) ? item.minutos : null, estado: "pendente", origem_id: null
+            }));
+
+        (Array.isArray(sessao.cartoes) ? sessao.cartoes : []).slice(0, 20)
+            .filter((c) => c && texto(c.frente, 500) && texto(c.verso, 1000))
+            .forEach((c) => dados.flashcards.push({
+                id: novoId(dados, "cartao"), sessao_id: sessaoId, frente: texto(c.frente, 500),
+                verso: texto(c.verso, 1000), caixa: 0, revisar_em: DORMINDO
+            }));
+
+    });
+
+    gravar(dados);
+
+    return obterPlano(id);
+
+}
+
+
 function excluirPlano(id) {
     const dados = ler();
     const sessoes = new Set(dados.sessoes.filter((s) => s.plano_id === id).map((s) => s.id));
@@ -693,7 +766,10 @@ function marcarItem(id, estado) {
     // feito numa sessão de pendências conta pro conteúdo de onde o item veio
     if (estado === "feito") {
         const conteudo = sessao.extra ? dados.itens.find((i) => i.id === item.origem_id)?.sessao_id : sessao.id;
-        if (conteudo) pedirFlashcards(conteudo);
+        if (conteudo) {
+            acordarCartoes(conteudo);
+            pedirFlashcards(conteudo);
+        }
     }
 
     return obterSessao(sessao.id);
@@ -1220,6 +1296,7 @@ export async function rotear(url, opcoes = {}) {
             if (metodo === "GET" && recurso === "sessoes") return json(200, { sessao: obterSessao(id) });
             if (metodo === "POST" && recurso === "perguntas") return json(200, { perguntas: await perguntas(String(corpo.tema || "").trim(), corpo.motor, corpo.continua_de) });
             if (metodo === "POST" && recurso === "planos") return json(201, { plano: criarPlano(corpo) });
+            if (metodo === "POST" && recurso === "importar-plano") return json(201, { plano: await importarPlano(corpo) });
             if (metodo === "POST" && recurso === "sessoes" && acao === "adiar") return json(200, { sessao: adiarPendentes(id) });
             if (metodo === "PATCH" && recurso === "itens") return json(200, { sessao: marcarItem(id, corpo.estado) });
             if (metodo === "DELETE" && recurso === "planos") { excluirPlano(id); return json(200, { ok: true }); }

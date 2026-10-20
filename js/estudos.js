@@ -252,6 +252,11 @@ function renderizarPlanos() {
             <article class="est-plano est-plano-${p.status}" style="--cor:${esc(p.cor)}" data-plano="${p.id}">
                 <header>
                     <h3 title="${esc(p.titulo || p.tema)}">${esc(p.titulo || p.tema)}</h3>
+                    ${p.status === "pronto" ? `
+                    <button type="button" class="est-icone" data-agenda-plano="${p.id}"
+                            title="Pôr as sessões na agenda do celular" aria-label="Pôr ${esc(p.tema)} na agenda">📅</button>
+                    <button type="button" class="est-icone" data-compartilhar-plano="${p.id}"
+                            title="Compartilhar com a turma" aria-label="Compartilhar ${esc(p.tema)}">🔗</button>` : ""}
                     <button type="button" class="est-icone" data-excluir-plano="${p.id}"
                             title="Excluir plano" aria-label="Excluir plano ${esc(p.tema)}">✕</button>
                 </header>

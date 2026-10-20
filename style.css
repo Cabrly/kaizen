@@ -6346,3 +6346,44 @@ html.travado body > *:not(.pin-tela) {
 .pets-entrega .est-nota {
     flex-shrink: 0;
 }
+
+/* ---------- compartilhar e receber plano (js/compartilhar.js) ---------- */
+
+.comp-modal {
+    width: min(460px, 92vw);
+    max-height: 90vh;
+
+    overflow-y: auto;
+}
+
+.comp-status:empty {
+    display: none;
+}
+
+.comp-status {
+    margin-bottom: 12px;
+
+    font-size: 14px;
+}
+
+.comp-link {
+    width: 100%;
+    margin: 14px 0 12px;
+    padding: 9px 10px;
+
+    font: inherit;
+    font-size: 12px;
+
+    background: #f7f7f7;
+    border: 1px solid #e3e3e3;
+    border-radius: 8px;
+}
+
+#imp-campo-link[hidden] {
+    display: none;
+}
+
+#imp-abrir {
+    display: block;
+    margin-top: 6px;
+}

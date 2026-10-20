@@ -44,6 +44,7 @@ BLOCO = 10                # sessões por chamada à IA
 
 CORES = ["#c90016", "#2f6f4f", "#3b5bdb", "#b8860b", "#7b2cbf", "#0b7285", "#5c5f66"]
 DIAS_SEMANA = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"]
+DORMINDO = "9999-12-31"   # cartão de plano importado: só entra na revisão quando a sessão é estudada
 
 
 def conectar():
@@ -472,6 +473,54 @@ def criar_plano(dados):
     return obter_plano(plano_id)
 
 
+def importar_plano(dados):
+    """Plano que alguém compartilhou (js/compartilhar.js) vira um plano novo daqui:
+    progresso zerado, datas a partir de `inicio` nos `dias` escolhidos."""
+    pacote = dados.get("plano") if isinstance(dados.get("plano"), dict) else {}
+    if pacote.get("app") != "kaizen-plano":
+        raise ValueError("Isso não é um plano do Kaizen.")
+    texto = lambda valor, maximo: str(valor or "").strip()[:maximo]
+    link = lambda url: texto(url, 1000) if re.match(r"^https?://", str(url or "")) else None
+    sessoes = [s for s in (pacote.get("sessoes") or [])[:400] if isinstance(s, dict) and texto(s.get("topico"), 200)]
+    if not sessoes:
+        raise ValueError("O plano veio vazio.")
+    dias = sorted({int(d) for d in (dados.get("dias") or pacote.get("dias") or [])
+                   if str(d).isdigit() and 0 <= int(d) <= 6})
+    if not dias:
+        raise ValueError("Escolha pelo menos um dia da semana.")
+    inicio = texto(dados.get("inicio"), 10) or date.today().isoformat()
+    date.fromisoformat(inicio)  # valida
+    horario = texto(dados.get("horario", pacote.get("horario")), 5)
+    horario = horario if re.fullmatch(r"\d{2}:\d{2}", horario) else None
+    minutos = min(480, max(10, int(pacote.get("minutos") or 60)))
+    tema = texto(pacote.get("tema"), 200) or texto(pacote.get("titulo"), 200) or "Plano compartilhado"
+
+    motor = motor_padrao()
+    with conectar() as con:
+        cor = CORES[con.execute("SELECT COUNT(*) FROM planos").fetchone()[0] % len(CORES)]
+        plano_id = con.execute(
+            "INSERT INTO planos (tema, dias, minutos, horario, inicio, semanas, motor, idioma, cor, status, titulo, doc_oficial) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pronto', ?, ?)",
+            (tema, json.dumps(dias), minutos, horario, inicio, -(-len(sessoes) // len(dias)), motor,
+             busca.idioma_valido(pacote.get("idioma")), cor, texto(pacote.get("titulo"), 200) or tema,
+             texto(pacote.get("doc_oficial"), 200))
+        ).lastrowid
+        for sessao, data in zip(sessoes, datas_de_estudo(inicio, dias, len(sessoes))):
+            sid = con.execute("INSERT INTO sessoes (plano_id, data, topico, objetivo) VALUES (?, ?, ?, ?)",
+                              (plano_id, data, texto(sessao.get("topico"), 200), texto(sessao.get("objetivo"), 1000))).lastrowid
+            for item in (sessao.get("itens") or [])[:12]:
+                if isinstance(item, dict) and item.get("tipo") in ("video", "doc", "atividade") and texto(item.get("titulo"), 200):
+                    con.execute("INSERT INTO itens (sessao_id, tipo, titulo, url, descricao, fonte, minutos) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                (sid, item["tipo"], texto(item["titulo"], 200), link(item.get("url")),
+                                 texto(item.get("descricao"), 4000) or None, texto(item.get("fonte"), 100) or None,
+                                 item["minutos"] if isinstance(item.get("minutos"), int) else None))
+            validos = [c for c in (sessao.get("cartoes") or [])[:20]
+                             if isinstance(c, dict) and texto(c.get("frente"), 500) and texto(c.get("verso"), 1000)]
+            con.executemany("INSERT INTO flashcards (sessao_id, frente, verso, revisar_em) VALUES (?, ?, ?, ?)",
+                            [(sid, texto(c["frente"], 500), texto(c["verso"], 1000), DORMINDO) for c in validos])
+    return obter_plano(plano_id)
+
+
 def obter_plano(plano_id):
     with conectar() as con:
         linha = con.execute(f"{_SELECT_PLANOS} WHERE p.id = ? GROUP BY p.id", (plano_id,)).fetchone()
@@ -596,8 +645,16 @@ def marcar_item(item_id, estado):
             origem = con.execute("SELECT sessao_id FROM itens WHERE id = ?", (item["origem_id"],)).fetchone()
             conteudo = origem["sessao_id"] if origem else None
     if estado == "feito" and conteudo:
+        acordar_cartoes(conteudo)
         pedir_flashcards(conteudo)
     return obter_sessao(sessao["id"])
+
+
+def acordar_cartoes(sessao_id):
+    """Os cartões que vieram num plano importado entram na revisão de hoje."""
+    with conectar() as con:
+        con.execute("UPDATE flashcards SET revisar_em = ? WHERE sessao_id = ? AND revisar_em = ?",
+                    (date.today().isoformat(), sessao_id, DORMINDO))
 
 
 def adiar_pendentes(sessao_id):
