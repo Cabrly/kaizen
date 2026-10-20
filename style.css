@@ -4893,18 +4893,31 @@ html.travado body > *:not(.pin-tela) {
 
 /* ---------- Pets de estudo (js/pets.js, js/pets-arte.js) ---------- */
 
-/* animações do bichinho */
+/* o pet: palco quadrado com camadas (js/pets-arte.js) */
 .pet {
-    display: block;
+    position: relative;
+
     width: 100%;
     height: 100%;
-    overflow: visible;
+
+    border-radius: 16px;
 }
 
-.pet .pet-corpo {
-    transform-box: fill-box;
-    transform-origin: 50% 100%;
+.pet-corpo {
+    position: absolute;
+    inset: 0;
+
+    transform-origin: 50% 92%;
     animation: pet-respira 3.2s ease-in-out infinite;
+}
+
+.pet-camada {
+    position: absolute;
+
+    height: auto;
+
+    pointer-events: none;
+    user-select: none;
 }
 
 .pet-feliz .pet-corpo {
@@ -4912,22 +4925,23 @@ html.travado body > *:not(.pin-tela) {
 }
 
 .pet-triste .pet-corpo {
-    animation: pet-respira 4.8s ease-in-out infinite;
-    filter: saturate(0.65) brightness(0.97);
+    animation: pet-cabisbaixo 4.8s ease-in-out infinite;
 }
 
-.pet-lagrima {
-    animation: pet-lagrima 2.4s ease-in infinite;
+.pet-triste .pet-bicho {
+    filter: saturate(0.45) brightness(0.93) !important;
 }
 
-.pet-brilho path {
-    transform-box: fill-box;
-    transform-origin: center;
+.pet-brilho {
     animation: pet-brilha 1.8s ease-in-out infinite;
 }
 
-.pet-brilho path + path {
-    animation-delay: 0.9s;
+.pet-chuva {
+    animation: pet-nuvem 3s ease-in-out infinite;
+}
+
+.pet-gota {
+    animation: pet-lagrima 2.4s ease-in infinite;
 }
 
 @keyframes pet-respira {
@@ -4937,28 +4951,46 @@ html.travado body > *:not(.pin-tela) {
 @keyframes pet-pulinho {
     0%, 60%, 100% { transform: translateY(0) scale(1, 1); }
     70% { transform: translateY(0) scale(1.04, 0.95); }
-    82% { transform: translateY(-7px) scale(0.98, 1.03); }
+    82% { transform: translateY(-5%) scale(0.98, 1.03); }
+}
+
+@keyframes pet-cabisbaixo {
+    0%, 100% { transform: translateY(3%) rotate(-5deg); }
+    50% { transform: translateY(3.5%) rotate(-4deg) scale(1.01, 0.99); }
 }
 
 @keyframes pet-lagrima {
-    0% { transform: translateY(-2px); opacity: 0; }
+    0% { transform: translateY(-10%); opacity: 0; }
     20% { opacity: 1; }
-    80% { transform: translateY(14px); opacity: 1; }
-    100% { transform: translateY(18px); opacity: 0; }
+    80% { transform: translateY(60%); opacity: 1; }
+    100% { transform: translateY(80%); opacity: 0; }
 }
 
 @keyframes pet-brilha {
-    0%, 100% { transform: scale(0.6); opacity: 0.3; }
-    50% { transform: scale(1.1); opacity: 1; }
+    0%, 100% { transform: scale(0.75) rotate(0deg); opacity: 0.55; }
+    50% { transform: scale(1.05) rotate(8deg); opacity: 1; }
+}
+
+@keyframes pet-nuvem {
+    50% { transform: translateX(4%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .pet .pet-corpo,
-    .pet-lagrima,
-    .pet-brilho path {
+    .pet-corpo,
+    .pet-brilho,
+    .pet-chuva,
+    .pet-gota {
         animation: none;
     }
 }
+
+/* cenários */
+.pet-fundo-ceu { background: linear-gradient(#9fd3ff, #dff1ff 70%, #bfe6a8 70%); }
+.pet-fundo-sakura { background: radial-gradient(circle at 20% 25%, #ffd1e0 0 6px, transparent 7px), radial-gradient(circle at 78% 18%, #ffc2d6 0 5px, transparent 6px), radial-gradient(circle at 65% 40%, #ffd9e6 0 4px, transparent 5px), linear-gradient(#ffeef4, #ffdbe8 70%, #f3c6d6 70%); }
+.pet-fundo-floresta { background: radial-gradient(ellipse at 15% 75%, #6fbf73 0 22%, transparent 23%), radial-gradient(ellipse at 88% 72%, #5aa862 0 20%, transparent 21%), linear-gradient(#d8f0d0, #bfe3b5 70%, #8fcf86 70%); }
+.pet-fundo-praia { background: radial-gradient(circle at 82% 18%, #ffe27a 0 9%, transparent 10%), linear-gradient(#a6e1ff, #d9f4ff 55%, #5cc4e8 55%, #5cc4e8 68%, #f6e3b4 68%); }
+.pet-fundo-noite { background: radial-gradient(circle at 20% 20%, #fff 0 1.2px, transparent 2px), radial-gradient(circle at 70% 12%, #fff 0 1.5px, transparent 2.5px), radial-gradient(circle at 85% 40%, #fff 0 1px, transparent 2px), radial-gradient(circle at 40% 30%, #fff8 0 1px, transparent 2px), radial-gradient(circle at 80% 22%, #fff3b0 0 8%, transparent 9%), linear-gradient(#1d2350, #3a3f7a 70%, #2b2f5a 70%); }
+.pet-fundo-arcoiris { background: radial-gradient(circle at 50% 100%, transparent 0 34%, #b388ff 34% 39%, #64b5f6 39% 44%, #81c784 44% 49%, #fff176 49% 54%, #ffb74d 54% 59%, #e57373 59% 64%, transparent 64%), linear-gradient(#e9f6ff, #fff); }
 
 .pets-avatar {
     display: block;
@@ -5515,4 +5547,60 @@ html.travado body > *:not(.pin-tela) {
         flex-direction: column-reverse;
         align-items: stretch;
     }
+}
+
+/* pets: editor e loja com o visual 3D */
+.pets-rotulo {
+    display: block;
+    margin: 10px 0 6px;
+
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+
+    color: #999;
+}
+
+.pets-editor .pets-opcoes,
+.pets-editor .pets-cores {
+    margin-bottom: 4px;
+}
+
+.pets-opcao {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 5px;
+}
+
+.pets-opcao img {
+    width: 18px;
+    height: 18px;
+}
+
+.pets-secoes {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 6px;
+    margin: 12px 0 14px;
+}
+
+.pets-item .pets-avatar,
+.pets-cartao .pets-avatar {
+    width: 112px;
+    height: 112px;
+}
+
+.pets-avatar-grande {
+    width: 180px;
+    height: 180px;
+    padding: 0;
+}
+
+.est-plano-pet {
+    width: 46px;
+    height: 46px;
+    margin: -8px 0 -8px -6px;
 }
