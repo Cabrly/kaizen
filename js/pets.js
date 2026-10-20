@@ -395,7 +395,7 @@ function mostrarFicha(petId) {
                         <button type="button" class="est-link" data-revisar="${s.id}">🃏 cartões</button>
                     </div>
                     <ul>${itensDa(s.id).map((i) => `<li>${i.url
-                        ? `<a href="${esc(i.url)}" target="_blank" rel="noopener">${i.tipo === "video" ? "🎥" : "📄"} ${esc(i.titulo)}</a>`
+                        ? `<a href="${escLink(i.url)}" target="_blank" rel="noopener">${i.tipo === "video" ? "🎥" : "📄"} ${esc(i.titulo)}</a>`
                         : `📝 ${esc(i.descricao || i.titulo)}`}</li>`).join("")}</ul>
                 </li>`).join("")}
             </ol>`
@@ -660,6 +660,12 @@ async function atualizar() {
 function esc(texto) {
     return String(texto ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[c]);
 }
+
+// link vindo dos dados (backup, sincronia, IA): só http(s), nunca "javascript:"
+function escLink(url) {
+    return /^https?:\/\//i.test(String(url ?? "").trim()) ? esc(url) : "#";
+}
+
 
 
 /* ---------- ligações ---------- */

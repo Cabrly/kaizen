@@ -38,6 +38,12 @@ function esc(texto) {
     return String(texto ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[c]);
 }
 
+// link vindo dos dados (backup, sincronia, IA): só http(s), nunca "javascript:"
+function escLink(url) {
+    return /^https?:\/\//i.test(String(url ?? "").trim()) ? esc(url) : "#";
+}
+
+
 
 function tamanho(bytes) {
     return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -140,7 +146,7 @@ function cartao(e) {
             <details class="entrega-o-que">
                 <summary>O que você entregou</summary>
                 ${e.texto ? `<pre class="entrega-pre">${esc(e.texto)}</pre>` : ""}
-                ${e.link ? `<p>🔗 <a href="${esc(e.link)}" target="_blank" rel="noopener noreferrer">${esc(e.link)}</a></p>` : ""}
+                ${e.link ? `<p>🔗 <a href="${escLink(e.link)}" target="_blank" rel="noopener noreferrer">${esc(e.link)}</a></p>` : ""}
                 ${e.arquivos.map((a) => a.conteudo != null
                     ? `<details><summary>📄 ${esc(a.nome)} <small>${tamanho(a.tamanho || 0)}</small></summary><pre class="entrega-pre">${esc(a.conteudo)}</pre></details>`
                     : `<p>📄 ${esc(a.nome)} <small>(guardado no PC)</small></p>`).join("")}

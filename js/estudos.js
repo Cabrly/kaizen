@@ -86,6 +86,12 @@ function esc(texto) {
         .replace(/"/g, "&quot;");
 }
 
+// link vindo dos dados (backup, sincronia, IA): só http(s), nunca "javascript:"
+function escLink(url) {
+    return /^https?:\/\//i.test(String(url ?? "").trim()) ? esc(url) : "#";
+}
+
+
 
 function duracao(minutos) {
     if (!minutos) return "";
@@ -512,7 +518,7 @@ function corpoSessao(sessao) {
 function linhaItem(item) {
 
     const titulo = item.url
-        ? `<a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">${esc(item.titulo)}</a>`
+        ? `<a href="${escLink(item.url)}" target="_blank" rel="noopener noreferrer">${esc(item.titulo)}</a>`
         : `<span>${esc(item.titulo)}</span>`;
 
     const meta = [
