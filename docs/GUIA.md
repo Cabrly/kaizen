@@ -196,10 +196,12 @@ roteiro.
 
 - **Humor:** feliz quando você estuda no dia; tristinho quando a sessão passa
   sem nada feito. Ele volta a sorrir quando você faz o que ficou pendente.
-- **Pontos:** 10 por item feito, 20 por sessão completa e 100 por plano
-  concluído. Na **Loja** eles viram novos bichos (gato, cachorro, coelho,
-  raposa, coruja, corvo) e acessórios (cachecóis das quatro casas, chapéu de
-  mago, gorro, coroa, óculos…).
+- **Pontos:** você começa com 150 e ganha 10 por item feito, 20 por sessão
+  completa e 100 por plano concluído. Na **Loja** eles viram 18 bichos (gato,
+  cachorro, hamster, coelho, pintinho, sapo, ratinho, raposa, panda, urso,
+  coala, pinguim, macaco, coruja, tigre, leão, unicórnio e dragão), mais de 30
+  acessórios (capelo, cartola, coroa, óculos, cachecóis das quatro casas,
+  livros, café, violão…), tons de pelo e cenários.
 - **Jardim:** plano concluído, o pet vai morar lá. Clicando nele você vê tudo
   o que estudaram juntos (tópicos, vídeos, documentação) e revisa os
   flashcards daquele período.

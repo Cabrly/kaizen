@@ -85,6 +85,11 @@ instaladores estão no **[guia completo](docs/GUIA.md)**.
 - **Sincronia:** Cloudflare Workers + Durable Objects
 - **IA:** Ollama, OpenRouter, APIs da Anthropic, OpenAI e Google
 
+## Créditos
+
+Os bichinhos e acessórios 3D dos pets são do [Fluent Emoji](https://github.com/microsoft/fluentui-emoji),
+da Microsoft, sob licença MIT ([icones/pets/LICENSE](icones/pets/LICENSE)).
+
 ## Apoie
 
 O Kaizen é grátis. Se ele te ajudou, dá pra apoiar com um Pix pelo botão
