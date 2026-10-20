@@ -17,6 +17,10 @@ import { PROVEDORES, ErroIA, lerConfig, salvarConfig, contasConectadas,
 
 import { IDIOMAS, buscarVideos, linkDocumentacao } from "./busca.js";
 
+import { ligarEntregas, listar as listarEntregas, obter as obterEntrega, criar as criarEntrega, corrigirDeNovo,
+         excluir as excluirEntrega, sobreCorretor, resumoDosItens, linhaDoPerfil,
+         exportar as exportarEntregas, importar as importarEntregas } from "./entregas.js";
+
 
 const CHAVE_DADOS = "kaizen.nuvem.dados.v1";
 const BLOCO = 10;
@@ -621,8 +625,11 @@ function obterSessao(id) {
                      foi_para: copia ? dataDaSessao(copia.sessao_id) : null };
         });
 
+    const entregas = resumoDosItens(dados, itens.filter((i) => i.tipo === "atividade").map((i) => i.id));
+
     return { ...sessao, tema: plano.tema, cor: plano.cor, horario: plano.horario,
-             minutos: plano.minutos, plano_titulo: plano.titulo, itens };
+             minutos: plano.minutos, plano_titulo: plano.titulo,
+             itens: itens.map((i) => ({ ...i, entrega: entregas[i.id] || null })) };
 
 }
 
@@ -834,7 +841,7 @@ function lerJson(chave, padrao) {
 }
 
 
-function exportarBackup() {
+async function exportarBackup() {
 
     const dados = completar(ler());
 
@@ -844,13 +851,14 @@ function exportarBackup() {
         criado_em: agora().replace(" ", "T"),
         kanban: { tarefas: lerJson(CHAVE_TAREFAS, []), categorias: lerJson(CHAVE_CATEGORIAS, []) },
         estudos: { planos: dados.planos, sessoes: dados.sessoes, itens: dados.itens,
-                   flashcards: dados.flashcards, perfil: dados.perfil, pets: dados.pets }
+                   flashcards: dados.flashcards, entregas: await exportarEntregas(dados),
+                   perfil: dados.perfil, pets: dados.pets }
     };
 
 }
 
 
-function restaurarBackup(corpo) {
+async function restaurarBackup(corpo) {
 
     if (corpo.app !== "kaizen") throw new RangeError("Esse arquivo não é um backup do Kaizen.");
 
@@ -873,10 +881,14 @@ function restaurarBackup(corpo) {
         const antes = completar(ler());
         const ids = new Set(e.sessoes.map((x) => x.id));
         const flashcards = (Array.isArray(e.flashcards) ? e.flashcards : antes.flashcards).filter((f) => ids.has(f.sessao_id));
+        // backup de versão antiga não tem entregas: ficam as daqui
+        const entregas = await importarEntregas(Array.isArray(e.entregas) ? e.entregas : await exportarEntregas(antes),
+                                                new Set(e.itens.map((i) => i.id)));
 
         gravar({
-            seq: { plano: maior(planos), sessao: maior(e.sessoes), item: maior(e.itens), cartao: maior(flashcards) },
-            planos, sessoes: e.sessoes, itens: e.itens, flashcards,
+            seq: { plano: maior(planos), sessao: maior(e.sessoes), item: maior(e.itens), cartao: maior(flashcards),
+                   entrega: maior(entregas) },
+            planos, sessoes: e.sessoes, itens: e.itens, flashcards, entregas,
             perfil: e.perfil && typeof e.perfil.sobre === "string" ? { sobre: e.perfil.sobre } : antes.perfil,
             pets: e.pets && typeof e.pets === "object" ? e.pets : antes.pets
         });
@@ -904,6 +916,7 @@ function completar(dados) {
     dados.flashcards ||= [];
     dados.perfil ||= { sobre: "" };
     dados.pets ||= {};
+    dados.entregas ||= [];
     dados.seq.cartao ||= dados.flashcards.reduce((m, f) => Math.max(m, f.id), 0);
     return dados;
 }
@@ -949,6 +962,9 @@ function perfilTexto(dados, excluirPlano = null) {
             linhas.push(linha);
 
         });
+
+    const atividades = linhaDoPerfil(dados);
+    if (atividades) linhas.push(atividades);
 
     const sobre = dados.perfil?.sobre;
     if (sobre) linhas.push(`- O que a pessoa contou sobre si: ${sobre}`);
@@ -1184,8 +1200,8 @@ export async function rotear(url, opcoes = {}) {
     try {
 
         if (area === "chat" && metodo === "POST") return json(200, await chat(corpo));
-        if (area === "backup" && metodo === "GET") return json(200, exportarBackup());
-        if (area === "backup" && metodo === "POST") { restaurarBackup(corpo); return json(200, { ok: true }); }
+        if (area === "backup" && metodo === "GET") return json(200, await exportarBackup());
+        if (area === "backup" && metodo === "POST") { await restaurarBackup(corpo); return json(200, { ok: true }); }
         if (area === "ia" && recurso === "status") return json(200, await statusChat());
 
         if (area === "ia" && recurso === "servidores") {
@@ -1216,6 +1232,13 @@ export async function rotear(url, opcoes = {}) {
             if (metodo === "POST" && recurso === "flashcards" && acao === "refazer") { pedirFlashcards(id, true); return json(202, { ok: true }); }
             if (metodo === "GET" && recurso === "pets") return json(200, { dados: completar(ler()).pets });
             if (metodo === "POST" && recurso === "pets") return json(200, { dados: salvarPets(corpo.dados) });
+            if (metodo === "GET" && recurso === "entregas" && !ident) {
+                return json(200, { entregas: await listarEntregas(Number(url.searchParams.get("item"))), corretor: await sobreCorretor() });
+            }
+            if (metodo === "GET" && recurso === "entregas") return json(200, { entrega: await obterEntrega(id) });
+            if (metodo === "POST" && recurso === "entregas" && !ident) return json(201, { entrega: await criarEntrega(corpo) });
+            if (metodo === "POST" && recurso === "entregas" && acao === "corrigir") return json(200, { entrega: await corrigirDeNovo(id) });
+            if (metodo === "DELETE" && recurso === "entregas") { await excluirEntrega(id); return json(200, { ok: true }); }
             if (metodo === "PATCH" && recurso === "cartoes") {
                 const cartao = responderCartao(id, corpo.acertou === true);
                 return json(cartao ? 200 : 404, { cartao });
@@ -1233,3 +1256,7 @@ export async function rotear(url, opcoes = {}) {
     }
 
 }
+
+
+ligarEntregas({ ler: () => completar(ler()), gravar, agora, motores, gerarJson, marcarItem,
+                prompts: carregarPrompts, nomeProvedor: (p) => PROVEDORES[p]?.nome || p });

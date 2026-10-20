@@ -30,7 +30,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="./style.css?v=novidades1">
+    <link rel="stylesheet" href="./style.css?v=entregas1">
 
     <!-- com PIN, esconde o app antes de desenhar qualquer coisa (js/pin.js destrava) -->
     <script>
@@ -677,6 +677,43 @@
     </dialog>
 
 
+    <dialog class="modal entrega-modal" id="entrega-modal" aria-labelledby="entrega-titulo">
+
+        <h2 class="modal-titulo" id="entrega-titulo">Entregar atividade</h2>
+
+        <p class="entrega-enunciado" id="entrega-enunciado"></p>
+        <p class="entrega-corretor" id="entrega-corretor"></p>
+
+        <h3 class="entrega-subtitulo" id="entrega-titulo-lista" hidden>Suas entregas</h3>
+        <div class="entrega-lista" id="entrega-lista"></div>
+
+        <h3 class="entrega-subtitulo" id="entrega-nova-titulo">Sua entrega</h3>
+
+        <label class="campo-modal"><span>RESPOSTA ESCRITA</span>
+            <textarea id="entrega-texto" rows="5" maxlength="50000"
+                      placeholder="Escreva a resposta, cole o código ou conte o que você fez…"></textarea></label>
+
+        <div class="campo-modal">
+            <span>ARQUIVOS (código ou texto, até 10)</span>
+            <label class="entrega-escolher">
+                <input type="file" id="entrega-arquivo" multiple hidden>
+                📎 Escolher arquivos <small>ou arraste pra cá</small>
+            </label>
+            <div class="entrega-anexos" id="entrega-anexos"></div>
+        </div>
+
+        <label class="campo-modal"><span>LINK (GITHUB OU OUTRO)</span>
+            <input type="url" id="entrega-link" placeholder="https://github.com/voce/seu-projeto"></label>
+
+        <p class="entrega-erro" id="entrega-erro" role="alert" hidden></p>
+
+        <div class="form-acoes">
+            <button type="button" class="btn-secundario" data-fechar>Fechar</button>
+            <button type="button" class="btn-primario" id="entrega-enviar">Entregar</button>
+        </div>
+
+    </dialog>
+
     <dialog class="modal novidades-modal" id="novidades-modal" aria-labelledby="novidades-titulo">
 
         <h2 class="modal-titulo" id="novidades-titulo">Novidades do Kaizen</h2>
@@ -1216,7 +1253,12 @@
 
     <script
         type="module"
-        src="./js/estudos.js?v=pwa1"
+        src="./js/estudos.js?v=entregas1"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/entregas.js?v=1"
     ></script>
 
     <script

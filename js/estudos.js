@@ -135,6 +135,15 @@ function iniciarEstudos() {
     document.addEventListener("kaizen:continuar-plano", (evento) => abrirAssistente(evento.detail));
     document.addEventListener("kaizen:recarregar-estudos", () => atualizarTudo());
 
+    // entregou ou a correção chegou (js/entregas.js): a atividade ficou feita e ganhou nota
+    document.addEventListener("kaizen:entrega", async () => {
+        for (const id of estado.abertas) {
+            try {
+                mostrarSessaoAtualizada((await api(`/sessoes/${id}`)).sessao, false);
+            } catch (erro) { /* sessão sumiu: tudo bem */ }
+        }
+    });
+
     tela.querySelector("#est-calendario").addEventListener("click", (evento) => {
         const dia = evento.target.closest("[data-dia]");
         if (dia) selecionarDia(dia.dataset.dia);
@@ -523,6 +532,7 @@ function linhaItem(item) {
                 ${titulo}
                 ${item.descricao ? `<p>${esc(item.descricao)}</p>` : ""}
                 ${meta || avisos ? `<small>${meta}${avisos}</small>` : ""}
+                ${item.tipo === "atividade" ? botaoEntrega(item) : ""}
             </div>
             <div class="est-item-acoes">
                 <button type="button" class="est-marca feito" data-item="${item.id}" data-estado="feito"
@@ -531,6 +541,22 @@ function linhaItem(item) {
                         aria-pressed="${item.estado === "nao-feito"}" title="Não fiz — passa pra próxima sessão">✕</button>
             </div>
         </div>`;
+
+}
+
+
+// entrega e correção da atividade (a janela é do js/entregas.js)
+function botaoEntrega(item) {
+
+    const e = item.entrega;
+    const selo = !e ? ""
+        : e.situacao === "corrigida" ? `<span class="est-nota est-nota-${e.nota >= 7 ? "boa" : e.nota >= 5 ? "media" : "baixa"}">Nota ${e.nota}/10</span>`
+        : ["na-fila", "corrigindo"].includes(e.situacao) ? `<span class="est-nota">Corrigindo…</span>`
+        : `<span class="est-nota">Entregue</span>`;
+
+    return `<button type="button" class="est-entregar" data-entregar="${item.id}">
+                ${e ? `📎 ${e.entregas > 1 ? `${e.entregas} entregas` : "Ver entrega"}` : "📤 Entregar"} ${selo}
+            </button>`;
 
 }
 

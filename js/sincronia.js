@@ -181,7 +181,8 @@ async function decifrar(chave, dados) {
 /* ---------- retrato dos dados ---------- */
 
 async function exportar() {
-    const resposta = await fetch("./api/backup", { cache: "no-store" });
+    // ?sincronia=1: no PC, os arquivos das entregas seguem a opção "O que vai pro celular"
+    const resposta = await fetch("./api/backup?sincronia=1", { cache: "no-store" });
     if (!resposta.ok) throw new Error(`Não consegui ler os dados deste aparelho (HTTP ${resposta.status}).`);
     return resposta.json();
 }
