@@ -30,7 +30,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="./style.css?v=pin1">
+    <link rel="stylesheet" href="./style.css?v=fc1">
 
     <!-- com PIN, esconde o app antes de desenhar qualquer coisa (js/pin.js destrava) -->
     <script>
@@ -516,13 +516,23 @@
 
             </div>
 
-            <button
-                type="button"
-                class="btn-primario"
-                id="est-novo-plano"
-            >
-                + Novo plano
-            </button>
+            <div class="est-topo-acoes">
+                <button type="button" class="est-atalho" id="fc-abrir"
+                        title="Cartões de revisão do que você estudou nos últimos dias">
+                    🃏 Flashcards <span class="fc-contador" id="fc-contador" hidden></span>
+                </button>
+                <button type="button" class="est-atalho" id="perfil-abrir"
+                        title="O que a IA leva em conta pra explicar do seu jeito">
+                    🧠 O que a IA sabe
+                </button>
+                <button
+                    type="button"
+                    class="btn-primario"
+                    id="est-novo-plano"
+                >
+                    + Novo plano
+                </button>
+            </div>
 
         </section>
 
@@ -681,6 +691,87 @@
         <div class="form-acoes">
             <button type="button" class="btn-secundario" data-fechar>Fechar</button>
         </div>
+
+    </dialog>
+
+
+    <dialog class="modal fc-modal" id="fc-modal" aria-labelledby="fc-titulo">
+
+        <div id="fc-lista">
+
+            <h2 class="modal-titulo" id="fc-titulo">Flashcards</h2>
+
+            <p class="sinc-texto">
+                Cartões do que você estudou nos últimos dias. Eles ficam prontos sozinhos quando você
+                marca ✓ numa sessão. O que você acerta volta cada vez mais tarde; o que erra, volta logo.
+            </p>
+
+            <button type="button" class="btn-primario sinc-largo" id="fc-revisar-hoje">Revisar os de hoje</button>
+
+            <ul class="fc-conteudos" id="fc-conteudos"></ul>
+
+            <div class="form-acoes">
+                <button type="button" class="btn-secundario" data-fechar>Fechar</button>
+            </div>
+
+        </div>
+
+        <div id="fc-estudo" hidden>
+
+            <div class="fc-barra">
+                <button type="button" class="est-link" id="fc-voltar">← Conteúdos</button>
+                <span class="fc-progresso" id="fc-progresso"></span>
+            </div>
+
+            <p class="fc-topico" id="fc-topico"></p>
+
+            <button type="button" class="fc-cartao" id="fc-cartao" aria-live="polite">
+                <span class="fc-frente" id="fc-frente"></span>
+                <span class="fc-verso" id="fc-verso" hidden></span>
+                <span class="fc-dica" id="fc-dica">Toque pra ver a resposta (ou aperte espaço)</span>
+            </button>
+
+            <div class="fc-respostas" id="fc-respostas" hidden>
+                <button type="button" class="btn-secundario fc-errei" id="fc-errei">✕ Errei <kbd>1</kbd></button>
+                <button type="button" class="btn-primario fc-acertei" id="fc-acertei">✓ Acertei <kbd>2</kbd></button>
+            </div>
+
+            <div class="fc-fim" id="fc-fim" hidden>
+                <p class="fc-fim-titulo" id="fc-fim-titulo"></p>
+                <p class="sinc-texto" id="fc-fim-texto"></p>
+                <button type="button" class="btn-primario sinc-largo" id="fc-fim-voltar">Voltar aos conteúdos</button>
+            </div>
+
+        </div>
+
+    </dialog>
+
+
+    <dialog class="modal fc-modal" id="perfil-modal" aria-labelledby="perfil-titulo">
+
+        <h2 class="modal-titulo" id="perfil-titulo">O que a IA sabe de você</h2>
+
+        <p class="sinc-texto">
+            A IA recebe este resumo no chat, nos planos novos e nos flashcards, pra explicar a partir do que
+            você já sabe. Ele é montado sozinho com o seu progresso e fica só com você.
+        </p>
+
+        <pre class="perfil-texto" id="perfil-texto"></pre>
+
+        <form id="perfil-form">
+            <label class="campo-modal">
+                <span>Sobre você (opcional)</span>
+                <textarea id="perfil-sobre" rows="3" maxlength="1500"
+                          placeholder="Ex.: faço ADS, trabalho com suporte, aprendo melhor com exemplos práticos"></textarea>
+            </label>
+
+            <p class="est-erro" id="perfil-erro" role="alert"></p>
+
+            <div class="form-acoes">
+                <button type="button" class="btn-secundario" data-fechar>Fechar</button>
+                <button type="submit" class="btn-primario">Salvar</button>
+            </div>
+        </form>
 
     </dialog>
 
@@ -1042,6 +1133,11 @@
     <script
         type="module"
         src="./js/estudos.js?v=pwa1"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/flashcards.js?v=1"
     ></script>
 
     <script

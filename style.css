@@ -4530,3 +4530,363 @@ html.travado body > *:not(.pin-tela) {
 
     cursor: pointer;
 }
+
+/* ---------- Flashcards e "O que a IA sabe" (js/flashcards.js) ---------- */
+
+.est-topo-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+
+    gap: 8px;
+}
+
+.est-atalho {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 6px;
+    min-height: 40px;
+    padding: 9px 14px;
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+
+    color: #333;
+    background: rgba(255, 255, 255, 0.85);
+
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 6px;
+
+    cursor: pointer;
+
+    backdrop-filter: blur(6px);
+    transition: background 0.2s, transform 0.1s;
+}
+
+.est-atalho:hover {
+    background: #ffffff;
+}
+
+.est-atalho:active {
+    transform: scale(0.97);
+}
+
+.fc-contador {
+    min-width: 18px;
+    padding: 1px 6px;
+
+    font-size: 11px;
+    text-align: center;
+
+    color: #ffffff;
+    background: #c90016;
+
+    border-radius: 9px;
+}
+
+.fc-contador[hidden] {
+    display: none;
+}
+
+.fc-modal {
+    width: min(520px, 94vw);
+    max-height: 90vh;
+
+    overflow-y: auto;
+}
+
+.fc-conteudos {
+    display: flex;
+    flex-direction: column;
+
+    gap: 8px;
+    margin: 16px 0 0;
+    padding: 0;
+
+    list-style: none;
+}
+
+.fc-conteudo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 12px;
+    width: 100%;
+    padding: 12px 14px;
+
+    font-family: inherit;
+    text-align: left;
+
+    color: #171717;
+    background: #f7f7f5;
+
+    border: 1px solid #e4e4e0;
+    border-left: 4px solid var(--cor, #c90016);
+    border-radius: 8px;
+
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.fc-conteudo:hover {
+    background: #efefeb;
+}
+
+.fc-conteudo[data-situacao="gerando"] {
+    cursor: default;
+}
+
+.fc-conteudo-texto {
+    display: flex;
+    flex-direction: column;
+
+    gap: 2px;
+    min-width: 0;
+}
+
+.fc-conteudo-texto strong {
+    font-size: 14px;
+}
+
+.fc-conteudo-texto small {
+    font-size: 12px;
+
+    color: #777;
+}
+
+.fc-selo {
+    flex-shrink: 0;
+    padding: 3px 9px;
+
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+
+    color: #555;
+    background: #e8e8e4;
+
+    border-radius: 10px;
+}
+
+.fc-selo-hoje {
+    color: #ffffff;
+    background: #c90016;
+}
+
+.fc-selo-gerando {
+    animation: fc-pulsa 1.4s ease-in-out infinite;
+}
+
+.fc-selo-erro {
+    color: #c90016;
+    background: #fde8ea;
+}
+
+@keyframes fc-pulsa {
+    50% { opacity: 0.45; }
+}
+
+.fc-vazio {
+    padding: 18px;
+
+    font-size: 13px;
+    text-align: center;
+
+    color: #666;
+    background: #f7f7f5;
+
+    border-radius: 8px;
+}
+
+.fc-barra {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.fc-barra .est-link {
+    margin: 0;
+}
+
+.fc-progresso {
+    font-size: 12px;
+    font-weight: 700;
+
+    color: #777;
+}
+
+.fc-topico {
+    min-height: 1em;
+    margin: 14px 0 8px;
+
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+
+    color: #c90016;
+}
+
+.fc-cartao {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    gap: 14px;
+    width: 100%;
+    min-height: 220px;
+    padding: 28px 24px;
+
+    font-family: inherit;
+    text-align: center;
+
+    color: #171717;
+    background: #ffffff;
+
+    border: 1px solid #e0e0dc;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+
+    cursor: pointer;
+}
+
+.fc-cartao.virado {
+    cursor: default;
+}
+
+.fc-cartao:focus-visible {
+    outline: 2px solid #c90016;
+    outline-offset: 2px;
+}
+
+.fc-frente {
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.fc-verso {
+    padding-top: 14px;
+
+    font-size: 15px;
+    line-height: 1.5;
+
+    color: #333;
+    border-top: 1px dashed #d5d5d5;
+
+    animation: fc-surge 0.2s ease-out;
+}
+
+.fc-verso[hidden],
+.fc-dica[hidden] {
+    display: none;
+}
+
+@keyframes fc-surge {
+    from { opacity: 0; transform: translateY(4px); }
+}
+
+.fc-dica {
+    font-size: 12px;
+
+    color: #999;
+}
+
+.fc-respostas {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.fc-respostas[hidden],
+.fc-fim[hidden] {
+    display: none;
+}
+
+.fc-respostas kbd {
+    margin-left: 4px;
+    padding: 0 5px;
+
+    font-family: inherit;
+    font-size: 10px;
+
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    opacity: 0.6;
+}
+
+.fc-fim {
+    padding: 24px 0 4px;
+
+    text-align: center;
+}
+
+.fc-fim-titulo {
+    margin: 0 0 6px;
+
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.perfil-texto {
+    max-height: 240px;
+    margin: 0 0 16px;
+    padding: 14px;
+
+    overflow-y: auto;
+
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+
+    color: #333;
+    background: #f7f7f5;
+
+    border: 1px solid #e4e4e0;
+    border-radius: 8px;
+}
+
+.campo-modal textarea {
+    width: 100%;
+    padding: 9px 11px;
+
+    font-family: inherit;
+    font-size: 13px;
+
+    resize: vertical;
+
+    color: #171717;
+    background: #f7f7f5;
+
+    border: 1px solid #d5d5d5;
+    border-radius: 6px;
+}
+
+@media (max-width: 640px) {
+    .est-topo-acoes {
+        justify-content: stretch;
+    }
+
+    .est-topo-acoes > * {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+}
+
+.fc-cartao[hidden] {
+    display: none;
+}
+
+/* no toque não tem teclado: some a dica das teclas */
+@media (hover: none) {
+    .fc-respostas kbd {
+        display: none;
+    }
+}
