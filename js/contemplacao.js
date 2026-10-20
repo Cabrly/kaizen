@@ -5,8 +5,9 @@
    vê-las inteiras:
      • modo contemplação: tecla Z (fora de campo de texto) ou o
        botão discreto no canto. Volta com clique ou tecla.
-     • descanso de tela: depois de alguns minutos sem mexer, a
-       interface esmaece sozinha. Mexeu o mouse, volta.
+     • descanso de tela (desligado; liga no menu de fundos):
+       depois de alguns minutos sem mexer, a interface esmaece
+       sozinha. Mexeu o mouse, volta.
    Só esconde a interface (opacity): nada é desmontado.
 ========================================================= */
 
@@ -31,7 +32,7 @@ function ler(chave, padrao) {
 
 
 export function descansoLigado() {
-    return ler(CHAVE_DESCANSO, true);
+    return ler(CHAVE_DESCANSO, false);   // desligado até a pessoa ligar no menu de fundos
 }
 
 

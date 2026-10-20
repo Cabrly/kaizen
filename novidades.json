@@ -1,5 +1,12 @@
 [
     {
+        "versao": "1.3.0",
+        "data": "2026-10-21",
+        "itens": [
+            "O descanso de tela (a interface sumindo depois de 3 minutos parado) agora vem desligado. Quem gostar liga no menu de fundos, em Ver o fundo."
+        ]
+    },
+    {
         "versao": "1.2.0",
         "data": "2026-10-20",
         "itens": [
