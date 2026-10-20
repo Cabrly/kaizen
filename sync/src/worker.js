@@ -10,14 +10,17 @@
    DELETE /v1/cofre/:id                 → apaga o cofre
 
    Cada cofre é um Durable Object: um código atende um pedido por vez, então
-   dois aparelhos gravando juntos não se atropelam.
+   dois aparelhos gravando juntos não se atropelam. O blob vai em pedaços de
+   1 MB (o armazenamento aceita valores de até 2 MB cada), então um cofre
+   aguenta até TAMANHO_MAXIMO, com as entregas das atividades e tudo.
 
    Limite por IP: 120 pedidos por minuto no total e 10 por minuto em cofre que
    não existe (404). Quem tenta adivinhar códigos bate no segundo logo. */
 
 import { DurableObject } from "cloudflare:workers";
 
-const TAMANHO_MAXIMO = 1_500_000;  // o armazenamento aceita valores de até 2 MB
+const TAMANHO_MAXIMO = 32_000_000;  // ~32 MB cifrados e comprimidos; cabe folgado na memória do Worker
+const PEDACO = 1_000_000;
 const UM_ANO = 365 * 24 * 60 * 60 * 1000;
 
 const CORS = {
@@ -39,8 +42,26 @@ function json(status, corpo) {
 export class Cofre extends DurableObject {
 
     async ler() {
-        const cofre = await this.ctx.storage.get(["versao", "dados", "atualizado_em"]);
-        return cofre.has("versao") ? Object.fromEntries(cofre) : null;
+        const cofre = await this.ctx.storage.get(["versao", "dados", "atualizado_em", "pedacos"]);
+        if (!cofre.has("versao")) return null;
+        const { versao, atualizado_em, pedacos } = Object.fromEntries(cofre);
+        if (!pedacos) return { versao, atualizado_em, dados: cofre.get("dados") };   // cofre de antes dos pedaços
+        const chaves = Array.from({ length: pedacos }, (_, i) => `pedaco:${i}`);
+        const partes = await this.ctx.storage.get(chaves);
+        return { versao, atualizado_em, dados: chaves.map((c) => partes.get(c)).join("") };
+    }
+
+    async gravar(versao, dados, atualizado_em) {
+        const pedacos = Math.ceil(dados.length / PEDACO);
+        const antes = (await this.ctx.storage.get("pedacos")) || 0;
+        const novo = { versao, atualizado_em, pedacos };
+        for (let i = 0; i < pedacos; i++) novo[`pedaco:${i}`] = dados.slice(i * PEDACO, (i + 1) * PEDACO);
+        // tudo na mesma transação: quem ler nunca pega metade velha, metade nova
+        await this.ctx.storage.transaction(async (txn) => {
+            await txn.put(novo);
+            const sobras = ["dados", ...Array.from({ length: Math.max(0, antes - pedacos) }, (_, i) => `pedaco:${pedacos + i}`)];
+            await txn.delete(sobras);
+        });
     }
 
     async fetch(pedido) {
@@ -82,7 +103,7 @@ export class Cofre extends DurableObject {
         }
 
         const agora = Date.now();
-        await this.ctx.storage.put({ versao: base + 1, dados, atualizado_em: agora });
+        await this.gravar(base + 1, dados, agora);
         await this.ctx.storage.setAlarm(agora + UM_ANO);  // cofre esquecido por um ano se apaga sozinho
 
         return json(200, { versao: base + 1, atualizado_em: agora });

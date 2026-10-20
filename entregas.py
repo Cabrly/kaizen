@@ -10,9 +10,9 @@ como melhorar e os assuntos em que a pessoa mostrou dificuldade. As
 dificuldades entram no perfil (estudos.perfil_texto), então os próximos
 planos, flashcards e o chat já sabem onde reforçar.
 
-Aqui no PC nada tem limite de espaço além do bom senso (ver os LIMITES); o
-que vai pro celular pela sincronia depende da escolha em "O que vai pro
-celular" (para_sincronia).
+Aqui no PC nada tem limite de espaço além do bom senso (ver os LIMITES).
+Pela sincronia vai tudo, a não ser que a pessoa escolha poupar o celular em
+"O que vai pro celular" (para_sincronia).
 """
 from datetime import date, datetime, timedelta
 import json
@@ -326,8 +326,9 @@ def ler_github(url):
 # =========================================================
 
 def opcao_sincronia():
+    # padrão: tudo vai (o cofre da sincronia aguenta ~32 MB comprimidos); a opção fica pra quem quiser poupar o celular
     valor = servidores._config("sinc_entregas")
-    return valor if valor in SINC_OPCOES else "andamento"
+    return valor if valor in SINC_OPCOES else "tudo"
 
 
 def definir_sincronia(valor):
