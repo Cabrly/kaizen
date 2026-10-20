@@ -628,6 +628,16 @@
 
             <p class="sinc-status" id="sinc-status" role="status"></p>
 
+            <!-- só no PC (js/sincronia.js): o PC guarda tudo, o celular recebe o que for escolhido aqui -->
+            <label class="campo-modal sinc-entregas" id="sinc-entregas" hidden>
+                <span>ARQUIVOS DAS ATIVIDADES ENTREGUES</span>
+                <select id="sinc-entregas-opcao">
+                    <option value="tudo">Vão todos pro outro aparelho</option>
+                    <option value="andamento">Só dos planos em andamento (o resto fica no PC)</option>
+                    <option value="notas">Ficam no PC (vão só as notas e correções)</option>
+                </select>
+            </label>
+
         </div>
 
         <p class="est-erro" id="sinc-erro" role="alert"></p>
@@ -1208,7 +1218,7 @@
 
     <script
         type="module"
-        src="./js/sincronia.js?v=sinc2"
+        src="./js/sincronia.js?v=sinc3"
     ></script>
 
     <script

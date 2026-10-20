@@ -548,6 +548,31 @@ function quandoFoi(ms) {
 }
 
 
+// No PC: o que vai dos arquivos das entregas pro outro aparelho (entregas.para_sincronia)
+async function ligarOpcaoEntregas() {
+
+    const campo = el("entregas");
+    const seletor = el("entregas-opcao");
+    if (!campo || !seletor) return;
+
+    try {
+        const resposta = await fetch("./api/estudos/sincronia-entregas");
+        seletor.value = (await resposta.json()).opcao;
+    } catch (erro) {
+        return;
+    }
+    campo.hidden = false;
+
+    seletor.addEventListener("change", async () => {
+        await fetch("./api/estudos/sincronia-entregas", {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ opcao: seletor.value })
+        }).catch(() => null);
+        ciclo(true);
+    });
+
+}
+
+
 function mostrarSituacao(tipo, textoSituacao = "") {
 
     situacao = { tipo, texto: textoSituacao };
@@ -704,7 +729,9 @@ if (modal && botaoAbrir) {
     }
 
 
-    window.kaizenModo.then(() => {
+    window.kaizenModo.then((modoAtual) => {
+
+        if (modoAtual === "servidor") ligarOpcaoEntregas();
 
         if (doLink && lerEstado()?.codigo !== doLink) {
             abrir();
