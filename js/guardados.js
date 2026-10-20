@@ -7,14 +7,15 @@
    recarrega a página uma vez, pra cada tela ler o que voltou.
 
    Tarefas e categorias ficam de fora: o servidor já é o dono
-   delas. No celular e na demonstração, não faz nada.
+   delas. O PIN também, pra que apagar os dados do site tire
+   um PIN esquecido. No celular e na demonstração, não faz nada.
 ========================================================= */
 
 
 import { detectarModo } from "./modo.js";
 
 
-const FORA = new Set(["kaizen.tarefas.v1", "kaizen.categorias.v1"]);
+const FORA = new Set(["kaizen.tarefas.v1", "kaizen.categorias.v1", "kaizen.pin.v1", "kaizen.pin.espera"]);
 const RECARREGOU = "kaizen.guardados.recarregou";   // sessionStorage: evita recarregar em laço
 const OLHAR = 3000;   // ms entre comparações
 

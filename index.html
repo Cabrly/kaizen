@@ -30,10 +30,37 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="./style.css?v=sinc1">
+    <link rel="stylesheet" href="./style.css?v=pin1">
+
+    <!-- com PIN, esconde o app antes de desenhar qualquer coisa (js/pin.js destrava) -->
+    <script>
+        try {
+            if (localStorage.getItem("kaizen.pin.v1") && !sessionStorage.getItem("kaizen.pin.aberto")
+                && !new URLSearchParams(location.search).has("demo")) {
+                document.documentElement.classList.add("travado");
+            }
+        } catch (erro) { /* aba privada */ }
+    </script>
 </head>
 
 <body>
+
+    <div class="pin-tela" id="pin-tela" hidden>
+        <form class="pin-cartao" id="pin-form-abrir">
+            <p class="pin-logo">改善</p>
+            <h2 class="pin-titulo">Digite o PIN</h2>
+            <input class="pin-campo" id="pin-digitado" type="password" inputmode="numeric" pattern="[0-9]*"
+                   maxlength="8" autocomplete="off" aria-label="PIN">
+            <p class="est-erro" id="pin-erro-abrir" role="alert"></p>
+            <button type="submit" class="btn-primario sinc-largo">Abrir</button>
+            <details class="pin-esqueci">
+                <summary>Esqueci o PIN</summary>
+                <p>O PIN só tranca a tela deste aparelho. Pra tirar, apague os dados do site nas configurações
+                   do navegador. No computador, as tarefas, os planos e o chat continuam no app. No celular, eles
+                   voltam pela sincronia, se ela estiver ligada.</p>
+            </details>
+        </form>
+    </div>
 
     <header class="header">
 
@@ -596,6 +623,41 @@
     </dialog>
 
 
+    <dialog class="modal pin-modal" id="pin-modal" aria-labelledby="pin-modal-titulo">
+
+        <h2 class="modal-titulo" id="pin-modal-titulo">PIN pra abrir</h2>
+
+        <p class="sinc-texto" id="pin-explica">
+            Pede um PIN toda vez que alguém abrir o Kaizen neste aparelho. Bom pra computador compartilhado.
+        </p>
+
+        <form id="pin-form-config">
+            <label class="campo-modal" id="pin-campo-atual" hidden>
+                <span>PIN atual</span>
+                <input id="pin-atual" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off">
+            </label>
+            <label class="campo-modal" id="pin-campo-novo">
+                <span>PIN novo (4 a 8 números)</span>
+                <input id="pin-novo" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off">
+            </label>
+            <label class="campo-modal" id="pin-campo-repetir">
+                <span>Repita o PIN novo</span>
+                <input id="pin-repetir" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off">
+            </label>
+
+            <p class="est-erro" id="pin-erro-config" role="alert"></p>
+
+            <div class="form-acoes">
+                <button type="button" class="btn-secundario" data-fechar>Fechar</button>
+                <button type="submit" class="btn-primario" id="pin-salvar">Salvar PIN</button>
+            </div>
+        </form>
+
+        <button type="button" class="est-link sinc-apagar" id="pin-tirar" hidden>Tirar o PIN</button>
+
+    </dialog>
+
+
     <dialog class="modal apoio-modal" id="apoio-modal" aria-labelledby="apoio-titulo">
 
         <h2 class="modal-titulo" id="apoio-titulo">Apoie o Kaizen</h2>
@@ -904,6 +966,10 @@
                     title="Usa as mesmas tarefas e planos no PC e no celular">
                 Sincronizar aparelhos
             </button>
+            <button type="button" class="btn-secundario" id="pin-abrir"
+                    title="Pede um PIN pra abrir o Kaizen neste aparelho">
+                PIN
+            </button>
             <button type="button" class="btn-secundario btn-apoiar" id="apoio-abrir" hidden
                     title="O Kaizen é grátis: apoie com um Pix de qualquer valor">
                 Apoiar ♥
@@ -920,7 +986,12 @@
 
     <script
         type="module"
-        src="./js/guardados.js?v=1"
+        src="./js/guardados.js?v=2"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/pin.js?v=1"
     ></script>
 
     <script
