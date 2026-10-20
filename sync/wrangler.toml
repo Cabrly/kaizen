@@ -10,3 +10,15 @@ class_name = "Cofre"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Cofre"]
+
+# limites por IP (grátis): um geral, folgado pro uso normal, e um apertado pra
+# código que não existe — é o que alguém tentando adivinhar códigos faria
+[[ratelimits]]
+name = "LIMITE_GERAL"
+namespace_id = "1001"
+simple = { limit = 120, period = 60 }
+
+[[ratelimits]]
+name = "LIMITE_ERROS"
+namespace_id = "1002"
+simple = { limit = 10, period = 60 }

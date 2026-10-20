@@ -10,7 +10,10 @@
    DELETE /v1/cofre/:id                 → apaga o cofre
 
    Cada cofre é um Durable Object: um código atende um pedido por vez, então
-   dois aparelhos gravando juntos não se atropelam. */
+   dois aparelhos gravando juntos não se atropelam.
+
+   Limite por IP: 120 pedidos por minuto no total e 10 por minuto em cofre que
+   não existe (404). Quem tenta adivinhar códigos bate no segundo logo. */
 
 import { DurableObject } from "cloudflare:workers";
 
@@ -93,6 +96,18 @@ export class Cofre extends DurableObject {
 }
 
 
+const MUITAS_TENTATIVAS = () => json(429, { erro: "Muitas tentativas. Espere um minuto e tente de novo." });
+
+// IPs que estouraram a cota de erros (por instância do Worker; o limite da Cloudflare cobre o resto)
+const bloqueados = new Map();
+
+async function dentroDoLimite(limite, ip) {
+    if (!limite) return true;  // sem o binding (wrangler dev antigo), não limita
+    const { success } = await limite.limit({ key: ip });
+    return success;
+}
+
+
 export default {
 
     async fetch(pedido, env) {
@@ -107,8 +122,20 @@ export default {
             return json(404, { erro: "Rota não encontrada." });
         }
 
+        const ip = pedido.headers.get("CF-Connecting-IP") || "sem-ip";
+        if ((bloqueados.get(ip) || 0) > Date.now() || !(await dentroDoLimite(env.LIMITE_GERAL, ip))) {
+            return MUITAS_TENTATIVAS();
+        }
+
         try {
-            return await env.COFRES.get(env.COFRES.idFromName(id)).fetch(pedido);
+            const resposta = await env.COFRES.get(env.COFRES.idFromName(id)).fetch(pedido);
+            // só código que não existe gasta essa cota; quem estoura fica bloqueado um minuto
+            if (resposta.status === 404 && !(await dentroDoLimite(env.LIMITE_ERROS, ip))) {
+                if (bloqueados.size > 5000) bloqueados.forEach((ate, chave) => ate < Date.now() && bloqueados.delete(chave));
+                bloqueados.set(ip, Date.now() + 60_000);
+                return MUITAS_TENTATIVAS();
+            }
+            return resposta;
         } catch (erro) {
             console.error(erro);
             return json(500, { erro: "O servidor de sincronia falhou. Tente de novo daqui a pouco." });
