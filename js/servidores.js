@@ -225,12 +225,13 @@ function renderizar(servidores, soNuvem = false) {
     painel.querySelector("#srv-lista").innerHTML = servidores.map((s) => {
 
         const situacao = s.online
-            ? `${s.modelos.length} modelo${s.modelos.length === 1 ? "" : "s"} · ${s.ms} ms`
+            ? `${s.modelos.length} modelo${s.modelos.length === 1 ? "" : "s"}${s.ms == null ? "" : ` · ${s.ms} ms`}`
             : (s.tipo === "nuvem" ? "chave recusada ou sem internet" : "offline");
 
-        const endereco = s.tipo === "nuvem"
-            ? "☁ nuvem — os textos vão pra esse serviço"
-            : s.url.replace(/^https?:\/\//, "");
+        const endereco = {
+            nuvem: "☁ nuvem — os textos vão pra esse serviço",
+            agente: "⌨ usa o login da sua conta"
+        }[s.tipo] || s.url.replace(/^https?:\/\//, "");
 
         return `
             <div class="srv-item ${s.online ? "" : "srv-offline"}">
@@ -249,9 +250,23 @@ function renderizar(servidores, soNuvem = false) {
                             title="Remover" aria-label="Remover ${esc(s.nome)}">✕</button>` : ""}
             </div>`;
 
-    }).join("");
+    }).join("") + (soNuvem || servidores.some((s) => s.tipo === "agente") ? "" : `
+        <p class="srv-dica">Usa <b>Claude Code</b>, <b>Gemini CLI</b> ou <b>Codex</b>? Instale e faça login
+        no terminal que ele aparece aqui sozinho, sem chave de API.</p>`);
 
 }
+
+
+// Pra quem nunca mexeu com chave de API: o OpenRouter é o caminho grátis recomendado.
+const PASSOS_OPENROUTER = `
+    <ol class="srv-passos">
+        <li>Abra <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer">openrouter.ai</a>
+            e clique em <b>Sign in</b>. Dá pra entrar com a conta Google.</li>
+        <li>Vá em <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer">openrouter.ai/keys</a>,
+            clique em <b>Create Key</b>, dê um nome (ex.: Kaizen) e confirme.</li>
+        <li>Copie a chave que aparece (começa com <code>sk-or-</code>). Ela só aparece uma vez!</li>
+        <li>Cole aqui embaixo e clique em <b>Salvar</b>. Não precisa de cartão.</li>
+    </ol>`;
 
 
 function renderizarNuvem(nuvem) {
@@ -260,6 +275,7 @@ function renderizarNuvem(nuvem) {
     painel.querySelector("#srv-nuvem").innerHTML = nuvem.filter((n) => !n.conectado).map((n) => `
         <button type="button" class="srv-nuvem-botao" data-abrir-nuvem="${esc(n.id)}">☁ Conectar ${esc(n.nome)}</button>
         <form class="srv-form srv-caixa-nuvem" data-caixa-nuvem="${esc(n.id)}" hidden>
+            ${n.id === "openrouter" ? PASSOS_OPENROUTER : ""}
             ${n.pede_url ? `
             <input name="url" type="url" required autocomplete="off" spellcheck="false"
                    placeholder="URL da API (ex.: https://openrouter.ai/api/v1)" aria-label="URL da API">` : ""}

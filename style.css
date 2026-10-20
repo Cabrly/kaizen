@@ -4417,3 +4417,31 @@ body.contemplando .contemplar-aviso.some {
 [data-demo] .rodape-backup {
     display: none;
 }
+
+/* Passo a passo do OpenRouter (js/servidores.js), dentro da caixa de conectar. */
+.srv-passos {
+    margin: 0 0 4px;
+    padding-left: 18px;
+
+    font-size: 11px;
+    line-height: 1.5;
+
+    color: #cfcfcf;
+}
+
+.srv-passos li + li {
+    margin-top: 4px;
+}
+
+.srv-passos a {
+    color: #ff8a95;
+}
+
+.srv-passos code {
+    padding: 0 3px;
+
+    font-size: 10px;
+
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}

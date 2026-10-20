@@ -5,6 +5,8 @@
   casa, ou um servidor alcançado pelo Tailscale (http://100.80.57.121:11434).
 - Dá pra conectar uma conta da OpenAI (ChatGPT) ou do Google (Gemini) com
   uma chave de API. A chave fica só no banco local.
+- Claude Code, Gemini CLI e Codex instalados no computador aparecem sozinhos
+  (tipo "agente", ver agentes.py) e usam o login da própria ferramenta.
 
 Um deles é o "preferido" (o chat usa esse); o plano de estudo pode usar
 um modelo de qualquer destino. Tudo passa por conversar().
@@ -20,6 +22,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+
+import agentes
 
 DB = None
 URL_LOCAL = "http://127.0.0.1:11434"   # o server.py troca pelo OLLAMA_URL
@@ -256,8 +260,11 @@ def listar():
     nuvem = [{"id": p, "nome": info["nome"], "url": _url_compat() if info.get("pede_url") else f"https://{info['host']}",
               "tipo": "nuvem", "removivel": True}
              for p, info in NUVEM.items() if conectado(p)]
+    ferramentas = [{"id": a, "nome": agentes.AGENTES[a]["nome"], "url": "login da sua conta", "tipo": "agente",
+                    "removivel": False}
+                   for a in agentes.instalados()]
     return ([{"id": "local", "nome": "Este computador", "url": URL_LOCAL, "tipo": "ollama", "removivel": False}]
-            + cadastrados + nuvem)
+            + cadastrados + nuvem + ferramentas)
 
 
 def obter(destino_id):
@@ -281,7 +288,11 @@ def definir_preferido(destino_id):
 
 
 def status(destino, usar_cache=True):
-    """{online, modelos, ms} do destino (Ollama ou nuvem)."""
+    """{online, modelos, ms} do destino (Ollama, nuvem ou agente)."""
+    if destino["tipo"] == "agente":
+        # instalado = online; se faltar login, o erro aparece na primeira conversa
+        return {"online": True, "modelos": agentes.AGENTES[destino["id"]]["modelos"], "ms": None}
+
     chave_cache = destino["id"] if destino["tipo"] == "nuvem" else destino["url"]
     validade = CACHE_NUVEM if destino["tipo"] == "nuvem" else CACHE_SEGUNDOS
     agora = time.time()
@@ -366,6 +377,12 @@ def conversar(destino_id, modelo, mensagens, formato=None, progresso=None, limit
 
     if destino["tipo"] == "nuvem":
         return _conversar_nuvem(destino_id, modelo, mensagens, formato)
+
+    if destino["tipo"] == "agente":
+        try:
+            return _sem_raciocinio(agentes.conversar(destino_id, modelo, mensagens, formato))
+        except agentes.ErroAgente as erro:
+            raise ErroConexao(str(erro))
 
     # streaming só quando alguém acompanha o progresso: nesta versão do Ollama,
     # com stream o "think": False é ignorado e o qwen3 "pensa em voz alta"

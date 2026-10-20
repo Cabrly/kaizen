@@ -263,9 +263,23 @@ em ~2 s. O `qwen3:4b` comum sempre "pensa em voz alta" antes de responder e
 leva mais de um minuto numa conversa; nos planos isso não atrapalha (e ajuda).
 O instruct, por outro lado, monta planos piores (fugiu do assunto no teste).
 
-Qualquer modelo instalado no Ollama aparece pra escolher. Se você tiver o
-[Claude Code](https://claude.com/claude-code) instalado e logado, ele também
-aparece como opção.
+Qualquer modelo instalado no Ollama aparece pra escolher.
+
+### Claude Code, Gemini CLI e Codex (sem chave de API)
+
+Se você já usa uma dessas ferramentas de terminal, o Kaizen usa ela pelo login
+da sua conta (a assinatura do Claude, a conta Google ou a do ChatGPT), sem
+precisar de chave de API:
+
+- [Claude Code](https://claude.com/claude-code) — modelos `sonnet`, `opus` e `haiku`
+- [Gemini CLI](https://github.com/google-gemini/gemini-cli) — `gemini-2.5-flash` e `gemini-2.5-pro`
+- [Codex](https://github.com/openai/codex) — o modelo configurado na sua conta
+
+Instale, faça login uma vez no terminal e abra o Kaizen: elas aparecem sozinhas
+em **Assistente IA → Onde a IA roda**, pro chat e pros planos de estudo. Rodam
+só com texto, numa pasta temporária vazia, sem ler nem alterar seus arquivos
+(`agentes.py`). Só no PC ou no app de computador: o navegador do celular não
+roda programas.
 
 ### Configuração (variáveis de ambiente, todas opcionais)
 

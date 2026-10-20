@@ -16,12 +16,8 @@ plano (ou numa sessão de pendências criada no próximo dia de estudo).
 from datetime import date, timedelta
 from pathlib import Path
 import json
-import os
 import re
-import shutil
 import sqlite3
-import subprocess
-import tempfile
 import threading
 import unicodedata
 
@@ -34,8 +30,6 @@ DB = None                 # o server.py aponta pro kaizen.sqlite3
 # (js/nuvem) também lê — assim os dois nunca ficam diferentes.
 PROMPTS = json.loads((Path(__file__).parent / "prompts.json").read_text(encoding="utf-8"))
 MODELO_PADRAO = "qwen3:8b"
-MODELO_CLAUDE = "sonnet"
-CLAUDE_BIN = shutil.which("claude") or os.path.expanduser("~/.npm-global/bin/claude")
 BLOCO = 10                # sessões por chamada à IA
 
 CORES = ["#c90016", "#2f6f4f", "#3b5bdb", "#b8860b", "#7b2cbf", "#0b7285", "#5c5f66"]
@@ -104,27 +98,29 @@ def init():
 
 
 # =========================================================
-#   IA: Ollama (padrão, local) ou Claude Code (opcional)
+#   IA: Ollama (padrão, local), nuvem ou Claude Code/Gemini CLI/Codex
 # =========================================================
 
 class ErroIA(Exception):
     pass
 
 
-# Motor = "<tipo>@<destino>:<modelo>" ou "claude". Exemplos:
-#   "ollama@local:qwen3:8b", "ollama@1:qwen3:8b", "nuvem@gemini:gemini-…", "nuvem@openai:gpt-…"
-# "ollama:<modelo>" (formato antigo) vale como Ollama deste computador.
+# Motor = "<tipo>@<destino>:<modelo>". Exemplos:
+#   "ollama@local:qwen3:8b", "ollama@1:qwen3:8b", "nuvem@gemini:gemini-…", "agente@claude-code:sonnet"
+# Formatos antigos: "ollama:<modelo>" vale como Ollama deste computador; "claude" como o Claude Code.
 
 def _separar_motor(motor):
+    if motor == "claude":
+        return "claude-code", "sonnet"
     tipo, arroba, resto = motor.partition("@")
-    if arroba and tipo in ("ollama", "nuvem"):
+    if arroba and tipo in ("ollama", "nuvem", "agente"):
         destino, _, modelo = resto.partition(":")
         return destino, modelo
     return "local", motor.removeprefix("ollama:")
 
 
 def motores_disponiveis():
-    """(motores, padrao) — modelos de todos os destinos online + Claude, e o sugerido."""
+    """(motores, padrao) — modelos de todos os destinos online, e o sugerido."""
     destinos = servidores.listar_com_status()
     motores = []
     for d in sorted(destinos, key=lambda d: not d["preferido"]):
@@ -133,9 +129,6 @@ def motores_disponiveis():
         for nome in d["modelos"]:
             motores.append({"id": f"{d['tipo']}@{d['id']}:{nome}", "modelo": nome, "servidor": d["nome"],
                             "recomendado": nome in (MODELO_PADRAO, sugerido)})
-    if os.path.exists(CLAUDE_BIN):
-        motores.append({"id": "claude", "modelo": "Claude Code instalado", "servidor": "Claude Code (este computador)",
-                        "recomendado": False})
 
     # sugerido: o recomendado no servidor preferido; senão o recomendado em
     # qualquer um; senão um qwen3 qualquer; senão o primeiro que houver
@@ -164,21 +157,6 @@ def gerar_json(motor, sistema, pedido, esquema, progresso=None, limite_tokens=40
     """Pede um JSON à IA. `progresso(texto_parcial)` é chamado enquanto o
     Ollama escreve (streaming) — em PC lento a tela mostra que está andando.
     `limite_tokens` corta modelo que entra em repetição e não para."""
-    if motor == "claude":
-        prompt = (f"{sistema}\n\nResponda SOMENTE com um objeto JSON que siga este JSON Schema:\n"
-                  f"{json.dumps(esquema, ensure_ascii=False)}\n\n{pedido}")
-        try:
-            proc = subprocess.run(
-                [CLAUDE_BIN, "-p", "--model", MODELO_CLAUDE, "--tools", "", "--strict-mcp-config",
-                 "--no-session-persistence", "--output-format", "text"],
-                input=prompt, capture_output=True, text=True, encoding="utf-8", timeout=600,
-                cwd=tempfile.gettempdir())  # pasta neutra, em Linux ou Windows
-        except (OSError, subprocess.TimeoutExpired) as erro:
-            raise ErroIA(f"Falha ao rodar o Claude: {erro}")
-        if proc.returncode != 0:
-            raise ErroIA((proc.stderr or proc.stdout or "Claude retornou erro").strip()[-300:])
-        return _json_do_texto(proc.stdout)
-
     destino_id, modelo = _separar_motor(motor)
     mensagens = [{"role": "system", "content": sistema}, {"role": "user", "content": pedido}]
 
@@ -187,7 +165,7 @@ def gerar_json(motor, sistema, pedido, esquema, progresso=None, limite_tokens=40
     candidatos = [destino_id] + [
         d["id"] for d in servidores.listar_com_status()
         if d["id"] != destino_id and d["tipo"] == "ollama" and d["online"] and modelo in d["modelos"]
-        and not motor.startswith("nuvem@")]
+        and not motor.startswith(("nuvem@", "agente@"))]
     erro_conexao = None
     for candidato in candidatos:
         try:
