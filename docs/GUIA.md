@@ -226,7 +226,7 @@ roteiro.
   coroa, óculos pixelados, pão na cara, chapéu de alumínio, bigode, correntão,
   cachecóis das quatro casas, comidinhas, violão…), 15 tons de pelo (até RGB
   gamer) e 13 cenários.
-- **Memes:** a seção Memes da loja muda o jeito do pet reagir em cada humor.
+- **Status:** a seção Status da loja muda o jeito do pet reagir em cada humor.
   Triste: banho triste, violininho, "tá tudo bem" no meio do fogo, cri-cri,
   derretendo. Feliz: giro OIIA, vibando, stonks, óculos caindo, muito wow,
   rastro de arco-íris, discoteca, morri de rir. Esperando: teia de aranha,

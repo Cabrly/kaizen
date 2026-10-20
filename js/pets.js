@@ -29,7 +29,7 @@ const DIAS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sáb
 
 const PONTOS = { item: 10, sessao: 20, plano: 100, boasVindas: 150 };
 const SLOTS = { cabeca: "Cabeça", rosto: "Rosto", boca: "Boca", pescoco: "Pescoço", lado: "Na mão" };
-const SECOES = { bichos: "Bichos", acessorios: "Acessórios", memes: "Memes", tons: "Tons de pelo", cenarios: "Cenários" };
+const SECOES = { bichos: "Bichos", acessorios: "Acessórios", memes: "Status", tons: "Tons de pelo", cenarios: "Cenários" };
 const QUANDO = { triste: "Quando fica tristinho", feliz: "Quando fica feliz", esperando: "Enquanto espera" };
 
 let estado = { ligado: false, compras: [], pets: {}, encerrados: [] };
@@ -240,7 +240,7 @@ function editorVisual(petCru) {
         ${reacoes.map(([humor, nome, lista]) => `<span class="pets-rotulo">${nome}</span>
             <div class="pets-opcoes">${chip("reacao", `${humor}:`, "Normal", !pet.reacoes[humor])}${lista.map((id) =>
                 chip("reacao", `${humor}:${id}`, REACOES[id].nome, pet.reacoes[humor] === id)).join("")}</div>`).join("")}
-        ${porSlot.length && reacoes.length ? "" : `<p class="pets-dica">Na <button type="button" class="est-link" data-ir-loja>loja</button> tem chapéus, óculos, memes e muito mais.</p>`}`;
+        ${porSlot.length && reacoes.length ? "" : `<p class="pets-dica">Na <button type="button" class="est-link" data-ir-loja>loja</button> tem chapéus, óculos, status e muito mais.</p>`}`;
 
 }
 
@@ -346,7 +346,7 @@ function loja(pets) {
         : `<div class="pets-grade pets-loja">${itens[secaoLoja]().join("")}</div>`;
 
     return `<p class="pets-dica">Você começa com 150 pontos e ganha mais estudando: 10 por item feito, 20 por sessão completa e 100 por plano concluído.</p>
-        ${secaoLoja === "memes" ? `<p class="pets-dica">Os memes mudam o jeito do pet reagir: compre e escolha na ficha dele qual usar em cada humor.</p>` : ""}
+        ${secaoLoja === "memes" ? `<p class="pets-dica">Os status mudam o jeito do pet reagir: compre e escolha na ficha dele qual usar em cada humor.</p>` : ""}
         <div class="pets-secoes">${Object.entries(SECOES).map(([id, nome]) =>
             `<button type="button" class="pets-opcao ${secaoLoja === id ? "ativa" : ""}" data-secao="${id}">${nome}</button>`).join("")}</div>
         ${corpo}`;
