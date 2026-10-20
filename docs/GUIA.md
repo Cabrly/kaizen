@@ -210,6 +210,38 @@ A revisão é espaçada: o cartão que você acerta volta em 1, 3, 7, 14 e depoi
 30 dias; o que você erra volta no mesmo dia. No teclado: **espaço** vira o
 cartão, **1** = errei, **2** = acertei.
 
+### Entregar atividades e receber nota
+
+Em cada atividade da sessão tem o botão **📤 Entregar**. Dá pra escrever a
+resposta, anexar até 10 arquivos de código ou texto (ou arrastar pra janela) e
+colar um link. De um repositório público do GitHub, o Kaizen lê o README e os
+arquivos principais; de um link de arquivo (`/blob/`), só aquele arquivo.
+Entregar marca a atividade como feita.
+
+Se a IA conectada for forte (Claude Code, Gemini CLI, Codex, ChatGPT/GPT-4o,
+Claude, Gemini 2.x, DeepSeek, modelos de 14B ou mais...), ela corrige sozinha
+em segundo plano: **nota de 0 a 10**, o que ficou bom, os erros (citando o
+arquivo e o trecho), como melhorar e os pontos em que você mostrou
+dificuldade. Esses pontos entram no "o que a IA sabe de você", então os
+próximos planos, flashcards e o chat reforçam exatamente isso. Modelos
+pequenos (qwen3:4b, llama3.2:3b) dariam nota no chute: a entrega fica
+guardada e você pede a correção depois de conectar uma IA melhor.
+
+Limites: até 500 mil caracteres por arquivo, e a IA lê até 200 mil por
+entrega. Projeto grande: mande o link do GitHub.
+
+### Biblioteca
+
+Em **📚 Biblioteca**, cada plano (com os que continuam ele) é um livro na
+estante. Abrindo o livro você vê tudo: as sessões estudadas, os materiais, as
+atividades entregues com nota e correção, a nota média e os pontos pra
+reforçar. Plano concluído ganha selo dourado. Funciona com ou sem os pets.
+
+A capa se personaliza na **Loja dos livros**, com os mesmos pontos dos pets:
+16 capas (couro, jeans, xadrez, mármore, pixel retrô, galáxia, folha de
+ouro...), margens (filetes, cantoneiras, pergaminho, arabesco...), título
+gravado em ouro, prata, carimbo ou neon, fitilhos e adesivos.
+
 ### Pets de estudo (opcional)
 
 Em **🐾 Pets → Ativar os pets**, cada plano ganha um bichinho. Ao criar um
@@ -303,6 +335,13 @@ texto cifrado e limita tentativas de adivinhar códigos. Como não tem conta,
 **quem tiver o código vê os dados**: não mostre pra ninguém. Se alguém viu,
 toque em **Trocar o código**, e o antigo para de funcionar na hora. As chaves
 de IA não sincronizam (conecte em cada aparelho).
+
+Cada código guarda até uns 32 MB (já comprimidos e criptografados), o que dá
+pra centenas de atividades entregues com arquivos. No programa de computador,
+a janela de sincronia tem a opção **Arquivos das atividades entregues**: vão
+todos pro outro aparelho (padrão), só os dos planos em andamento, ou nenhum
+(vão só as notas e correções; os arquivos ficam no PC). No celular sem PC,
+os arquivos ficam no próprio aparelho, sem limite apertado.
 
 ## Desenvolvimento
 

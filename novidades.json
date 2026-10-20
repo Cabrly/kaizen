@@ -1,5 +1,19 @@
 [
     {
+        "versao": "1.3.0",
+        "data": "2026-10-21",
+        "itens": [
+            "Entregue as atividades: escreva a resposta, anexe arquivos de código ou cole o link do GitHub, no botão 📤 Entregar de cada atividade.",
+            "Com uma IA forte conectada (Claude Code, Gemini, ChatGPT, OpenRouter com modelo grande…), a entrega ganha nota de 0 a 10, o que ficou bom, os erros e como melhorar. Os pontos em que você teve dificuldade passam a ser reforçados nos planos, flashcards e no chat.",
+            "📚 Biblioteca: cada plano vira um livro com todo o histórico (o que estudou, as entregas e as notas). Funciona com ou sem pets.",
+            "Loja dos livros: capas, margens, títulos gravados, fitilhos e adesivos, com os mesmos pontos dos pets.",
+            "A sincronia entre PC e celular aguenta muito mais (até uns 32 MB). No PC dá pra escolher quais arquivos das entregas vão pro celular.",
+            "Os vídeos vêm no idioma escolhido mesmo quando a IA escreve a busca em inglês.",
+            "O descanso de tela agora vem desligado. Quem gostar liga no menu de fundos.",
+            "A ficha do pet mostra as atividades entregues com a nota."
+        ]
+    },
+    {
         "versao": "1.2.0",
         "data": "2026-10-20",
         "itens": [
