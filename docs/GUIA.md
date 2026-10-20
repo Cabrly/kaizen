@@ -178,6 +178,25 @@ Nos planos isso ajuda; o instruct, por outro lado, monta planos piores.
    - **✕** não fiz: o item vai sozinho pra próxima sessão daquele plano (ou pra
      uma sessão de *Pendências* no próximo dia de estudo). Clicar de novo desfaz.
 
+### Flashcards
+
+Quando você marca ✓ numa sessão, o Kaizen gera em segundo plano de 5 a 6
+cartões daquele conteúdo. Ao abrir **🃏 Flashcards**, eles já estão prontos:
+escolha um conteúdo dos últimos 14 dias ou **Revisar os de hoje**.
+
+A revisão é espaçada: o cartão que você acerta volta em 1, 3, 7, 14 e depois
+30 dias; o que você erra volta no mesmo dia. No teclado: **espaço** vira o
+cartão, **1** = errei, **2** = acertei.
+
+### O que a IA sabe de você
+
+O Kaizen monta sozinho um resumo do seu progresso: o que você contou ao criar
+cada plano, o que já concluiu e o que anda adiando. Dá pra completar com um
+texto seu em **🧠 O que a IA sabe** (ex.: "faço ADS, aprendo melhor com
+exemplos"). Esse resumo vai junto pro chat, pros planos novos e pros
+flashcards, pra IA explicar a partir do que você já sabe. Ele é feito por
+código, sem gastar IA, e fica só com você (entra no backup e na sincronia).
+
 ### Como os materiais são escolhidos
 
 Modelo pequeno inventa link, então **a IA nunca escreve URL**. Ela só monta o
