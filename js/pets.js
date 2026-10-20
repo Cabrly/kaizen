@@ -391,7 +391,7 @@ function mostrarFicha(petId) {
                 <button type="button" class="btn-secundario" data-revisar="${estudadas.map((s) => s.id).join(",")}">🃏 Revisar os cartões de ${esc(pet.nome)}</button>
             </div>
             <ol class="pets-historico">${estudadas.map((s) => `
-                <li>
+                <li data-historico="${s.id}">
                     <div class="pets-historico-topo">
                         <span><strong>${esc(s.topico)}</strong><small>${dataBonita(s.data)}</small></span>
                         <button type="button" class="est-link" data-revisar="${s.id}">🃏 cartões</button>
@@ -410,6 +410,34 @@ function mostrarFicha(petId) {
 
     ficha.dataset.pet = petId;
     delete ficha.dataset.adocao;
+
+    if (estudadas.length) mostrarEntregas(ficha, ids);
+
+}
+
+
+// as atividades entregues (com a nota) entram no histórico depois, pra ficha abrir na hora
+async function mostrarEntregas(ficha, planoIds) {
+
+    let entregas;
+    try {
+        entregas = (await api(`/estudos/entregas?planos=${planoIds.join(",")}`)).entregas;
+    } catch (erro) {
+        return;
+    }
+
+    entregas.forEach((e) => {
+        // entregue numa sessão de pendências: aparece no dia de onde a atividade veio
+        const item = dados.itens.find((i) => i.id === e.item_id);
+        const origem = dados.itens.find((o) => o.id === item?.origem_id);
+        const li = ficha.querySelector(`[data-historico="${e.sessao_id}"]`) || ficha.querySelector(`[data-historico="${origem?.sessao_id}"]`);
+        li?.insertAdjacentHTML("beforeend", `
+            <div class="biblioteca-entrega">
+                ${e.situacao === "corrigida" ? `<span class="est-nota est-nota-${e.nota >= 7 ? "boa" : e.nota >= 5 ? "media" : "baixa"}">Nota ${e.nota}/10</span>`
+                    : `<span class="est-nota">Entregue</span>`}
+                <span>${esc(e.correcao?.resumo || "Atividade entregue.")}</span>
+            </div>`);
+    });
 
 }
 
