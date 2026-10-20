@@ -16,6 +16,7 @@ import urllib.request
 import busca
 import estudos
 import ia_local
+import remoto
 import servidores
 
 # Empacotado (app de computador), os arquivos do app ficam na pasta temporária
@@ -35,6 +36,7 @@ busca.CACHE_DB = DB
 estudos.DB = DB
 servidores.DB = DB
 servidores.URL_LOCAL = OLLAMA_URL
+remoto.PORTA_LOCAL = PORT
 ia_local.PASTA = DADOS / "ollama"
 
 
@@ -122,7 +124,30 @@ class Handler(SimpleHTTPRequestHandler):
         # o navegador sempre confere se o arquivo mudou (responde 304 se não): sem isso ele
         # guarda o js antigo e um módulo novo importando um velho quebra a tela depois de atualizar
         self.send_header("Cache-Control", "no-cache")
+        if self.path.startswith("/api/remoto/"):
+            # o app do celular roda em outro endereço (GitHub Pages); a chave é que protege
+            self.send_header("Access-Control-Allow-Origin", "*")
         super().end_headers()
+
+    def parse_request(self):
+        """Pelo túnel do Tailscale (IA do PC no celular) só passam as rotas da IA."""
+        if not super().parse_request():
+            return False
+        if remoto.veio_pelo_tunel(self.headers) and urllib.parse.urlparse(self.path).path not in remoto.ROTAS_LIBERADAS:
+            self.send_error(403, "Pelo celular, só a IA deste PC fica liberada.")
+            return False
+        return True
+
+    def do_OPTIONS(self):
+        if not self.path.startswith("/api/remoto/"):
+            return self.responder(404, {"erro": "Rota não encontrada"})
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Methods", "GET, POST")
+        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        self.send_header("Access-Control-Allow-Private-Network", "true")
+        self.send_header("Access-Control-Max-Age", "600")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_GET(self):
         if self.rota_estudos("GET"):
@@ -213,6 +238,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self.rota_servidores(metodo, partes[3:])
         if partes[:2] == ["api", "backup"]:
             return self.rota_backup(metodo)
+        if partes[:2] == ["api", "remoto"]:
+            return self.rota_remoto(metodo, partes[2:])
         if partes[:2] != ["api", "estudos"]:
             return False
         recurso = partes[2] if len(partes) > 2 else ""
@@ -314,6 +341,33 @@ class Handler(SimpleHTTPRequestHandler):
             else:
                 self.responder(404, {"erro": "Rota não encontrada"})
         except ValueError as erro:
+            self.responder(400, {"erro": str(erro)})
+        return True
+
+    def rota_remoto(self, metodo, partes):
+        """/api/remoto[...] — IA deste PC no celular (ver remoto.py)."""
+        acao = partes[0] if partes else ""
+        try:
+            if acao in ("modelos", "conversar"):
+                if not remoto.autorizado(self.headers.get("Authorization")):
+                    return self.responder(401, {"erro": "Chave do PC errada. Confira no Kaizen do PC."}) or True
+                if metodo == "GET" and acao == "modelos":
+                    return self.responder(200, {"modelos": remoto.modelos()}) or True
+                if metodo == "POST" and acao == "conversar":
+                    corpo = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+                    resposta = remoto.conversar(corpo.get("modelo"), corpo.get("mensagens"), corpo.get("formato"))
+                    return self.responder(200, {"resposta": resposta}) or True
+            elif metodo == "GET" and not acao:
+                return self.responder(200, remoto.situacao()) or True
+            elif metodo == "POST" and acao in ("instalar", "abrir", "entrar", "conectar", "ligar", "desligar"):
+                return self.responder(200, remoto.acao(acao)) or True
+            elif metodo == "POST" and acao == "chave":
+                remoto.trocar_chave()
+                return self.responder(200, remoto.situacao()) or True
+            self.responder(404, {"erro": "Rota não encontrada"})
+        except servidores.ErroConexao as erro:
+            self.responder(502, {"erro": str(erro)})
+        except (OSError, ValueError) as erro:
             self.responder(400, {"erro": str(erro)})
         return True
 
