@@ -11,9 +11,9 @@ import qrcode from "./vendor/qrcode.js";
 
 
 const PIX = {
-    chave: "",
-    nome: "",        // até 25 letras
-    cidade: ""       // até 15 letras
+    chave: "cc99ff46-3c97-468b-a006-e71fbb7d7364",
+    nome: "Vitor Cabral",        // até 25 letras
+    cidade: "Palmas"       // até 15 letras
 };
 
 
