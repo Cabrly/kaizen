@@ -173,7 +173,27 @@ function mover(c, destino, mola) {
 }
 
 
+/* Parada na aba, a gota só ondula de leve (menos de 1 px): 10 quadros por segundo
+   bastam. Cada quadro mexe no SVG com filtro, e a 60 por segundo isso era quase
+   todo o processador que o app gastava parado. Mexeu, volta pros 60 na hora. */
+const QUADRO_PARADA = 100;   // ms
+let ultimoQuadro = -Infinity;
+
+function assentada() {
+    const rabo = direcao > 0 ? corpo[0] : corpo[QTD_CORPO - 1];
+    const perto = (c, x, y) => Math.abs(x - c.x) + Math.abs(y - c.y) + Math.abs(c.vx) + Math.abs(c.vy) < 0.3;
+    return corpo.every((c, i) => { const p = posicaoDoCirculo(i); return perto(c, p.x, p.y); })
+        && pingos.every((p) => perto(p, rabo.x, rabo.y));
+}
+
+
 function quadro(tempo) {
+
+    if (tempo - ultimoQuadro < QUADRO_PARADA && assentada()) {
+        requestAnimationFrame(quadro);
+        return;
+    }
+    ultimoQuadro = tempo;
 
     const t = tempo / 1000;
     const raioBase = alvo.altura / 2;

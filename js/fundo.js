@@ -1018,9 +1018,23 @@ function ajustarContraste(corBase) {
    LOOP
 ========================================================= */
 
+/* Respingo assentado (nível no alvo, marcas já estouradas, sem spray) daria um
+   quadro igual ao anterior: não redesenha. A barra ondula sempre, então não para. */
+let ultimaTela = "";
+
+function quadroParado(tempo) {
+    const tela = `${largura}x${altura}:${arteAtual()}:${marcas.length}:${modo}`;
+    const parado = modo !== "barra" && nivel === alvo && !spray.length && tela === ultimaTela
+        && marcas.every((m) => (nivel >= m.limiar) === (m.aparecidoEm !== null)
+                               && (m.aparecidoEm === null || tempo - m.aparecidoEm > 300));
+    ultimaTela = tela;
+    return parado;
+}
+
+
 function loop(tempo) {
 
-    if (cenaDef) {                      // a cena se anima sozinha; a tinta descansa
+    if (cenaDef || quadroParado(tempo)) {   // a cena se anima sozinha; a tinta descansa
         requestAnimationFrame(loop);
         return;
     }

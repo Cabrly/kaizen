@@ -360,14 +360,21 @@ export function iniciarTinta() {
        LOOP
     ========================= */
 
+    let vazio = false;   // tela já limpa e nada pra desenhar: o mouse parado não gasta nada
+
     function loop() {
 
-        const agora = performance.now();
+        if (pontos.length || faiscas.length || !vazio) {
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const agora = performance.now();
 
-        desenharLamina(agora);
-        desenharFaiscas();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            desenharLamina(agora);
+            desenharFaiscas();
+
+            vazio = !pontos.length && !faiscas.length;
+        }
 
         requestAnimationFrame(loop);
     }
