@@ -4425,3 +4425,12 @@ body.contemplando .contemplar-aviso.some {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
 }
+
+/* "Trocar o código" (js/sincronia.js): link discreto junto do aviso de segredo. */
+.sinc-segredo .sinc-trocar {
+    display: inline;
+    margin: 0;
+    padding: 0;
+
+    font-size: inherit;
+}

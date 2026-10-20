@@ -388,7 +388,8 @@ async function adotar(codigo, versao, remoto, recado) {
 function esquecido() {
     gravarEstado(null);
     mostrarSituacao("ok");
-    avisar("A sincronia foi desligada: o código foi apagado em outro aparelho.");
+    avisar("A sincronia foi desligada: o código foi trocado ou apagado em outro aparelho. " +
+           "Se ele foi trocado, abra “Sincronizar aparelhos” e digite o código novo.");
 }
 
 
@@ -454,6 +455,24 @@ async function conectar(codigo) {
     }
 
     await adotar(codigo, r.corpo.versao, remoto, "Pronto! Este aparelho agora está sincronizado.");
+
+}
+
+
+/* Código novo com os dados daqui; o antigo é apagado, então quem viu o código
+   velho perde o acesso. Os outros aparelhos caem em esquecido() e pedem o novo. */
+async function trocarCodigo() {
+
+    const antigo = lerEstado();
+    if (!antigo) return;
+
+    if (!confirm("Gerar um código novo?\n\nO código atual para de funcionar na hora. " +
+                 "Nos seus outros aparelhos, você vai precisar digitar (ou escanear) o novo.")) return;
+
+    await gerar();  // cria o cofre novo primeiro: se algo falhar, o antigo continua valendo
+
+    const { id } = await derivar(antigo.codigo);
+    await pedir("DELETE", id).catch(() => null);  // se não apagar agora, o cofre velho expira sozinho
 
 }
 
@@ -660,6 +679,8 @@ if (modal && botaoAbrir) {
     });
 
     el("apagar").addEventListener("click", (evento) => acao(evento.currentTarget, apagarDaNuvem));
+
+    el("trocar").addEventListener("click", (evento) => acao(evento.currentTarget, trocarCodigo));
 
     mostrarSituacao("ok");
 
