@@ -20,7 +20,7 @@
 ========================================================= */
 
 
-import { ARTES, arteAtual, definirArte, lerArteSalva, miniatura } from "./fundos-orientais.js";
+import { ARTES, arteAtual, definirArte, lerArteSalva } from "./fundos-orientais.js";
 import { CENAS } from "./cenas/index.js";
 import { fotografar } from "./cenas/foto.js";
 import { descansoLigado, definirDescanso, entrar as contemplar, iniciarContemplacao } from "./contemplacao.js";
@@ -226,7 +226,7 @@ function criarSeletor() {
             </button>
             ${ARTES.map((arte) => `
                 <button type="button" class="fundo-arte" data-arte="${arte.id}" title="${arte.nome} — ${arte.desc}">
-                    ${miniatura(arte)}<small>${arte.nome.split(/[\u3000-\u9fff+]/)[0].trim()}</small>
+                    ${miniaturaPronta(`arte-${arte.id}`)}<small>${arte.nome.split(/[\u3000-\u9fff+]/)[0].trim()}</small>
                 </button>`).join("")}
         </div>
     `;
@@ -234,36 +234,11 @@ function criarSeletor() {
     document.body.appendChild(menu);
 
 
-    /* Miniaturas das cenas: foto pequena num estado do meio, tirada só
-       quando o menu abre pela primeira vez (não pesa a abertura do app). */
     const gradeCenas = menu.querySelector(".fundo-cenas");
-    const quadrosMini = [];
-    CENAS.forEach((def) => {
-        const botao = document.createElement("button");
-        botao.type = "button";
-        botao.className = "fundo-arte";
-        botao.dataset.modo = `cena:${def.id}`;
-        botao.title = `${def.nome} — ${def.desc}`;
-        const quadro = document.createElement("span");
-        quadro.className = "fundo-cena-mini";
-        botao.append(quadro);
-        botao.insertAdjacentHTML("beforeend", `<small>${def.nome}</small>`);
-        gradeCenas.append(botao);
-        quadrosMini.push([def, quadro]);
-    });
-
-    let miniaturasProntas = false;
-    async function fotografarMiniaturas() {
-        if (miniaturasProntas) return;
-        miniaturasProntas = true;
-        for (const [def, quadro] of quadrosMini) {
-            try {
-                quadro.append(await fotografar(def, 6, 10, 192, 120));
-            } catch (erro) {
-                /* sem miniatura: o nome continua lá */
-            }
-        }
-    }
+    gradeCenas.innerHTML = CENAS.map((def) => `
+        <button type="button" class="fundo-arte" data-modo="cena:${def.id}" title="${def.nome} — ${def.desc}">
+            ${miniaturaPronta(`cena-${def.id}`)}<small>${def.nome}</small>
+        </button>`).join("");
 
 
     menu.querySelectorAll("button[data-modo]").forEach((botao) => {
@@ -305,7 +280,6 @@ function criarSeletor() {
     }
 
     function abrirMenu() {
-        fotografarMiniaturas();
         posicionar();
         menu.classList.add("aberto");
         simbolo.setAttribute("aria-expanded", "true");
@@ -364,6 +338,13 @@ function criarSeletor() {
             posicionar();
         }
     });
+}
+
+
+/* Miniatura do menu: imagem pronta em icones/fundos (gerada a partir das
+   próprias cenas). Desenhar as cenas na hora travava o app ao abrir o menu. */
+function miniaturaPronta(nome) {
+    return `<img class="fundo-mini" src="./icones/fundos/${nome}.webp" alt="" width="192" height="120" decoding="async">`;
 }
 
 
