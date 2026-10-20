@@ -129,7 +129,11 @@ function iniciarEstudos() {
         carregarCalendario();
     });
 
-    tela.querySelector("#est-novo-plano").addEventListener("click", abrirAssistente);
+    tela.querySelector("#est-novo-plano").addEventListener("click", () => abrirAssistente());
+
+    // pet reativado no jardim: plano novo no mesmo assunto, sabendo o que já foi estudado
+    document.addEventListener("kaizen:continuar-plano", (evento) => abrirAssistente(evento.detail));
+    document.addEventListener("kaizen:recarregar-estudos", () => atualizarTudo());
 
     tela.querySelector("#est-calendario").addEventListener("click", (evento) => {
         const dia = evento.target.closest("[data-dia]");
@@ -230,7 +234,7 @@ function renderizarPlanos() {
 
 
         return `
-            <article class="est-plano est-plano-${p.status}" style="--cor:${esc(p.cor)}">
+            <article class="est-plano est-plano-${p.status}" style="--cor:${esc(p.cor)}" data-plano="${p.id}">
                 <header>
                     <h3 title="${esc(p.titulo || p.tema)}">${esc(p.titulo || p.tema)}</h3>
                     <button type="button" class="est-icone" data-excluir-plano="${p.id}"
@@ -240,6 +244,9 @@ function renderizarPlanos() {
             </article>`;
 
     }).join("");
+
+    // os pets (js/pets.js) põem o bichinho de cada plano aqui
+    document.dispatchEvent(new CustomEvent("kaizen:planos", { detail: { planos: estado.planos } }));
 
 }
 
@@ -644,7 +651,8 @@ const assistente = {
     dialogo: null,
     perguntas: [],
     motores: [],
-    aviso: ""
+    aviso: "",
+    continuaDe: null   // plano que este continua (pet reativado)
 };
 
 
@@ -717,12 +725,17 @@ function iniciarAssistente() {
 }
 
 
-async function abrirAssistente() {
+async function abrirAssistente({ planoId = null, tema = "", aviso = "" } = {}) {
 
     const d = assistente.dialogo;
 
     d.querySelector("#est-form-tema").reset();
     d.querySelector("#est-inicio").value = hojeIso();
+
+    assistente.continuaDe = planoId;
+    d.querySelector("#est-tema").value = tema;
+    d.querySelector("#est-continuacao").hidden = !planoId;
+    d.querySelector("#est-continuacao").textContent = aviso;
 
     try {
         d.querySelector("#est-idioma").value = localStorage.getItem(CHAVE_IDIOMA) || "pt";
@@ -810,7 +823,7 @@ async function irParaPerguntas() {
 
         const { perguntas } = await api("/perguntas", {
             method: "POST",
-            body: { tema, motor: d.querySelector("#est-motor").value }
+            body: { tema, motor: d.querySelector("#est-motor").value, continua_de: assistente.continuaDe }
         });
 
         assistente.perguntas = perguntas;
@@ -926,19 +939,23 @@ async function gerarPlano() {
 
     try {
 
-        await api("/planos", {
+        const { plano } = await api("/planos", {
             method: "POST",
             body: {
                 tema: d.querySelector("#est-tema").value.trim(),
                 motor: d.querySelector("#est-motor").value,
                 idioma,
                 respostas,
+                pai_id: assistente.continuaDe,
                 ...lerDisponibilidade()
             }
         });
 
         d.close();
         carregarPlanos();
+
+        // com os pets ligados, a pessoa adota o bichinho enquanto a IA monta o plano
+        document.dispatchEvent(new CustomEvent("kaizen:plano-criado", { detail: { plano } }));
 
     } catch (erro) {
 

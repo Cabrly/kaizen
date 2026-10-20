@@ -30,7 +30,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="./style.css?v=fc1">
+    <link rel="stylesheet" href="./style.css?v=pets1">
 
     <!-- com PIN, esconde o app antes de desenhar qualquer coisa (js/pin.js destrava) -->
     <script>
@@ -517,6 +517,10 @@
             </div>
 
             <div class="est-topo-acoes">
+                <button type="button" class="est-atalho" id="pets-abrir"
+                        title="Cada plano vira um pet que você cuida estudando">
+                    🐾 Pets
+                </button>
                 <button type="button" class="est-atalho" id="fc-abrir"
                         title="Cartões de revisão do que você estudou nos últimos dias">
                     🃏 Flashcards <span class="fc-contador" id="fc-contador" hidden></span>
@@ -747,6 +751,52 @@
     </dialog>
 
 
+    <dialog class="modal pets-modal" id="pets-modal" aria-labelledby="pets-titulo">
+
+        <!-- desligado: convite -->
+        <div id="pets-convite" hidden>
+            <div class="pets-vitrine" id="pets-vitrine" aria-hidden="true"></div>
+            <h2 class="modal-titulo" id="pets-titulo">Pets de estudo</h2>
+            <p class="sinc-texto">
+                Cada plano de estudo vira um bichinho. Estudou no dia, ele fica feliz; deixou a sessão pra trás,
+                ele fica tristinho até você recuperar. Cada item feito vale pontos pra trocar por novos bichos e
+                roupinhas. Plano concluído, o pet vai morar no jardim, guardando tudo o que você estudou com ele.
+            </p>
+            <div class="form-acoes">
+                <button type="button" class="btn-secundario" data-fechar>Agora não</button>
+                <button type="button" class="btn-primario" id="pets-ligar">Ativar os pets</button>
+            </div>
+        </div>
+
+        <!-- ligado -->
+        <div id="pets-principal" hidden>
+
+            <header class="pets-topo">
+                <h2 class="modal-titulo">Seus pets</h2>
+                <span class="pets-pontos" id="pets-pontos" title="10 por item feito, 20 por sessão completa, 100 por plano concluído"></span>
+            </header>
+
+            <nav class="pets-abas" role="tablist">
+                <button type="button" role="tab" class="pets-aba ativa" data-aba="cuidando">Cuidando agora</button>
+                <button type="button" role="tab" class="pets-aba" data-aba="jardim">Jardim</button>
+                <button type="button" role="tab" class="pets-aba" data-aba="loja">Loja</button>
+            </nav>
+
+            <section class="pets-painel" id="pets-painel"></section>
+
+            <div class="form-acoes pets-rodape">
+                <button type="button" class="est-link pets-desligar" id="pets-desligar">Desligar os pets</button>
+                <button type="button" class="btn-secundario" data-fechar>Fechar</button>
+            </div>
+
+        </div>
+
+        <!-- ficha de um pet -->
+        <div id="pets-ficha" hidden></div>
+
+    </dialog>
+
+
     <dialog class="modal fc-modal" id="perfil-modal" aria-labelledby="perfil-titulo">
 
         <h2 class="modal-titulo" id="perfil-titulo">O que a IA sabe de você</h2>
@@ -781,6 +831,8 @@
         <form id="est-form-tema">
 
             <h2 class="modal-titulo" id="est-modal-titulo">Novo plano de estudos</h2>
+
+            <p class="est-continuacao" id="est-continuacao" hidden></p>
 
             <label class="campo-modal">
                 <span>O que você quer estudar?</span>
@@ -1137,7 +1189,12 @@
 
     <script
         type="module"
-        src="./js/flashcards.js?v=1"
+        src="./js/flashcards.js?v=2"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/pets.js?v=1"
     ></script>
 
     <script

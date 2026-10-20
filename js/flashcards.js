@@ -331,6 +331,22 @@ function iniciar() {
 
     modal.addEventListener("close", () => { clearTimeout(relogioLista); atualizarContador(); });
 
+    // ficha do pet: "revisar os cartões deste pet" (sessões de qualquer época)
+    document.addEventListener("kaizen:revisar", async (evento) => {
+        const listas = await Promise.all(evento.detail.sessoes.map((id) => api(`/flashcards/${id}`).then((r) => r.cartoes).catch(() => [])));
+        const todos = listas.flat();
+        if (!modal.open) modal.showModal();
+        if (todos.length) {
+            comecar(todos);
+        } else {
+            $("fc-lista").hidden = false;
+            $("fc-estudo").hidden = true;
+            await carregarLista();
+            $("fc-conteudos").insertAdjacentHTML("afterbegin", `<li class="fc-vazio">Os cartões desse conteúdo estão sendo
+                preparados agora. Volte em alguns segundos.</li>`);
+        }
+    });
+
     $("perfil-abrir").addEventListener("click", abrirPerfil);
     $("perfil-form").addEventListener("submit", salvarPerfil);
 
