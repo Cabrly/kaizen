@@ -17,7 +17,7 @@
    fabrica pontos.
 ========================================================= */
 
-import { ESPECIES, TONS, FUNDOS, ACESSORIOS, desenharPet, normalizar, imagemDe } from "./pets-arte.js";
+import { ESPECIES, TONS, FUNDOS, ACESSORIOS, REACOES, desenharPet, normalizar, imagemDe } from "./pets-arte.js?v=3";
 
 
 const API = "./api";
@@ -28,8 +28,9 @@ const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "o
 const DIAS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
 const PONTOS = { item: 10, sessao: 20, plano: 100, boasVindas: 150 };
-const SLOTS = { cabeca: "Cabeça", rosto: "Rosto", pescoco: "Pescoço", lado: "Na mão" };
-const SECOES = { bichos: "Bichos", acessorios: "Acessórios", tons: "Tons de pelo", cenarios: "Cenários" };
+const SLOTS = { cabeca: "Cabeça", rosto: "Rosto", boca: "Boca", pescoco: "Pescoço", lado: "Na mão" };
+const SECOES = { bichos: "Bichos", acessorios: "Acessórios", memes: "Memes", tons: "Tons de pelo", cenarios: "Cenários" };
+const QUANDO = { triste: "Quando fica tristinho", feliz: "Quando fica feliz", esperando: "Enquanto espera" };
 
 let estado = { ligado: false, compras: [], pets: {}, encerrados: [] };
 let dados = { planos: [], sessoes: [], itens: [] };
@@ -195,10 +196,11 @@ function novoPet(quantos) {
 }
 
 
-// itens da loja: bicho e acessório pelo id; tom e cenário com prefixo (há nomes repetidos)
+// itens da loja: bicho e acessório pelo id; tom, cenário e meme com prefixo (há nomes repetidos)
 function custo(id) {
     if (id.startsWith("tom:")) return TONS[id.slice(4)]?.custo ?? 0;
     if (id.startsWith("fundo:")) return FUNDOS[id.slice(6)]?.custo ?? 0;
+    if (id.startsWith("meme:")) return REACOES[id.slice(5)]?.custo ?? 0;
     return ESPECIES[id]?.custo ?? ACESSORIOS[id]?.custo ?? 0;
 }
 
@@ -216,6 +218,9 @@ function editorVisual(petCru) {
 
     const tons = Object.keys(TONS).filter((id) => tem(`tom:${id}`));
     const fundos = Object.keys(FUNDOS).filter((id) => tem(`fundo:${id}`));
+    const reacoes = Object.entries(QUANDO)
+        .map(([humor, nome]) => [humor, nome, Object.keys(REACOES).filter((id) => REACOES[id].humor === humor && tem(`meme:${id}`))])
+        .filter(([, , lista]) => lista.length);
     const porSlot = Object.entries(SLOTS)
         .map(([slot, nome]) => [nome, Object.keys(ACESSORIOS).filter((id) => ACESSORIOS[id].slot === slot && tem(id))])
         .filter(([, lista]) => lista.length);
@@ -232,7 +237,10 @@ function editorVisual(petCru) {
             <div class="pets-opcoes">${fundos.map((id) => chip("fundo", id, FUNDOS[id].nome, pet.fundo === id)).join("")}</div>` : ""}
         ${porSlot.map(([nome, lista]) => `<span class="pets-rotulo">${nome}</span>
             <div class="pets-opcoes">${lista.map((id) => chip("acessorio", id, ACESSORIOS[id].nome, pet.acessorios.includes(id), icone(id))).join("")}</div>`).join("")}
-        ${porSlot.length ? "" : `<p class="pets-dica">Na <button type="button" class="est-link" data-ir-loja>loja</button> tem chapéus, óculos, cachecóis e muito mais.</p>`}`;
+        ${reacoes.map(([humor, nome, lista]) => `<span class="pets-rotulo">${nome}</span>
+            <div class="pets-opcoes">${chip("reacao", `${humor}:`, "Normal", !pet.reacoes[humor])}${lista.map((id) =>
+                chip("reacao", `${humor}:${id}`, REACOES[id].nome, pet.reacoes[humor] === id)).join("")}</div>`).join("")}
+        ${porSlot.length && reacoes.length ? "" : `<p class="pets-dica">Na <button type="button" class="est-link" data-ir-loja>loja</button> tem chapéus, óculos, memes e muito mais.</p>`}`;
 
 }
 
@@ -250,9 +258,9 @@ function abrir(petId = null) {
 
     if (!estado.ligado) {
         $("pets-vitrine").innerHTML = [
-            [{ especie: "gato", acessorios: ["cachecol-brasa", "capelo"] }, "feliz"],
+            [{ especie: "cachorro", tom: "caramelo", acessorios: ["cachecol-brasa", "capelo"] }, "feliz"],
             [{ especie: "coruja", acessorios: ["oculos", "livros"] }, "esperando"],
-            [{ especie: "cachorro", acessorios: ["bone"] }, "triste"]
+            [{ especie: "gato", reacoes: { triste: "banho-triste" } }, "triste"]
         ].map(([pet, h]) => `<div class="pets-avatar">${desenharPet(pet, h)}</div>`).join("");
         return;
     }
@@ -304,12 +312,13 @@ function loja(pets) {
     const saldo = pontos();
     const modelo = normalizar(pets.find((p) => !p.noJardim) || pets[0] || { especie: "gato" });
 
-    const cartao = (id, nome, desenho) => {
+    const cartao = (id, nome, desenho, meme = "") => {
         const comprado = tem(id);
         const preco = custo(id);
         return `<div class="pets-item ${comprado ? "comprado" : ""}">
             <span class="pets-avatar">${desenho}</span>
             <strong>${esc(nome)}</strong>
+            ${meme ? `<small class="pets-meme">${esc(meme)}</small>` : ""}
             ${comprado
                 ? `<small class="pets-seu">✓ É seu</small>`
                 : `<button type="button" class="btn-primario pets-comprar" data-comprar="${id}" ${saldo < preco ? "disabled" : ""}>⭐ ${preco}</button>`}
@@ -323,14 +332,21 @@ function loja(pets) {
         acessorios: () => Object.entries(SLOTS).map(([slot, nome]) => `
             <h3 class="pets-subtitulo">${nome}</h3>
             <div class="pets-grade pets-loja">${Object.entries(ACESSORIOS).filter(([, a]) => a.slot === slot)
-                .map(([id, a]) => cartao(id, a.nome, desenharPet({ ...modelo, acessorios: [id] }, "esperando"))).join("")}</div>`)
+                .map(([id, a]) => cartao(id, a.nome, desenharPet({ ...modelo, acessorios: [id] }, "esperando"), a.meme)).join("")}</div>`),
+        // cada meme aparece no humor dele, no pet que a pessoa já tem
+        memes: () => Object.entries(QUANDO).map(([humor, nome]) => `
+            <h3 class="pets-subtitulo">${nome}</h3>
+            <div class="pets-grade pets-loja">${Object.entries(REACOES).filter(([, r]) => r.humor === humor)
+                .map(([id, r]) => cartao(`meme:${id}`, r.nome, desenharPet({ ...modelo, reacoes: { [humor]: id } }, humor, { cenario: true }), r.meme)).join("")}</div>`)
     };
 
-    const corpo = secaoLoja === "acessorios"
-        ? itens.acessorios().join("")
+    const agrupada = secaoLoja === "acessorios" || secaoLoja === "memes";
+    const corpo = agrupada
+        ? itens[secaoLoja]().join("")
         : `<div class="pets-grade pets-loja">${itens[secaoLoja]().join("")}</div>`;
 
     return `<p class="pets-dica">Você começa com 150 pontos e ganha mais estudando: 10 por item feito, 20 por sessão completa e 100 por plano concluído.</p>
+        ${secaoLoja === "memes" ? `<p class="pets-dica">Os memes mudam o jeito do pet reagir: compre e escolha na ficha dele qual usar em cada humor.</p>` : ""}
         <div class="pets-secoes">${Object.entries(SECOES).map(([id, nome]) =>
             `<button type="button" class="pets-opcao ${secaoLoja === id ? "ativa" : ""}" data-secao="${id}">${nome}</button>`).join("")}</div>
         ${corpo}`;
@@ -523,7 +539,7 @@ function aoClicar(evento) {
 
     if (alvo.hasAttribute("data-fechar-adocao")) { $("pets-modal").close(); return; }
 
-    if (pet && (alvo.dataset.especie || alvo.dataset.tom || alvo.dataset.fundo || alvo.dataset.acessorio)) {
+    if (pet && (alvo.dataset.especie || alvo.dataset.tom || alvo.dataset.fundo || alvo.dataset.acessorio || alvo.dataset.reacao)) {
         Object.assign(pet, normalizar(pet));   // traz pets do visual antigo pro novo
         if (alvo.dataset.especie) pet.especie = alvo.dataset.especie;
         if (alvo.dataset.tom) pet.tom = alvo.dataset.tom;
@@ -535,10 +551,16 @@ function aoClicar(evento) {
                 ? pet.acessorios.filter((a) => a !== id)
                 : [...pet.acessorios.filter((a) => ACESSORIOS[a]?.slot !== slot), id];
         }
+        let humorAgora = $("pets-ficha").dataset.adocao ? "feliz" : (listarPets().find((p) => p.id === fichaId)?.humor || "esperando");
+        if (alvo.dataset.reacao) {
+            const [humor, id] = alvo.dataset.reacao.split(":");
+            if (id) pet.reacoes[humor] = id;
+            else delete pet.reacoes[humor];
+            humorAgora = humor;   // mostra o meme escolhido na hora, mesmo que o pet esteja em outro humor
+        }
         salvar();
         decorarPlanos();
         // redesenha só o bicho e o editor: a tela não pula e a barra da adoção continua andando
-        const humorAgora = $("pets-ficha").dataset.adocao ? "feliz" : (listarPets().find((p) => p.id === fichaId)?.humor || "esperando");
         $("pets-ficha-avatar").innerHTML = desenharPet(pet, humorAgora, { titulo: pet.nome, cenario: true });
         $("pets-editor").innerHTML = editorVisual(pet);
         return;
