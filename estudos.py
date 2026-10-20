@@ -12,13 +12,23 @@ Tudo roda numa thread; a tela acompanha pelo campo "etapa" do plano.
 
 Item marcado como "não feito" ganha uma cópia na próxima sessão do mesmo
 plano (ou numa sessão de pendências criada no próximo dia de estudo).
+
+Flashcards: o primeiro ✓ numa sessão põe ela na fila e uma thread gera os
+cartões em segundo plano, então ao abrir a área de flashcards eles já estão
+prontos. A revisão é espaçada (caixas de Leitner).
+
+Perfil: um resumo, feito por código, do que a pessoa já estudou e do que
+anda adiando, mais o "sobre mim" que ela escreve. Vai junto pro chat, pros
+planos novos e pros flashcards, pra IA explicar a partir do que ela já sabe.
 """
 from datetime import date, timedelta
 from pathlib import Path
 import json
+import queue
 import re
 import sqlite3
 import threading
+import time
 import unicodedata
 
 import busca
@@ -86,6 +96,19 @@ def init():
                           CHECK (estado IN ('pendente', 'feito', 'nao-feito')),
                 origem_id INTEGER REFERENCES itens(id) ON DELETE SET NULL
             );
+            CREATE TABLE IF NOT EXISTS flashcards (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                sessao_id  INTEGER NOT NULL REFERENCES sessoes(id) ON DELETE CASCADE,
+                frente     TEXT NOT NULL,
+                verso      TEXT NOT NULL,
+                caixa      INTEGER NOT NULL DEFAULT 0,
+                revisar_em TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS perfil (
+                id    INTEGER PRIMARY KEY CHECK (id = 1),
+                sobre TEXT NOT NULL DEFAULT ''
+            );
+            CREATE INDEX IF NOT EXISTS idx_flashcards_sessao ON flashcards(sessao_id);
             CREATE INDEX IF NOT EXISTS idx_sessoes_data ON sessoes(data);
             CREATE INDEX IF NOT EXISTS idx_itens_sessao ON itens(sessao_id);
         """)
@@ -210,6 +233,10 @@ def _pedido_roteiro(plano, respostas, total, feitas, quantas):
     linhas += [f"Duração de cada sessão: {plano['minutos']} minutos",
                f"Idioma dos materiais (vídeos e documentação): {busca.IDIOMAS[plano['idioma']]['nome']}",
                f"O roteiro completo tem {total} sessões."]
+    historico = perfil_texto(excluir_plano=plano["id"])
+    if historico:
+        linhas.append("O que o estudante já estudou em outros planos (aproveite e não repita o básico que ele já sabe):\n"
+                      + historico)
     if feitas:
         linhas.append("Já planejado (não repita): " + "; ".join(f"{i}. {s['topico']}" for i, s in enumerate(feitas, 1)))
     ultimo = len(feitas) + quantas >= total
@@ -501,6 +528,13 @@ def marcar_item(item_id, estado):
             con.execute("DELETE FROM sessoes WHERE id = ? AND extra = 1 "
                         "AND NOT EXISTS (SELECT 1 FROM itens WHERE sessao_id = ?)",
                         (copia["sessao_id"], copia["sessao_id"]))
+        # feito numa sessão de pendências conta pro conteúdo de onde o item veio
+        conteudo = sessao["id"]
+        if estado == "feito" and sessao["extra"] and item["origem_id"]:
+            origem = con.execute("SELECT sessao_id FROM itens WHERE id = ?", (item["origem_id"],)).fetchone()
+            conteudo = origem["sessao_id"] if origem else None
+    if estado == "feito" and conteudo:
+        pedir_flashcards(conteudo)
     return obter_sessao(sessao["id"])
 
 
@@ -515,6 +549,242 @@ def adiar_pendentes(sessao_id):
 
 
 # =========================================================
+#   Perfil: o que a IA sabe sobre a pessoa
+# =========================================================
+
+def obter_sobre():
+    with conectar() as con:
+        linha = con.execute("SELECT sobre FROM perfil WHERE id = 1").fetchone()
+    return linha["sobre"] if linha else ""
+
+
+def salvar_sobre(texto):
+    texto = str(texto or "").strip()[:1500]
+    with conectar() as con:
+        con.execute("INSERT INTO perfil (id, sobre) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET sobre = excluded.sobre",
+                    (texto,))
+    return texto
+
+
+def perfil_texto(excluir_plano=None):
+    """Resumo curto pra IA, montado por código (não gasta IA nem tempo):
+    por plano, o que a pessoa respondeu nas perguntas, o que já concluiu
+    (os mais recentes) e o que vive adiando."""
+    with conectar() as con:
+        planos = con.execute("SELECT id, tema, respostas FROM planos WHERE status = 'pronto' AND id IS NOT ? "
+                             "ORDER BY id DESC LIMIT 8", (excluir_plano,)).fetchall()
+        linhas = []
+        for plano in planos:
+            feitos = [l["topico"] for l in con.execute("""
+                SELECT s.topico, MAX(s.data) AS quando FROM sessoes s
+                WHERE s.plano_id = ? AND s.extra = 0
+                  AND EXISTS (SELECT 1 FROM itens i WHERE i.sessao_id = s.id AND (i.estado = 'feito'
+                       OR EXISTS (SELECT 1 FROM itens c WHERE c.origem_id = i.id AND c.estado = 'feito')))
+                GROUP BY s.topico ORDER BY quando DESC LIMIT 12""", (plano["id"],))]
+            adiados = [l["topico"] for l in con.execute("""
+                SELECT s.topico FROM sessoes s JOIN itens i ON i.sessao_id = s.id
+                WHERE s.plano_id = ? AND s.extra = 0 AND i.estado = 'nao-feito'
+                GROUP BY s.topico ORDER BY COUNT(*) DESC LIMIT 4""", (plano["id"],))]
+            respostas = [r.get("resposta", "").strip() for r in json.loads(plano["respostas"] or "[]")
+                         if isinstance(r, dict) and r.get("resposta")]
+            linha = f"- {plano['tema']}"
+            if respostas:
+                linha += f" (contou: {'; '.join(respostas[:3])})"
+            linha += (": já estudou " + ", ".join(reversed(feitos)) + ".") if feitos else ": ainda não concluiu nenhuma sessão."
+            if adiados:
+                linha += " Adiou: " + ", ".join(adiados) + "."
+            linhas.append(linha)
+    sobre = obter_sobre()
+    if sobre:
+        linhas.append(f"- O que a pessoa contou sobre si: {sobre}")
+    return "\n".join(linhas)
+
+
+def perfil():
+    return {"texto": perfil_texto(), "sobre": obter_sobre()}
+
+
+# =========================================================
+#   Flashcards
+# =========================================================
+
+ESQUEMA_FLASHCARDS = PROMPTS["esquema_flashcards"]
+SISTEMA_FLASHCARDS = PROMPTS["sistema_flashcards"]
+INTERVALOS = [0, 1, 3, 7, 14, 30]   # dias até revisar de novo, por caixa
+JANELA = 14                          # dias de conteúdo estudado que aparecem
+
+_fila = queue.Queue()                # uma geração por vez: o Ollama local não aguenta várias juntas
+_na_fila = set()
+_falhas = {}                         # sessao_id -> (quando, erro): não tenta de novo sem parar
+_trava = threading.Lock()
+_trabalhador = None
+
+
+def pedir_flashcards(sessao_id, forcar=False):
+    """Põe a sessão na fila de geração (quem gera confere se já tem cartões)."""
+    global _trabalhador
+    with _trava:
+        if sessao_id in _na_fila:
+            return
+        falha = _falhas.get(sessao_id)
+        if falha and not forcar and time.time() - falha[0] < 600:
+            return
+        _na_fila.add(sessao_id)
+        _falhas.pop(sessao_id, None)
+        _fila.put((sessao_id, forcar))
+        if not _trabalhador or not _trabalhador.is_alive():
+            _trabalhador = threading.Thread(target=_trabalhar, daemon=True)
+            _trabalhador.start()
+
+
+def _trabalhar():
+    while True:
+        try:
+            sessao_id, forcar = _fila.get(timeout=30)
+        except queue.Empty:
+            return
+        try:
+            _gerar_flashcards(sessao_id, forcar)
+        except Exception as erro:  # qualquer falha só marca a sessão; a fila segue
+            _falhas[sessao_id] = (time.time(), str(erro))
+        finally:
+            with _trava:
+                _na_fila.discard(sessao_id)
+
+
+def _pedido_flashcards(con, sessao):
+    itens = con.execute("SELECT tipo, titulo, descricao FROM itens WHERE sessao_id = ? ORDER BY id",
+                        (sessao["id"],)).fetchall()
+    linhas = [f"Assunto do plano: {sessao['tema']}", f"Tópico da sessão: {sessao['topico']}"]
+    if sessao["objetivo"]:
+        linhas.append(f"Objetivo da sessão: {sessao['objetivo']}")
+    for i in itens:
+        if i["tipo"] == "atividade":
+            linhas.append(f"Atividade: {i['descricao'] or i['titulo']}")
+        else:
+            linhas.append(f"Material estudado: {i['titulo']}")
+    historico = perfil_texto()
+    if historico:
+        linhas.append("Quem é o estudante (ajuste o nível):\n" + historico)
+    return "\n".join(linhas)
+
+
+# resposta cortada no meio (modelo pequeno que esquece de escapar aspas) fica curta ou para numa palavra de ligação
+CORTADA = re.compile(r"\b(o|a|os|as|um|uma|de|do|da|dos|das|e|com|para|pra|em|no|na|que|por|ao)$", re.IGNORECASE)
+
+
+def cartoes_bons(lista):
+    """Tira cartão vazio, cortado no meio e repetido."""
+    vistos, bons = set(), []
+    for c in lista if isinstance(lista, list) else []:
+        if not isinstance(c, dict):
+            continue
+        frente, verso = str(c.get("frente", "")).strip(), str(c.get("verso", "")).strip()
+        if (len(frente) < 8 or len(verso.split()) < 4 or CORTADA.search(verso) or verso.endswith((",", "\""))
+                or frente.lower() in vistos):
+            continue
+        vistos.add(frente.lower())
+        bons.append((frente, verso))
+    return bons[:8]
+
+
+def _gerar_flashcards(sessao_id, forcar):
+    with conectar() as con:
+        sessao = con.execute("SELECT s.*, p.tema, p.motor FROM sessoes s JOIN planos p ON p.id = s.plano_id "
+                             "WHERE s.id = ?", (sessao_id,)).fetchone()
+        if not sessao:
+            return
+        if not forcar and con.execute("SELECT 1 FROM flashcards WHERE sessao_id = ?", (sessao_id,)).fetchone():
+            return
+        pedido = _pedido_flashcards(con, sessao)
+
+    motor = sessao["motor"]
+    cartoes_novos = []
+    for _ in range(2):  # modelo pequeno às vezes devolve lista vazia ou cartão cortado: tenta mais uma vez
+        try:
+            dados = gerar_json(motor, SISTEMA_FLASHCARDS, pedido, ESQUEMA_FLASHCARDS, limite_tokens=1500)
+        except ErroIA:
+            # o motor do plano sumiu (conta removida, PC desligado): vai o padrão de agora
+            if motor != sessao["motor"] or motor_padrao() == motor:
+                raise
+            motor = motor_padrao()
+            dados = gerar_json(motor, SISTEMA_FLASHCARDS, pedido, ESQUEMA_FLASHCARDS, limite_tokens=1500)
+        cartoes_novos = cartoes_bons(dados.get("cartoes"))
+        if len(cartoes_novos) >= 3:
+            break
+    if not cartoes_novos:
+        raise ErroIA("A IA não devolveu cartões.")
+
+    hoje = date.today().isoformat()
+    with conectar() as con:
+        if forcar:
+            con.execute("DELETE FROM flashcards WHERE sessao_id = ?", (sessao_id,))
+        elif con.execute("SELECT 1 FROM flashcards WHERE sessao_id = ?", (sessao_id,)).fetchone():
+            return
+        con.executemany("INSERT INTO flashcards (sessao_id, frente, verso, revisar_em) VALUES (?, ?, ?, ?)",
+                        [(sessao_id, f, v, hoje) for f, v in cartoes_novos])
+
+
+def listar_flashcards():
+    """Conteúdos dos últimos dias (e os mais antigos com revisão pra hoje).
+    O que foi estudado e ainda não tem cartões entra na fila aqui mesmo."""
+    hoje = date.today().isoformat()
+    desde = (date.today() - timedelta(days=JANELA)).isoformat()
+    with conectar() as con:
+        linhas = con.execute("""
+            SELECT s.id, s.plano_id, s.topico, s.data, p.tema, p.titulo AS plano_titulo, p.cor,
+                   (SELECT COUNT(*) FROM flashcards f WHERE f.sessao_id = s.id) AS total,
+                   (SELECT COUNT(*) FROM flashcards f WHERE f.sessao_id = s.id AND f.revisar_em <= ?) AS para_hoje
+            FROM sessoes s JOIN planos p ON p.id = s.plano_id
+            WHERE s.extra = 0 AND (
+                (s.data BETWEEN ? AND ? AND EXISTS (
+                    SELECT 1 FROM itens i WHERE i.sessao_id = s.id AND (i.estado = 'feito'
+                      OR EXISTS (SELECT 1 FROM itens c WHERE c.origem_id = i.id AND c.estado = 'feito'))))
+                OR EXISTS (SELECT 1 FROM flashcards f WHERE f.sessao_id = s.id AND f.revisar_em <= ?))
+            ORDER BY s.data DESC, s.id DESC
+        """, (hoje, desde, hoje, hoje)).fetchall()
+
+    conteudos = []
+    for linha in linhas:
+        c = dict(linha)
+        c["sessao_id"] = c.pop("id")
+        if not c["total"]:
+            pedir_flashcards(c["sessao_id"])
+        falha = None if c["total"] else _falhas.get(c["sessao_id"])
+        c["situacao"] = "pronto" if c["total"] else "erro" if falha else "gerando"
+        c["erro"] = falha[1] if falha else None
+        conteudos.append(c)
+    return {"conteudos": conteudos, "para_hoje": sum(c["para_hoje"] for c in conteudos)}
+
+
+def cartoes(sessao_id=None):
+    """Cartões de um conteúdo (os de hoje primeiro) ou, sem conteúdo, todos os de hoje."""
+    hoje = date.today().isoformat()
+    with conectar() as con:
+        if sessao_id:
+            linhas = con.execute("""
+                SELECT f.*, s.topico FROM flashcards f JOIN sessoes s ON s.id = f.sessao_id
+                WHERE f.sessao_id = ? ORDER BY f.revisar_em > ?, f.caixa, f.id""", (sessao_id, hoje))
+        else:
+            linhas = con.execute("""
+                SELECT f.*, s.topico FROM flashcards f JOIN sessoes s ON s.id = f.sessao_id
+                WHERE f.revisar_em <= ? ORDER BY f.caixa, s.data, f.id""", (hoje,))
+        return [dict(l) for l in linhas]
+
+
+def responder_cartao(cartao_id, acertou):
+    """Acertou: sobe uma caixa e volta mais tarde. Errou: volta pra caixa 0 (hoje)."""
+    with conectar() as con:
+        cartao = con.execute("SELECT * FROM flashcards WHERE id = ?", (cartao_id,)).fetchone()
+        if not cartao:
+            return None
+        caixa = min(cartao["caixa"] + 1, len(INTERVALOS) - 1) if acertou else 0
+        quando = (date.today() + timedelta(days=INTERVALOS[caixa])).isoformat()
+        con.execute("UPDATE flashcards SET caixa = ?, revisar_em = ? WHERE id = ?", (caixa, quando, cartao_id))
+        return dict(con.execute("SELECT * FROM flashcards WHERE id = ?", (cartao_id,)).fetchone())
+
+
+# =========================================================
 #   Backup (mesmo formato do modo nuvem: dá pra levar do
 #   celular pro PC e vice-versa)
 # =========================================================
@@ -523,6 +793,7 @@ COLUNAS_PLANO = ["id", "tema", "respostas", "dias", "minutos", "horario", "inici
                  "cor", "status", "etapa", "erro", "titulo", "doc_oficial", "criado_em"]
 COLUNAS_SESSAO = ["id", "plano_id", "data", "topico", "objetivo", "extra"]
 COLUNAS_ITEM = ["id", "sessao_id", "tipo", "titulo", "url", "descricao", "fonte", "minutos", "estado", "origem_id"]
+COLUNAS_CARTAO = ["id", "sessao_id", "frente", "verso", "caixa", "revisar_em"]
 
 
 def exportar():
@@ -535,7 +806,9 @@ def exportar():
             planos.append(p)
         sessoes = [dict(l) for l in con.execute("SELECT * FROM sessoes ORDER BY id")]
         itens = [dict(l) for l in con.execute("SELECT * FROM itens ORDER BY id")]
-    return {"planos": planos, "sessoes": sessoes, "itens": itens}
+        flashcards = [dict(l) for l in con.execute("SELECT * FROM flashcards ORDER BY id")]
+    return {"planos": planos, "sessoes": sessoes, "itens": itens, "flashcards": flashcards,
+            "perfil": {"sobre": obter_sobre()}}
 
 
 def importar(dados):
@@ -546,6 +819,7 @@ def importar(dados):
         raise ValueError("Backup com formato inválido.")
 
     with conectar() as con:
+        cartoes_antes = [dict(l) for l in con.execute("SELECT * FROM flashcards")]
         con.execute("DELETE FROM itens")
         con.execute("DELETE FROM sessoes")
         con.execute("DELETE FROM planos")
@@ -564,3 +838,11 @@ def importar(dados):
         for i in sorted(itens, key=lambda x: x["id"]):
             con.execute(f"INSERT INTO itens ({', '.join(COLUNAS_ITEM)}) VALUES ({', '.join('?' * len(COLUNAS_ITEM))})",
                         [i.get(c) for c in COLUNAS_ITEM])
+        # backup de versão antiga não tem cartões: ficam os daqui que ainda têm sessão
+        sessoes_ok = {s["id"] for s in sessoes}
+        for f in (cartoes_antes if dados.get("flashcards") is None else dados["flashcards"]):
+            if f.get("sessao_id") in sessoes_ok:
+                con.execute(f"INSERT INTO flashcards ({', '.join(COLUNAS_CARTAO)}) "
+                            f"VALUES ({', '.join('?' * len(COLUNAS_CARTAO))})", [f.get(c) for c in COLUNAS_CARTAO])
+    if isinstance(dados.get("perfil"), dict) and "sobre" in dados["perfil"]:
+        salvar_sobre(dados["perfil"]["sobre"])

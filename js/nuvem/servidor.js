@@ -326,6 +326,11 @@ function pedidoRoteiro(plano, total, feitas, quantas) {
     linhas.push(`Idioma dos materiais (vídeos e documentação): ${IDIOMAS[plano.idioma].nome}`);
     linhas.push(`O roteiro completo tem ${total} sessões.`);
 
+    const historico = perfilTexto(completar(ler()), plano.id);
+    if (historico) {
+        linhas.push("O que o estudante já estudou em outros planos (aproveite e não repita o básico que ele já sabe):\n" + historico);
+    }
+
     if (feitas.length) {
         linhas.push("Já planejado (não repita): " + feitas.map((s, i) => `${i + 1}. ${s.topico}`).join("; "));
     }
@@ -641,6 +646,13 @@ function marcarItem(id, estado) {
     }
 
     gravar(dados);
+
+    // feito numa sessão de pendências conta pro conteúdo de onde o item veio
+    if (estado === "feito") {
+        const conteudo = sessao.extra ? dados.itens.find((i) => i.id === item.origem_id)?.sessao_id : sessao.id;
+        if (conteudo) pedirFlashcards(conteudo);
+    }
+
     return obterSessao(sessao.id);
 
 }
@@ -748,8 +760,11 @@ async function chat(corpo) {
 
     if (!mensagens.length) throw new RangeError("Nenhuma mensagem enviada.");
 
+    const historico = perfilTexto(completar(ler()));
+    const sistema = historico ? `${sistema_chat}\n\nHistórico de estudos do usuário:\n${historico}` : sistema_chat;
+
     const resposta = await conversar(p, corpo.modelo || (await statusChat()).modelos[0],
-                                     [{ role: "system", content: sistema_chat }, ...mensagens]);
+                                     [{ role: "system", content: sistema }, ...mensagens]);
 
     return { resposta, modelo: corpo.modelo };
 
@@ -777,14 +792,15 @@ function lerJson(chave, padrao) {
 
 function exportarBackup() {
 
-    const dados = ler();
+    const dados = completar(ler());
 
     return {
         app: "kaizen",
         formato: 1,
         criado_em: agora().replace(" ", "T"),
         kanban: { tarefas: lerJson(CHAVE_TAREFAS, []), categorias: lerJson(CHAVE_CATEGORIAS, []) },
-        estudos: { planos: dados.planos, sessoes: dados.sessoes, itens: dados.itens }
+        estudos: { planos: dados.planos, sessoes: dados.sessoes, itens: dados.itens,
+                   flashcards: dados.flashcards, perfil: dados.perfil }
     };
 
 }
@@ -809,12 +825,283 @@ function restaurarBackup(corpo) {
             ? { ...p, status: "erro", etapa: null, erro: "O backup foi feito no meio da geração." }
             : { idioma: "pt", ...p });
 
+        // backup de versão antiga não tem cartões: ficam os daqui que ainda têm sessão
+        const antes = completar(ler());
+        const ids = new Set(e.sessoes.map((x) => x.id));
+        const flashcards = (Array.isArray(e.flashcards) ? e.flashcards : antes.flashcards).filter((f) => ids.has(f.sessao_id));
+
         gravar({
-            seq: { plano: maior(planos), sessao: maior(e.sessoes), item: maior(e.itens) },
-            planos, sessoes: e.sessoes, itens: e.itens
+            seq: { plano: maior(planos), sessao: maior(e.sessoes), item: maior(e.itens), cartao: maior(flashcards) },
+            planos, sessoes: e.sessoes, itens: e.itens, flashcards,
+            perfil: e.perfil && typeof e.perfil.sobre === "string" ? { sobre: e.perfil.sobre } : antes.perfil
         });
 
     }
+
+}
+
+
+
+/* =========================================================
+   Perfil e flashcards — o mesmo que o estudos.py faz no PC
+========================================================= */
+
+const INTERVALOS = [0, 1, 3, 7, 14, 30];   // dias até revisar de novo, por caixa
+const JANELA = 14;                         // dias de conteúdo estudado que aparecem
+
+const naFila = new Set();
+const falhas = new Map();                  // sessao_id -> { quando, erro }
+let fila = Promise.resolve();              // uma geração por vez
+
+
+function completar(dados) {
+    // dados gravados antes dos flashcards
+    dados.flashcards ||= [];
+    dados.perfil ||= { sobre: "" };
+    dados.seq.cartao ||= dados.flashcards.reduce((m, f) => Math.max(m, f.id), 0);
+    return dados;
+}
+
+
+/* Sessão "conta" como estudada se tem item feito, ou se a cópia de um "não fiz" foi feita depois. */
+function foiEstudada(dados, sessaoId) {
+    return dados.itens.some((i) => i.sessao_id === sessaoId &&
+        (i.estado === "feito" || dados.itens.some((c) => c.origem_id === i.id && c.estado === "feito")));
+}
+
+
+function perfilTexto(dados, excluirPlano = null) {
+
+    const linhas = [];
+
+    dados.planos
+        .filter((p) => p.status === "pronto" && p.id !== excluirPlano)
+        .sort((a, b) => b.id - a.id)
+        .slice(0, 8)
+        .forEach((plano) => {
+
+            const sessoes = dados.sessoes.filter((s) => s.plano_id === plano.id && !s.extra);
+
+            const feitos = [...new Set(sessoes
+                .filter((s) => foiEstudada(dados, s.id))
+                .sort((a, b) => a.data.localeCompare(b.data))
+                .map((s) => s.topico))].slice(-12);
+
+            const contagem = new Map();
+            sessoes.forEach((s) => {
+                const n = dados.itens.filter((i) => i.sessao_id === s.id && i.estado === "nao-feito").length;
+                if (n) contagem.set(s.topico, (contagem.get(s.topico) || 0) + n);
+            });
+            const adiados = [...contagem].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([t]) => t);
+
+            const respostas = (plano.respostas || []).map((r) => String(r.resposta || "").trim()).filter(Boolean);
+
+            let linha = `- ${plano.tema}`;
+            if (respostas.length) linha += ` (contou: ${respostas.slice(0, 3).join("; ")})`;
+            linha += feitos.length ? `: já estudou ${feitos.join(", ")}.` : ": ainda não concluiu nenhuma sessão.";
+            if (adiados.length) linha += ` Adiou: ${adiados.join(", ")}.`;
+            linhas.push(linha);
+
+        });
+
+    const sobre = dados.perfil?.sobre;
+    if (sobre) linhas.push(`- O que a pessoa contou sobre si: ${sobre}`);
+
+    return linhas.join("\n");
+
+}
+
+
+function perfil() {
+    const dados = completar(ler());
+    return { texto: perfilTexto(dados), sobre: dados.perfil.sobre };
+}
+
+
+function salvarSobre(texto) {
+    const dados = completar(ler());
+    dados.perfil.sobre = String(texto || "").trim().slice(0, 1500);
+    gravar(dados);
+    return perfil();
+}
+
+
+function pedidoFlashcards(dados, sessao, plano) {
+
+    const linhas = [`Assunto do plano: ${plano.tema}`, `Tópico da sessão: ${sessao.topico}`];
+
+    if (sessao.objetivo) linhas.push(`Objetivo da sessão: ${sessao.objetivo}`);
+
+    dados.itens.filter((i) => i.sessao_id === sessao.id).forEach((i) => {
+        linhas.push(i.tipo === "atividade" ? `Atividade: ${i.descricao || i.titulo}` : `Material estudado: ${i.titulo}`);
+    });
+
+    const historico = perfilTexto(dados);
+    if (historico) linhas.push("Quem é o estudante (ajuste o nível):\n" + historico);
+
+    return linhas.join("\n");
+
+}
+
+
+// resposta cortada no meio costuma parar numa palavra de ligação
+const CORTADA = /(^|\s)(o|a|os|as|um|uma|de|do|da|dos|das|e|com|para|pra|em|no|na|que|por|ao)$/i;
+
+
+/* Tira cartão vazio, cortado no meio e repetido. */
+function cartoesBons(lista) {
+
+    const vistos = new Set();
+
+    return (Array.isArray(lista) ? lista : [])
+        .map((c) => ({ frente: String(c?.frente || "").trim(), verso: String(c?.verso || "").trim() }))
+        .filter((c) => {
+            const chave = c.frente.toLowerCase();
+            if (c.frente.length < 8 || c.verso.split(/\s+/).length < 4 || CORTADA.test(c.verso) ||
+                /[,"]$/.test(c.verso) || vistos.has(chave)) return false;
+            vistos.add(chave);
+            return true;
+        })
+        .slice(0, 8);
+
+}
+
+
+async function gerarFlashcards(sessaoId, forcar) {
+
+    let dados = completar(ler());
+    const sessao = dados.sessoes.find((s) => s.id === sessaoId);
+    if (!sessao) return;
+    if (!forcar && dados.flashcards.some((f) => f.sessao_id === sessaoId)) return;
+
+    const plano = dados.planos.find((p) => p.id === sessao.plano_id);
+    const { sistema_flashcards, esquema_flashcards } = await carregarPrompts();
+    const pedido = pedidoFlashcards(dados, sessao, plano);
+
+    let novos = [];
+
+    if (plano.motor === "demo") {
+        // demonstração: cartões simples tirados do próprio plano, sem IA
+        novos = cartoesBons([
+            { frente: `Qual o objetivo de estudar "${sessao.topico}"?`, verso: sessao.objetivo || sessao.topico },
+            ...dados.itens.filter((i) => i.sessao_id === sessao.id && i.tipo === "atividade")
+                .map((i) => ({ frente: `Como praticar ${sessao.topico.toLowerCase()}?`, verso: i.descricao || i.titulo }))
+        ]);
+    } else {
+        let motor = plano.motor;
+        // modelo pequeno às vezes devolve lista vazia ou cartão cortado: tenta mais uma vez
+        for (let tentativa = 0; tentativa < 2 && novos.length < 3; tentativa++) {
+            let resposta;
+            try {
+                resposta = await gerarJson(motor, sistema_flashcards, pedido, esquema_flashcards);
+            } catch (erro) {
+                // a conta do plano foi removida: vai a IA preferida de agora
+                const padrao = (await motores()).padrao;
+                if (motor !== plano.motor || !padrao || padrao === motor) throw erro;
+                motor = padrao;
+                resposta = await gerarJson(motor, sistema_flashcards, pedido, esquema_flashcards);
+            }
+            novos = cartoesBons(resposta.cartoes);
+        }
+    }
+
+    if (!novos.length) throw new ErroIA("A IA não devolveu cartões.");
+
+    dados = completar(ler());  // pode ter mudado enquanto a IA respondia
+    if (forcar) dados.flashcards = dados.flashcards.filter((f) => f.sessao_id !== sessaoId);
+    else if (dados.flashcards.some((f) => f.sessao_id === sessaoId)) return;
+
+    novos.forEach((c) => dados.flashcards.push({ id: novoId(dados, "cartao"), sessao_id: sessaoId, ...c,
+                                                 caixa: 0, revisar_em: hojeIso() }));
+    gravar(dados);
+
+}
+
+
+function pedirFlashcards(sessaoId, forcar = false) {
+
+    if (naFila.has(sessaoId)) return;
+
+    const falha = falhas.get(sessaoId);
+    if (falha && !forcar && Date.now() - falha.quando < 600000) return;
+
+    naFila.add(sessaoId);
+    falhas.delete(sessaoId);
+
+    fila = fila
+        .then(() => gerarFlashcards(sessaoId, forcar))
+        .catch((erro) => falhas.set(sessaoId, { quando: Date.now(), erro: erro.message || String(erro) }))
+        .finally(() => naFila.delete(sessaoId));
+
+}
+
+
+function listarFlashcards() {
+
+    const dados = completar(ler());
+    const hoje = hojeIso();
+    const desde = somarDias(hoje, -JANELA);
+
+    const conteudos = dados.sessoes
+        .filter((s) => !s.extra)
+        .filter((s) => (s.data >= desde && s.data <= hoje && foiEstudada(dados, s.id)) ||
+                       dados.flashcards.some((f) => f.sessao_id === s.id && f.revisar_em <= hoje))
+        .sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id)
+        .map((s) => {
+
+            const plano = dados.planos.find((p) => p.id === s.plano_id);
+            const deles = dados.flashcards.filter((f) => f.sessao_id === s.id);
+
+            if (!deles.length) pedirFlashcards(s.id);
+
+            const falha = deles.length ? null : falhas.get(s.id);
+
+            return {
+                sessao_id: s.id, plano_id: s.plano_id, topico: s.topico, data: s.data,
+                tema: plano.tema, plano_titulo: plano.titulo, cor: plano.cor,
+                total: deles.length,
+                para_hoje: deles.filter((f) => f.revisar_em <= hoje).length,
+                situacao: deles.length ? "pronto" : falha ? "erro" : "gerando",
+                erro: falha?.erro || null
+            };
+
+        });
+
+    return { conteudos, para_hoje: conteudos.reduce((soma, c) => soma + c.para_hoje, 0) };
+
+}
+
+
+function cartoes(sessaoId = null) {
+
+    const dados = completar(ler());
+    const hoje = hojeIso();
+    const topico = (id) => dados.sessoes.find((s) => s.id === id)?.topico;
+    const data = (id) => dados.sessoes.find((s) => s.id === id)?.data || "";
+
+    const lista = sessaoId
+        ? dados.flashcards.filter((f) => f.sessao_id === sessaoId)
+            .sort((a, b) => (a.revisar_em > hoje) - (b.revisar_em > hoje) || a.caixa - b.caixa || a.id - b.id)
+        : dados.flashcards.filter((f) => f.revisar_em <= hoje)
+            .sort((a, b) => a.caixa - b.caixa || data(a.sessao_id).localeCompare(data(b.sessao_id)) || a.id - b.id);
+
+    return lista.map((f) => ({ ...f, topico: topico(f.sessao_id) }));
+
+}
+
+
+function responderCartao(id, acertou) {
+
+    const dados = completar(ler());
+    const cartao = dados.flashcards.find((f) => f.id === id);
+
+    if (!cartao) return null;
+
+    cartao.caixa = acertou ? Math.min(cartao.caixa + 1, INTERVALOS.length - 1) : 0;
+    cartao.revisar_em = somarDias(hojeIso(), INTERVALOS[cartao.caixa]);
+
+    gravar(dados);
+    return { ...cartao };
 
 }
 
@@ -863,6 +1150,17 @@ export async function rotear(url, opcoes = {}) {
             if (metodo === "POST" && recurso === "sessoes" && acao === "adiar") return json(200, { sessao: adiarPendentes(id) });
             if (metodo === "PATCH" && recurso === "itens") return json(200, { sessao: marcarItem(id, corpo.estado) });
             if (metodo === "DELETE" && recurso === "planos") { excluirPlano(id); return json(200, { ok: true }); }
+
+            if (metodo === "GET" && recurso === "perfil") return json(200, perfil());
+            if (metodo === "POST" && recurso === "perfil") return json(200, salvarSobre(corpo.sobre));
+            if (metodo === "GET" && recurso === "flashcards" && !ident) return json(200, listarFlashcards());
+            if (metodo === "GET" && recurso === "flashcards") return json(200, { cartoes: cartoes(id) });
+            if (metodo === "GET" && recurso === "revisao") return json(200, { cartoes: cartoes() });
+            if (metodo === "POST" && recurso === "flashcards" && acao === "refazer") { pedirFlashcards(id, true); return json(202, { ok: true }); }
+            if (metodo === "PATCH" && recurso === "cartoes") {
+                const cartao = responderCartao(id, corpo.acertou === true);
+                return json(cartao ? 200 : 404, { cartao });
+            }
         }
 
         // /api/tarefas e o resto: sem servidor, o kanban usa o modo estático dele

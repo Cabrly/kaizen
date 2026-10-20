@@ -83,6 +83,18 @@ function semear() {
         }));
     });
 
+    // cartões da primeira sessão (a que já tem itens feitos), prontos pra área de flashcards
+    dados.flashcards = [
+        ["O que é o React?", "Uma biblioteca JavaScript pra montar interfaces a partir de componentes reutilizáveis."],
+        ["Pra que serve um componente?", "Junta um pedaço da tela (visual e comportamento) num bloco que dá pra reaproveitar."],
+        ["O que é JSX?", "Uma sintaxe parecida com HTML dentro do JavaScript. Ex.: return <h1>Olá</h1>;"],
+        ["React é um framework completo?", "Não: é uma biblioteca de interface. Rotas e dados vêm de outras ferramentas."],
+        ["O que o React faz quando o estado muda?", "Atualiza na tela só o que mudou, sem recarregar a página."],
+        ["Como é um componente funcional mínimo?", "Uma função que devolve JSX. Ex.: function Ola() { return <p>Oi</p>; }"]
+    ].map(([frente, verso], i) => ({ id: i + 1, sessao_id: 1, frente, verso, caixa: 0, revisar_em: hoje() }));
+    dados.seq.cartao = dados.flashcards.length;
+    dados.perfil = { sobre: "Faço faculdade de ADS e aprendo melhor com exemplos práticos." };
+
     const conversa = [
         { papel: "usuario", texto: "Tenho 3 entregas essa semana e tô travado. Por onde começo?" },
         { papel: "assistente", texto: "Vamos por partes. Olhando seu quadro:\n\n1. **Refatorar tela de login** (alta, vence amanhã): comece por ela, de manhã, quando a cabeça está fresca.\n2. **Revisar proposta do cliente** (alta): reserve 1 hora à tarde.\n3. **Apresentação da sprint**: dá pra fazer em blocos de 25 min ao longo da semana.\n\nDica *kaizen*: termine uma coisa pequena hoje. Tirar a primeira tarefa da coluna dá ritmo pro resto." }

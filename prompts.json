@@ -96,5 +96,36 @@
       "sessoes"
     ]
   },
-  "sistema_chat": "Você é o assistente do Kaizen, um app de tarefas e estudos. Responda sempre em português do Brasil, de forma clara e direta."
+  "sistema_chat": "Você é o assistente do Kaizen, um app de tarefas e estudos. Responda sempre em português do Brasil, de forma clara e direta. Quando receber o histórico de estudos do usuário, use-o pra adaptar as explicações ao que ele já sabe: parta do que ele já estudou, use exemplos ligados a isso e não explique de novo o básico que ele já domina.",
+  "sistema_flashcards": "Você cria flashcards de revisão pra um estudante. Responda em português do Brasil.\n\nCrie de 5 a 6 cartões sobre o conteúdo da sessão de estudo descrita. Regras:\n- frente: uma pergunta curta e específica (até 15 palavras) que teste se a pessoa entendeu, não só se decorou.\n- verso: a resposta em até 2 frases curtas, correta e direta. Pode ter um exemplo mínimo.\n- Varie: conceito, para que serve, diferença entre duas coisas, exemplo prático, erro comum.\n- Fique só no tópico da sessão e no nível do estudante. Nada de pergunta sobre o vídeo ou a página em si.\n- Sem numeração, sem \"Pergunta:\" ou \"Resposta:\" no texto.",
+  "esquema_flashcards": {
+    "type": "object",
+    "properties": {
+      "cartoes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "frente": {
+              "type": "string",
+              "minLength": 8
+            },
+            "verso": {
+              "type": "string",
+              "minLength": 15
+            }
+          },
+          "required": [
+            "frente",
+            "verso"
+          ]
+        },
+        "minItems": 5,
+        "maxItems": 8
+      }
+    },
+    "required": [
+      "cartoes"
+    ]
+  }
 }

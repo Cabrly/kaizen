@@ -99,7 +99,11 @@ def ollama_chat(modelo, mensagens):
     Se o preferido for um Ollama de outra máquina e ela estiver fora do ar,
     tenta este computador.
     """
-    personalidade = [{"role": "system", "content": estudos.PROMPTS["sistema_chat"]}]
+    sistema = estudos.PROMPTS["sistema_chat"]
+    historico = estudos.perfil_texto()
+    if historico:
+        sistema += "\n\nHistórico de estudos do usuário:\n" + historico
+    personalidade = [{"role": "system", "content": sistema}]
 
     preferido = servidores.preferido()
     tentativas = [preferido]
@@ -243,6 +247,25 @@ class Handler(SimpleHTTPRequestHandler):
             if metodo == "DELETE" and recurso == "planos" and ident:
                 estudos.excluir_plano(ident)
                 return self.responder(200, {"ok": True}) or True
+
+            # perfil ("o que a IA sabe de você") e flashcards
+            if metodo == "GET" and recurso == "perfil":
+                return self.responder(200, estudos.perfil()) or True
+            if metodo == "POST" and recurso == "perfil":
+                estudos.salvar_sobre(corpo.get("sobre"))
+                return self.responder(200, estudos.perfil()) or True
+            if metodo == "GET" and recurso == "flashcards" and ident is None:
+                return self.responder(200, estudos.listar_flashcards()) or True
+            if metodo == "GET" and recurso == "flashcards":
+                return self.responder(200, {"cartoes": estudos.cartoes(ident)}) or True
+            if metodo == "GET" and recurso == "revisao":
+                return self.responder(200, {"cartoes": estudos.cartoes()}) or True
+            if metodo == "POST" and recurso == "flashcards" and ident and acao == "refazer":
+                estudos.pedir_flashcards(ident, forcar=True)
+                return self.responder(202, {"ok": True}) or True
+            if metodo == "PATCH" and recurso == "cartoes" and ident:
+                cartao = estudos.responder_cartao(ident, corpo.get("acertou") is True)
+                return self.responder(200 if cartao else 404, {"cartao": cartao}) or True
 
             self.responder(404, {"erro": "Rota não encontrada"})
         except estudos.ErroIA as erro:
