@@ -83,6 +83,33 @@ function semear() {
         }));
     });
 
+    // um plano já concluído, pra o jardim dos pets ter morador
+    dados.planos.push({
+        id: 2, tema: "Lógica de programação", respostas: [], dias: [0, 2, 4], minutos: 30, horario: null,
+        inicio: hoje(-30), semanas: 1, motor: "demo", idioma: "pt", cor: "#2f6f4f", status: "pronto", etapa: null,
+        erro: null, titulo: "Lógica de programação do zero", doc_oficial: null, criado_em: `${hoje(-30)} 08:00:00`, pai_id: null
+    });
+    dados.seq.plano = 2;
+    [
+        [-30, "Algoritmos e variáveis", "Pensar em passos e guardar valores.", "Lógica de Programação - Aula 1", "https://www.youtube.com/results?search_query=logica+de+programacao+aula+1"],
+        [-28, "Condicionais", "Decidir com if e else.", "Estruturas condicionais", "https://www.youtube.com/results?search_query=estruturas+condicionais+logica"],
+        [-26, "Laços de repetição", "Repetir tarefas com while e for.", "Laços de repetição", "https://www.youtube.com/results?search_query=lacos+de+repeticao+logica"]
+    ].forEach(([dia, topico, objetivo, video, url]) => {
+        const sessaoId = ++dados.seq.sessao;
+        dados.sessoes.push({ id: sessaoId, plano_id: 2, data: hoje(dia), topico, objetivo, extra: 0 });
+        dados.itens.push({ id: ++dados.seq.item, sessao_id: sessaoId, tipo: "video", titulo: video, url, descricao: null, fonte: "YouTube", minutos: 12, estado: "feito", origem_id: null });
+        dados.itens.push({ id: ++dados.seq.item, sessao_id: sessaoId, tipo: "atividade", titulo: "Pratique", url: null, descricao: `Escreva um algoritmo usando ${topico.toLowerCase()}.`, fonte: null, minutos: 15, estado: "feito", origem_id: null });
+    });
+
+    // pets ligados na demonstração: o Mochi cuida do React, a Hana mora no jardim
+    dados.pets = {
+        ligado: true, encerrados: [], bonus: 1000, compras: ["cachecol-brasa", "chapeu-mago", "coruja"],
+        pets: {
+            1: { nome: "Mochi", especie: "gato", cor: "laranja", acessorios: ["cachecol-brasa"] },
+            2: { nome: "Hana", especie: "coruja", cor: "marrom", acessorios: ["chapeu-mago"] }
+        }
+    };
+
     // cartões da primeira sessão (a que já tem itens feitos), prontos pra área de flashcards
     dados.flashcards = [
         ["O que é o React?", "Uma biblioteca JavaScript pra montar interfaces a partir de componentes reutilizáveis."],
