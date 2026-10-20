@@ -47,6 +47,8 @@ def init_db():
             prazo TEXT NOT NULL
         )""")
         con.execute("CREATE TABLE IF NOT EXISTS categorias (nome TEXT PRIMARY KEY)")
+        # chat e preferências que o navegador guarda; ficam aqui pra sobreviver a limpar o cache
+        con.execute("CREATE TABLE IF NOT EXISTS guardados (chave TEXT PRIMARY KEY, valor TEXT NOT NULL)")
         colunas = {row[1] for row in con.execute("PRAGMA table_info(tarefas)")}
         if "categoria" not in colunas:
             con.execute("ALTER TABLE tarefas ADD COLUMN categoria TEXT NOT NULL DEFAULT 'Geral'")
@@ -63,6 +65,23 @@ def listar():
     with sqlite3.connect(DB) as con:
         con.row_factory = sqlite3.Row
         return [dict(row) for row in con.execute("SELECT * FROM tarefas")]
+
+
+def guardados():
+    with sqlite3.connect(DB) as con:
+        return dict(con.execute("SELECT chave, valor FROM guardados"))
+
+
+def guardar(mudancas):
+    """{chave: valor} grava; valor None apaga. Só aceita chaves do Kaizen."""
+    if not isinstance(mudancas, dict) or not all(isinstance(c, str) and c.startswith("kaizen.") for c in mudancas):
+        raise ValueError("Chaves inválidas.")
+    if not all(v is None or isinstance(v, str) for v in mudancas.values()):
+        raise ValueError("Valores têm que ser texto.")
+    with sqlite3.connect(DB) as con:
+        con.executemany("DELETE FROM guardados WHERE chave = ?", [(c,) for c, v in mudancas.items() if v is None])
+        con.executemany("INSERT OR REPLACE INTO guardados (chave, valor) VALUES (?, ?)",
+                        [(c, v) for c, v in mudancas.items() if v is not None])
 
 
 def ollama_modelos():
@@ -100,6 +119,8 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path == "/api/tarefas":
             return self.responder(200, {"tarefas": listar()})
+        if self.path == "/api/guardados":
+            return self.responder(200, guardados())
         if self.path == "/api/ia/local":
             return self.responder(200, ia_local.situacao())
         if self.path == "/api/ia/local/progresso":
@@ -141,6 +162,12 @@ class Handler(SimpleHTTPRequestHandler):
             return self.responder(502, {"erro": f"Não foi possível usar \"{nome}\": {erro}"})
 
     def do_PUT(self):
+        if self.path == "/api/guardados":
+            try:
+                guardar(json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0)))))
+                return self.responder(200, {"ok": True})
+            except (TypeError, ValueError, sqlite3.Error) as erro:
+                return self.responder(400, {"erro": str(erro)})
         if self.path != "/api/tarefas":
             return self.responder(404, {"erro": "Rota não encontrada"})
         try:
