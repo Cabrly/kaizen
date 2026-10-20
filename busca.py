@@ -50,7 +50,7 @@ PIPED = ["https://api.piped.private.coffee", "https://pipedapi.kavin.rocks", "ht
 # (inglês entra como reserva, porque muita documentação só existe nele).
 IDIOMAS = {
     "pt": {"nome": "Português", "aceitar": "pt-BR,pt;q=0.9,en;q=0.7", "hl": "pt-BR", "gl": "BR",
-           "ddg": "br-pt", "searxng": "pt-BR", "aula": "aula", "documentacao": "documentação",
+           "ddg": "br-pt", "searxng": "pt-BR", "aula": "aula", "marca_video": "português", "documentacao": "documentação",
            "locais": ("pt-br", "pt_br", "pt"), "aceitos": ("pt-br", "pt_br", "pt", "en", "en-us", "en_us")},
     "en": {"nome": "English", "aceitar": "en-US,en;q=0.9", "hl": "en", "gl": "US",
            "ddg": "us-en", "searxng": "en-US", "aula": "tutorial", "documentacao": "documentation",
@@ -326,7 +326,8 @@ def buscar_videos(consulta, minutos_max=None, limite=2, idioma="pt"):
     """Melhores vídeos pra uma sessão: curtos o bastante pra caber nela."""
     consulta = re.sub(r"\s+", " ", consulta).strip()
     idioma = idioma_valido(idioma)
-    # "clase" sozinho não convence o YouTube; "español" no fim, sim
+    # "aula"/"clase" sozinho não convence o YouTube (ainda mais quando a IA escreve a busca
+    # em inglês, tipo "react useState tutorial"); "português"/"español" no fim, sim
     marca = IDIOMAS[idioma].get("marca_video")
     if marca and _sem_acento(marca) not in _sem_acento(consulta):
         consulta = f"{consulta} {marca}"
@@ -345,7 +346,8 @@ def buscar_videos(consulta, minutos_max=None, limite=2, idioma="pt"):
     return sorted(videos, key=nota)[:limite]
 
 
-_PORTUGUES = re.compile(r"[ãõç]|\b(do|da|dos|das|com|aula|em|no|na|um|uma|seu|sua|você|não|é)\b", re.I)
+_PORTUGUES = re.compile(r"[ãõç]|\b(do|da|dos|das|com|aula|em|no|na|um|uma|seu|sua|você|não|é|para|pra|como|neste|"
+                        r"nesta|aprenda|aprender|aprendendo|entenda|entendendo|curso|iniciantes|usar|fazer|parte|zero)\b", re.I)
 _ESPANHOL = re.compile(r"[ñ¿¡]|\b(el|los|las|del|clase|cómo|qué|y|en|un|una|su|tu|usted|curso de|"
                        r"desde|cero|fácil|gratis|principiantes|español)\b", re.I)
 _INGLES = re.compile(r"\b(the|and|how|to|with|for|in|of|your|you|learn|beginners?|tutorial|course|crash)\b", re.I)

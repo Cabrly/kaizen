@@ -22,7 +22,7 @@ const MAX_CACHE = 300;
 
 
 export const IDIOMAS = {
-    pt: { nome: "Português", regiao: "BR", aula: "aula", documentacao: "documentação" },
+    pt: { nome: "Português", regiao: "BR", aula: "aula", documentacao: "documentação", marca: "português" },
     en: { nome: "English", regiao: "US", aula: "tutorial", documentacao: "documentation" },
     es: { nome: "Español", regiao: "ES", aula: "clase", documentacao: "documentación", marca: "español" }
 };
@@ -150,7 +150,7 @@ async function viaPiped(consulta) {
 }
 
 
-const PORTUGUES = /[ãõç]|\b(do|da|dos|das|com|aula|em|no|na|um|uma|seu|sua|você|não|é)\b/i;
+const PORTUGUES = /[ãõç]|\b(do|da|dos|das|com|aula|em|no|na|um|uma|seu|sua|você|não|é|para|pra|como|neste|nesta|aprenda|aprender|aprendendo|entenda|entendendo|curso|iniciantes|usar|fazer|parte|zero)\b/i;
 const ESPANHOL = /[ñ¿¡]|\b(el|los|las|del|clase|cómo|qué|y|en|un|una|su|tu|usted|curso de|desde|cero|fácil|gratis|principiantes|español)\b/i;
 const INGLES = /\b(the|and|how|to|with|for|in|of|your|you|learn|beginners?|tutorial|course|crash)\b/i;
 
@@ -196,11 +196,14 @@ async function tituloOriginal(v) {
     Até `limite` vídeos que cabem em `minutosMax`, no idioma
     escolhido primeiro. Nunca lança erro: no pior caso, [].
 */
-export async function buscarVideos(consulta, { idioma = "pt", minutosMax = null, limite = 5 } = {}) {
+export async function buscarVideos(consulta, { idioma = "pt", minutosMax = null, limite = 8 } = {}) {
 
+    // "aula"/"clase" sozinho não convence o YouTube (ainda mais quando a IA escreve a busca
+    // em inglês, tipo "react useState tutorial"); "português"/"español" no fim, sim
     const marca = IDIOMAS[idioma].marca;
+    const semAcento = (texto) => texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-    if (marca && !consulta.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().includes("espanol")) {
+    if (marca && !semAcento(consulta).includes(semAcento(marca))) {
         consulta = `${consulta} ${marca}`;
     }
 

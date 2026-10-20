@@ -371,7 +371,7 @@ def _gerar_plano(plano_id):
 
         def materiais(sessao):
             consulta = sessao.get("busca_video") or f"{sessao['topico']} {plano['tema']} {busca.IDIOMAS[idioma]['aula']}"
-            videos = busca.buscar_videos(consulta, minutos_max=minutos_video, limite=5, idioma=idioma)
+            videos = busca.buscar_videos(consulta, minutos_max=minutos_video, limite=8, idioma=idioma)
             # título original (não o traduzido pelo YouTube) e, entre os que
             # cabem na sessão, aula no idioma escolhido primeiro
             videos = [busca.titulo_original(v) for v in videos]
