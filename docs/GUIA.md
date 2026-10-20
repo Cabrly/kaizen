@@ -219,11 +219,19 @@ roteiro.
 - **Humor:** feliz quando você estuda no dia; tristinho quando a sessão passa
   sem nada feito. Ele volta a sorrir quando você faz o que ficou pendente.
 - **Pontos:** você começa com 150 e ganha 10 por item feito, 20 por sessão
-  completa e 100 por plano concluído. Na **Loja** eles viram 18 bichos (gato,
-  cachorro, hamster, coelho, pintinho, sapo, ratinho, raposa, panda, urso,
-  coala, pinguim, macaco, coruja, tigre, leão, unicórnio e dragão), mais de 30
-  acessórios (capelo, cartola, coroa, óculos, cachecóis das quatro casas,
-  livros, café, violão…), tons de pelo e cenários.
+  completa e 100 por plano concluído. Na **Loja** eles viram 24 bichos (gato,
+  cachorro, hamster, coelho, pintinho, sapo, ratinho, porquinho, vaquinha,
+  raposa, panda, urso, coala, pinguim, macaco, coruja, tigre, leão, lobo,
+  fantasminha, robô, ET, unicórnio e dragão), mais de 80 acessórios (capelo,
+  coroa, óculos pixelados, pão na cara, chapéu de alumínio, bigode, correntão,
+  cachecóis das quatro casas, comidinhas, violão…), 15 tons de pelo (até RGB
+  gamer) e 13 cenários.
+- **Memes:** a seção Memes da loja muda o jeito do pet reagir em cada humor.
+  Triste: banho triste, violininho, "tá tudo bem" no meio do fogo, cri-cri,
+  derretendo. Feliz: giro OIIA, vibando, stonks, óculos caindo, muito wow,
+  rastro de arco-íris, discoteca, morri de rir. Esperando: teia de aranha,
+  fazendo contas, olhar de canto, pensativo, soneca. Compre e escolha na ficha
+  do pet qual usar em cada humor.
 - **Jardim:** plano concluído, o pet vai morar lá. Clicando nele você vê tudo
   o que estudaram juntos (tópicos, vídeos, documentação) e revisa os
   flashcards daquele período.
