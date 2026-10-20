@@ -12,7 +12,8 @@
 ========================================================= */
 
 
-import { detectarModo } from "./modo.js";
+// window.kaizenModo vem do js/modo.js; importar o módulo de novo (sem o ?v=) criaria uma segunda
+// cópia que envolve o fetch outra vez e, no celular, se acha "servidor"
 
 
 const FORA = new Set(["kaizen.tarefas.v1", "kaizen.categorias.v1", "kaizen.pin.v1", "kaizen.pin.espera"]);
@@ -77,7 +78,7 @@ function enviar(saindo = false) {
 
 async function iniciar() {
 
-    if ((await detectarModo()) !== "servidor") return;
+    if ((await window.kaizenModo) !== "servidor") return;
 
     let doPc;
     try {
