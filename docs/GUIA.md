@@ -354,6 +354,7 @@ os arquivos ficam no próprio aparelho, sem limite apertado.
 |---|---|---|
 | `PORT` / `HOST` | `8000` / `127.0.0.1` | onde o servidor escuta |
 | `OLLAMA_URL` | `http://127.0.0.1:11434` | onde está o Ollama |
+| `KAIZEN_HOSTS` | — | outros nomes pelos quais você abre o Kaizen, separados por vírgula (ex.: `meupc,100.80.57.121`). Com `HOST=127.0.0.1`, o servidor recusa qualquer endereço que não seja `localhost`/`127.0.0.1`, pra nenhum site conseguir mexer nele |
 | `SEARXNG_URL` | — | instância [SearXNG](https://docs.searxng.org) própria pra busca web (mais estável que os buscadores públicos, se for hospedar pra muita gente) |
 
 ### Gerar os instaladores
