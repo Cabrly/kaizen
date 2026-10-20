@@ -14,6 +14,7 @@ import urllib.parse
 import urllib.request
 
 import busca
+import entregas
 import estudos
 import ia_local
 import remoto
@@ -237,7 +238,7 @@ class Handler(SimpleHTTPRequestHandler):
         if partes[:3] == ["api", "ia", "servidores"]:
             return self.rota_servidores(metodo, partes[3:])
         if partes[:2] == ["api", "backup"]:
-            return self.rota_backup(metodo)
+            return self.rota_backup(metodo, sincronia="sincronia=1" in url.query)
         if partes[:2] == ["api", "remoto"]:
             return self.rota_remoto(metodo, partes[2:])
         if partes[:2] != ["api", "estudos"]:
@@ -301,6 +302,27 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.responder(200, {"dados": estudos.obter_pets()}) or True
             if metodo == "POST" and recurso == "pets":
                 return self.responder(200, {"dados": estudos.salvar_pets(corpo.get("dados"))}) or True
+            # entregas das atividades e correção pela IA
+            if metodo == "GET" and recurso == "entregas" and ident is None:
+                item = int(urllib.parse.parse_qs(url.query)["item"][0])
+                return self.responder(200, {"entregas": entregas.listar(item),
+                                            "corretor": entregas.sobre_corretor()}) or True
+            if metodo == "GET" and recurso == "entregas":
+                entrega = entregas.obter(ident)
+                return self.responder(200 if entrega else 404, {"entrega": entrega}) or True
+            if metodo == "POST" and recurso == "entregas" and ident is None:
+                return self.responder(201, {"entrega": entregas.criar(corpo)}) or True
+            if metodo == "POST" and recurso == "entregas" and acao == "corrigir":
+                entrega = entregas.corrigir_de_novo(ident)
+                return self.responder(200 if entrega else 404, {"entrega": entrega}) or True
+            if metodo == "DELETE" and recurso == "entregas" and ident:
+                entregas.excluir(ident)
+                return self.responder(200, {"ok": True}) or True
+            if metodo == "GET" and recurso == "sincronia-entregas":
+                return self.responder(200, {"opcao": entregas.opcao_sincronia()}) or True
+            if metodo == "POST" and recurso == "sincronia-entregas":
+                return self.responder(200, {"opcao": entregas.definir_sincronia(corpo.get("opcao"))}) or True
+
             if metodo == "PATCH" and recurso == "cartoes" and ident:
                 cartao = estudos.responder_cartao(ident, corpo.get("acertou") is True)
                 return self.responder(200 if cartao else 404, {"cartao": cartao}) or True
@@ -371,10 +393,11 @@ class Handler(SimpleHTTPRequestHandler):
             self.responder(400, {"erro": str(erro)})
         return True
 
-    def rota_backup(self, metodo):
+    def rota_backup(self, metodo, sincronia=False):
         """GET baixa tudo (kanban + estudos); POST restaura, substituindo.
         Mesmo formato do modo nuvem, então serve pra levar do celular pro PC.
-        Chaves de API não entram no arquivo."""
+        Chaves de API não entram no arquivo. Pra sincronia (?sincronia=1), os
+        arquivos das entregas seguem a opção "O que vai pro celular"."""
         try:
             if metodo == "GET":
                 with sqlite3.connect(DB) as con:
@@ -383,7 +406,7 @@ class Handler(SimpleHTTPRequestHandler):
                     "app": "kaizen", "formato": 1,
                     "criado_em": datetime.now().isoformat(timespec="seconds"),
                     "kanban": {"tarefas": listar(), "categorias": categorias},
-                    "estudos": estudos.exportar(),
+                    "estudos": entregas.para_sincronia(estudos.exportar()) if sincronia else estudos.exportar(),
                 }) or True
 
             if metodo == "POST":

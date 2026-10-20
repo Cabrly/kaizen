@@ -112,6 +112,21 @@ def init():
                 id    INTEGER PRIMARY KEY CHECK (id = 1),
                 dados TEXT NOT NULL DEFAULT '{}'
             );
+            -- o que a pessoa entregou numa atividade e a correção da IA (entregas.py)
+            CREATE TABLE IF NOT EXISTS entregas (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                item_id   INTEGER NOT NULL REFERENCES itens(id) ON DELETE CASCADE,
+                texto     TEXT NOT NULL DEFAULT '',
+                link      TEXT NOT NULL DEFAULT '',
+                arquivos  TEXT NOT NULL DEFAULT '[]',
+                criado_em TEXT NOT NULL,
+                situacao  TEXT NOT NULL DEFAULT 'guardada',
+                nota      INTEGER,
+                correcao  TEXT,
+                motor     TEXT,
+                erro      TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_entregas_item ON entregas(item_id);
             CREATE INDEX IF NOT EXISTS idx_flashcards_sessao ON flashcards(sessao_id);
             CREATE INDEX IF NOT EXISTS idx_sessoes_data ON sessoes(data);
             CREATE INDEX IF NOT EXISTS idx_itens_sessao ON itens(sessao_id);
@@ -126,6 +141,9 @@ def init():
         # planos que estavam gerando quando o servidor caiu não vão terminar
         con.execute("UPDATE planos SET status = 'erro', erro = 'O servidor reiniciou no meio da geração.' "
                     "WHERE status = 'gerando'")
+        # a fila de correção vive na memória: o que estava nela não vai terminar (a tela oferece tentar de novo)
+        con.execute("UPDATE entregas SET situacao = 'erro', erro = 'O Kaizen fechou no meio da correção.' "
+                    "WHERE situacao IN ('na-fila', 'corrigindo')")
 
 
 # =========================================================
@@ -524,8 +542,10 @@ def obter_sessao(sessao_id):
             WHERE i.sessao_id = ?
             ORDER BY CASE i.tipo WHEN 'video' THEN 0 WHEN 'doc' THEN 1 ELSE 2 END, i.id
         """, (sessao_id,)).fetchall()
+        import entregas   # aqui dentro: o entregas.py importa este módulo
+        resumo = entregas.resumo_dos_itens(con, [i["id"] for i in itens if i["tipo"] == "atividade"])
     resultado = dict(sessao)
-    resultado["itens"] = [dict(i) for i in itens]
+    resultado["itens"] = [{**dict(i), "entrega": resumo.get(i["id"])} for i in itens]
     return resultado
 
 
@@ -636,6 +656,21 @@ def perfil_texto(excluir_plano=None):
             if adiados:
                 linha += " Adiou: " + ", ".join(adiados) + "."
             linhas.append(linha)
+        # o que as correções das atividades mostraram (entregas.py)
+        corrigidas = con.execute("SELECT nota, correcao FROM entregas WHERE situacao = 'corrigida' "
+                                 "ORDER BY id DESC LIMIT 20").fetchall()
+    if corrigidas:
+        contagem = {}
+        for c in corrigidas:
+            for d in json.loads(c["correcao"] or "{}").get("dificuldades", []):
+                contagem[d.lower()] = contagem.get(d.lower(), 0) + 1
+        media = sum(c["nota"] for c in corrigidas) / len(corrigidas)
+        linha = f"- Atividades corrigidas recentemente: nota média {media:.1f}/10 em {len(corrigidas)} entregas."
+        if contagem:
+            maiores = sorted(contagem.items(), key=lambda x: -x[1])[:6]
+            linha += " Mostrou dificuldade em: " + ", ".join(f"{d} ({n}x)" if n > 1 else d for d, n in maiores) + \
+                     ". Reforce esses pontos com explicação e prática."
+        linhas.append(linha)
     sobre = obter_sobre()
     if sobre:
         linhas.append(f"- O que a pessoa contou sobre si: {sobre}")
@@ -874,8 +909,10 @@ def exportar():
         sessoes = [dict(l) for l in con.execute("SELECT * FROM sessoes ORDER BY id")]
         itens = [dict(l) for l in con.execute("SELECT * FROM itens ORDER BY id")]
         flashcards = [dict(l) for l in con.execute("SELECT * FROM flashcards ORDER BY id")]
+        import entregas
+        lista_entregas = entregas.exportar(con)
     return {"planos": planos, "sessoes": sessoes, "itens": itens, "flashcards": flashcards,
-            "perfil": {"sobre": obter_sobre()}, "pets": obter_pets()}
+            "entregas": lista_entregas, "perfil": {"sobre": obter_sobre()}, "pets": obter_pets()}
 
 
 def importar(dados):
@@ -885,8 +922,10 @@ def importar(dados):
     if not all(isinstance(x, list) for x in (planos, sessoes, itens)):
         raise ValueError("Backup com formato inválido.")
 
+    import entregas
     with conectar() as con:
         cartoes_antes = [dict(l) for l in con.execute("SELECT * FROM flashcards")]
+        entregas_antes = entregas.exportar(con)   # apagar os itens apaga as entregas junto (cascade)
         con.execute("DELETE FROM itens")
         con.execute("DELETE FROM sessoes")
         con.execute("DELETE FROM planos")
@@ -911,6 +950,8 @@ def importar(dados):
             if f.get("sessao_id") in sessoes_ok:
                 con.execute(f"INSERT INTO flashcards ({', '.join(COLUNAS_CARTAO)}) "
                             f"VALUES ({', '.join('?' * len(COLUNAS_CARTAO))})", [f.get(c) for c in COLUNAS_CARTAO])
+        # backup de versão antiga não tem entregas: ficam as daqui que ainda têm atividade
+        entregas.importar(con, entregas_antes if dados.get("entregas") is None else dados["entregas"], entregas_antes)
     if isinstance(dados.get("perfil"), dict) and "sobre" in dados["perfil"]:
         salvar_sobre(dados["perfil"]["sobre"])
     if isinstance(dados.get("pets"), dict):
