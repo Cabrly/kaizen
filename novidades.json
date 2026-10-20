@@ -1,5 +1,18 @@
 [
     {
+        "versao": "1.4.0",
+        "data": "2026-10-20",
+        "itens": [
+            "🔗 Compartilhe um plano com a turma: o botão de cada plano gera um link e um QR Code. Quem abre ganha uma cópia com os vídeos, as atividades e os flashcards (sem o seu progresso) e escolhe os próprios dias.",
+            "📅 Sessões na agenda do celular: baixe o plano pro Google Agenda, o iPhone ou o Outlook, com aviso antes de cada sessão.",
+            "📊 Resumo da semana: o que você estudou, as notas, os flashcards e dicas pra próxima semana. Abre sozinho no domingo ou na segunda.",
+            "Acessibilidade (no rodapé): texto maior, alto contraste, menos movimento, texto espaçado e leitura em voz alta.",
+            "A Biblioteca saiu: as entregas e as notas continuam na ficha de cada pet.",
+            "Mais seguro: nenhum site aberto no navegador consegue mexer no Kaizen do seu computador.",
+            "Mais leve: o app gasta bem menos processador parado e a tela aparece mais rápido."
+        ]
+    },
+    {
         "versao": "1.3.0",
         "data": "2026-10-21",
         "itens": [
