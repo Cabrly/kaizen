@@ -11,12 +11,13 @@
    - triste: a última sessão passou sem nada feito (volta a
      ficar feliz quando o que ficou pra trás é feito).
 
-   Pontos = 10 por item feito + 20 por sessão completa +
-   100 por plano concluído − o que foi gasto na loja. Como é
-   uma conta, marcar e desmarcar não fabrica pontos.
+   Pontos = 150 de boas-vindas + 10 por item feito + 20 por
+   sessão completa + 100 por plano concluído − o que foi
+   gasto na loja. Como é uma conta, marcar e desmarcar não
+   fabrica pontos.
 ========================================================= */
 
-import { ESPECIES, CORES, ACESSORIOS, desenharPet } from "./pets-arte.js";
+import { ESPECIES, TONS, FUNDOS, ACESSORIOS, desenharPet, normalizar, imagemDe } from "./pets-arte.js";
 
 
 const API = "./api";
@@ -26,11 +27,14 @@ const NOMES = ["Mochi", "Tofu", "Nori", "Sushi", "Yuki", "Hana", "Sora", "Momo",
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const DIAS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
-const PONTOS = { item: 10, sessao: 20, plano: 100 };
+const PONTOS = { item: 10, sessao: 20, plano: 100, boasVindas: 150 };
+const SLOTS = { cabeca: "Cabeça", rosto: "Rosto", pescoco: "Pescoço", lado: "Na mão" };
+const SECOES = { bichos: "Bichos", acessorios: "Acessórios", tons: "Tons de pelo", cenarios: "Cenários" };
 
 let estado = { ligado: false, compras: [], pets: {}, encerrados: [] };
 let dados = { planos: [], sessoes: [], itens: [] };
 let aba = "cuidando";
+let secaoLoja = "bichos";
 let salvando = null;
 let vigiaPlano = null;
 
@@ -105,9 +109,10 @@ function pontos() {
         return deles.length && deles.every((i) => i.estado === "feito");
     }).length;
     const planos = dados.planos.filter(concluido).length;
-    const gasto = estado.compras.reduce((soma, id) => soma + (ESPECIES[id]?.custo ?? ACESSORIOS[id]?.custo ?? 0), 0);
-    // bonus: só a demonstração usa, pra quem visita poder brincar na loja
-    return Math.max(0, itens * PONTOS.item + sessoes * PONTOS.sessao + planos * PONTOS.plano + (estado.bonus || 0) - gasto);
+    const gasto = estado.compras.reduce((soma, id) => soma + custo(id), 0);
+    // bonus: só a demonstração usa, pra quem visita poder brincar à vontade na loja
+    return Math.max(0, PONTOS.boasVindas + itens * PONTOS.item + sessoes * PONTOS.sessao + planos * PONTOS.plano
+                       + (estado.bonus || 0) - gasto);
 }
 
 
@@ -183,15 +188,53 @@ function listarPets() {
 function novoPet(quantos) {
     const usados = new Set(Object.values(estado.pets).map((p) => p.nome));
     const livres = NOMES.filter((n) => !usados.has(n));
-    const especie = quantos % 2 ? "cachorro" : "gato";
     return {
         nome: livres[Math.floor(Math.random() * livres.length)] || `Pet ${quantos + 1}`,
-        especie, cor: ESPECIES[especie].cor, acessorios: []
+        especie: ["gato", "cachorro", "hamster"][quantos % 3], tom: "original", fundo: "nenhum", acessorios: []
     };
 }
 
 
-const tem = (id) => (ESPECIES[id] && ESPECIES[id].custo === 0) || estado.compras.includes(id);
+// itens da loja: bicho e acessório pelo id; tom e cenário com prefixo (há nomes repetidos)
+function custo(id) {
+    if (id.startsWith("tom:")) return TONS[id.slice(4)]?.custo ?? 0;
+    if (id.startsWith("fundo:")) return FUNDOS[id.slice(6)]?.custo ?? 0;
+    return ESPECIES[id]?.custo ?? ACESSORIOS[id]?.custo ?? 0;
+}
+
+const tem = (id) => custo(id) === 0 || estado.compras.includes(id);
+
+
+/* ---------- editor de visual (ficha e adoção) ---------- */
+
+function editorVisual(petCru) {
+
+    const pet = normalizar(petCru);
+    const chip = (dado, id, nome, ativo, icone = "") =>
+        `<button type="button" class="pets-opcao ${ativo ? "ativa" : ""}" data-${dado}="${id}">${icone}${esc(nome)}</button>`;
+    const icone = (id) => imagemDe(id) ? `<img src="${imagemDe(id)}" alt="">` : "🧣 ";
+
+    const tons = Object.keys(TONS).filter((id) => tem(`tom:${id}`));
+    const fundos = Object.keys(FUNDOS).filter((id) => tem(`fundo:${id}`));
+    const porSlot = Object.entries(SLOTS)
+        .map(([slot, nome]) => [nome, Object.keys(ACESSORIOS).filter((id) => ACESSORIOS[id].slot === slot && tem(id))])
+        .filter(([, lista]) => lista.length);
+
+    return `
+        <span class="pets-rotulo">Bicho</span>
+        <div class="pets-opcoes">${Object.keys(ESPECIES).filter(tem).map((id) =>
+            chip("especie", id, ESPECIES[id].nome, pet.especie === id, `<img src="${imagemDe(id)}" alt="">`)).join("")}</div>
+        <span class="pets-rotulo">Tom</span>
+        <div class="pets-cores">${tons.map((id) => `
+            <button type="button" class="pets-cor ${pet.tom === id ? "ativa" : ""}" data-tom="${id}" style="--c:${TONS[id].amostra}"
+                    title="${TONS[id].nome}" aria-label="${TONS[id].nome}"></button>`).join("")}</div>
+        ${fundos.length > 1 ? `<span class="pets-rotulo">Cenário</span>
+            <div class="pets-opcoes">${fundos.map((id) => chip("fundo", id, FUNDOS[id].nome, pet.fundo === id)).join("")}</div>` : ""}
+        ${porSlot.map(([nome, lista]) => `<span class="pets-rotulo">${nome}</span>
+            <div class="pets-opcoes">${lista.map((id) => chip("acessorio", id, ACESSORIOS[id].nome, pet.acessorios.includes(id), icone(id))).join("")}</div>`).join("")}
+        ${porSlot.length ? "" : `<p class="pets-dica">Na <button type="button" class="est-link" data-ir-loja>loja</button> tem chapéus, óculos, cachecóis e muito mais.</p>`}`;
+
+}
 
 
 /* ---------- a janela ---------- */
@@ -207,9 +250,9 @@ function abrir(petId = null) {
 
     if (!estado.ligado) {
         $("pets-vitrine").innerHTML = [
-            [{ especie: "gato", acessorios: ["cachecol-brasa"] }, "feliz"],
-            [{ especie: "coruja", acessorios: ["chapeu-mago"] }, "esperando"],
-            [{ especie: "cachorro", acessorios: ["gorro"] }, "triste"]
+            [{ especie: "gato", acessorios: ["cachecol-brasa", "capelo"] }, "feliz"],
+            [{ especie: "coruja", acessorios: ["oculos", "livros"] }, "esperando"],
+            [{ especie: "cachorro", acessorios: ["bone"] }, "triste"]
         ].map(([pet, h]) => `<div class="pets-avatar">${desenharPet(pet, h)}</div>`).join("");
         return;
     }
@@ -244,7 +287,7 @@ function mostrarPainel() {
 
     painel.innerHTML = `<div class="pets-grade ${aba === "jardim" ? "pets-jardim" : ""}">${daqui.map((p) => `
         <button type="button" class="pets-cartao" data-pet="${p.id}">
-            <span class="pets-avatar">${desenharPet(p, p.humor, { titulo: p.nome })}</span>
+            <span class="pets-avatar">${desenharPet(p, p.humor, { titulo: p.nome, cenario: true })}</span>
             <strong>${esc(p.nome)}</strong>
             <small>${esc(p.atual.titulo || p.atual.tema)}</small>
             ${aba === "jardim"
@@ -259,26 +302,38 @@ function mostrarPainel() {
 function loja(pets) {
 
     const saldo = pontos();
-    const modelo = pets.find((p) => !p.noJardim) || pets[0] || { especie: "gato", cor: "laranja", acessorios: [] };
+    const modelo = normalizar(pets.find((p) => !p.noJardim) || pets[0] || { especie: "gato" });
 
-    const cartao = (id, nome, custo, desenho) => {
+    const cartao = (id, nome, desenho) => {
         const comprado = tem(id);
+        const preco = custo(id);
         return `<div class="pets-item ${comprado ? "comprado" : ""}">
             <span class="pets-avatar">${desenho}</span>
             <strong>${esc(nome)}</strong>
             ${comprado
                 ? `<small class="pets-seu">✓ É seu</small>`
-                : `<button type="button" class="btn-primario pets-comprar" data-comprar="${id}" ${saldo < custo ? "disabled" : ""}>⭐ ${custo}</button>`}
+                : `<button type="button" class="btn-primario pets-comprar" data-comprar="${id}" ${saldo < preco ? "disabled" : ""}>⭐ ${preco}</button>`}
         </div>`;
     };
 
-    return `<p class="pets-dica">Ganhe pontos estudando: 10 por item feito, 20 por sessão completa e 100 por plano concluído.</p>
-        <h3 class="pets-subtitulo">Bichos</h3>
-        <div class="pets-grade pets-loja">${Object.entries(ESPECIES).map(([id, e]) =>
-            cartao(id, e.nome, e.custo, desenharPet({ especie: id }, "feliz"))).join("")}</div>
-        <h3 class="pets-subtitulo">Roupinhas e acessórios</h3>
-        <div class="pets-grade pets-loja">${Object.entries(ACESSORIOS).map(([id, a]) =>
-            cartao(id, a.nome, a.custo, desenharPet({ especie: modelo.especie, cor: modelo.cor, acessorios: [id] }, "esperando"))).join("")}</div>`;
+    const itens = {
+        bichos: () => Object.entries(ESPECIES).map(([id, e]) => cartao(id, e.nome, desenharPet({ especie: id }, "feliz"))),
+        tons: () => Object.entries(TONS).map(([id, t]) => cartao(`tom:${id}`, t.nome, desenharPet({ ...modelo, tom: id, acessorios: [] }, "esperando"))),
+        cenarios: () => Object.entries(FUNDOS).map(([id, f]) => cartao(`fundo:${id}`, f.nome, desenharPet({ ...modelo, fundo: id }, "feliz", { cenario: true }))),
+        acessorios: () => Object.entries(SLOTS).map(([slot, nome]) => `
+            <h3 class="pets-subtitulo">${nome}</h3>
+            <div class="pets-grade pets-loja">${Object.entries(ACESSORIOS).filter(([, a]) => a.slot === slot)
+                .map(([id, a]) => cartao(id, a.nome, desenharPet({ ...modelo, acessorios: [id] }, "esperando"))).join("")}</div>`)
+    };
+
+    const corpo = secaoLoja === "acessorios"
+        ? itens.acessorios().join("")
+        : `<div class="pets-grade pets-loja">${itens[secaoLoja]().join("")}</div>`;
+
+    return `<p class="pets-dica">Você começa com 150 pontos e ganha mais estudando: 10 por item feito, 20 por sessão completa e 100 por plano concluído.</p>
+        <div class="pets-secoes">${Object.entries(SECOES).map(([id, nome]) =>
+            `<button type="button" class="pets-opcao ${secaoLoja === id ? "ativa" : ""}" data-secao="${id}">${nome}</button>`).join("")}</div>
+        ${corpo}`;
 
 }
 
@@ -296,14 +351,11 @@ function mostrarFicha(petId) {
     const ultimaData = dados.sessoes.filter((s) => s.plano_id === pet.atual.id).map((s) => s.data).sort().pop();
     const podeEncerrar = !pet.noJardim && pet.atual.status === "pronto" && ultimaData && ultimaData < hoje();
 
-    const especies = Object.keys(ESPECIES).filter(tem);
-    const acessorios = Object.keys(ACESSORIOS).filter(tem);
-
     ficha.innerHTML = `
         <button type="button" class="est-link pets-voltar" data-voltar>← Seus pets</button>
 
         <div class="pets-ficha-topo">
-            <div class="pets-avatar pets-avatar-grande" id="pets-ficha-avatar">${desenharPet(pet, pet.humor, { titulo: pet.nome })}</div>
+            <div class="pets-avatar pets-avatar-grande" id="pets-ficha-avatar">${desenharPet(pet, pet.humor, { titulo: pet.nome, cenario: true })}</div>
             <div class="pets-ficha-info">
                 <input class="pets-nome" id="pets-nome" value="${esc(pet.nome)}" maxlength="20" aria-label="Nome do pet">
                 <p class="pets-ficha-plano">${pet.planos.map((p) => esc(p.titulo || p.tema)).join(" → ")}</p>
@@ -313,16 +365,7 @@ function mostrarFicha(petId) {
         </div>
 
         <h3 class="pets-subtitulo">Visual</h3>
-        <div class="pets-opcoes" data-grupo="especie">${especies.map((id) => `
-            <button type="button" class="pets-opcao ${pet.especie === id ? "ativa" : ""}" data-especie="${id}">${ESPECIES[id].nome}</button>`).join("")}
-        </div>
-        <div class="pets-cores">${Object.entries(CORES).map(([id, c]) => `
-            <button type="button" class="pets-cor ${pet.cor === id ? "ativa" : ""}" data-cor="${id}" style="--c:${c.hex}" title="${c.nome}" aria-label="${c.nome}"></button>`).join("")}
-        </div>
-        ${acessorios.length
-            ? `<div class="pets-opcoes">${acessorios.map((id) => `
-                <button type="button" class="pets-opcao ${pet.acessorios.includes(id) ? "ativa" : ""}" data-acessorio="${id}">${ACESSORIOS[id].nome}</button>`).join("")}</div>`
-            : `<p class="pets-dica">Na <button type="button" class="est-link" data-ir-loja>loja</button> tem cachecóis, chapéus e óculos pra ${esc(pet.nome)}.</p>`}
+        <div class="pets-editor" id="pets-editor">${editorVisual(pet)}</div>
 
         <h3 class="pets-subtitulo">O que vocês estudaram juntos</h3>
         ${estudadas.length ? `
@@ -381,9 +424,6 @@ function mostrarAdocao(plano) {
     ficha.dataset.pet = pet.id;
     ficha.dataset.adocao = plano.id;
 
-    const especies = Object.keys(ESPECIES).filter(tem);
-    const acessorios = Object.keys(ACESSORIOS).filter(tem);
-
     ficha.innerHTML = `
         <h2 class="modal-titulo">${reativado ? `${esc(pet.nome)} está se arrumando pra nova jornada` : "Adote o pet deste plano"}</h2>
         <p class="sinc-texto">${reativado
@@ -391,18 +431,11 @@ function mostrarAdocao(plano) {
             : "Enquanto a IA monta seu plano, escolha quem vai estudar com você."}</p>
 
         <div class="pets-adocao">
-            <div class="pets-avatar pets-avatar-grande" id="pets-ficha-avatar">${desenharPet(pet, "feliz", { titulo: pet.nome })}</div>
+            <div class="pets-avatar pets-avatar-grande" id="pets-ficha-avatar">${desenharPet(pet, "feliz", { titulo: pet.nome, cenario: true })}</div>
             <div class="pets-adocao-opcoes">
                 <label class="campo-modal"><span>Nome</span>
                     <input class="pets-nome" id="pets-nome" value="${esc(pet.nome)}" maxlength="20"></label>
-                <div class="pets-opcoes">${especies.map((id) => `
-                    <button type="button" class="pets-opcao ${pet.especie === id ? "ativa" : ""}" data-especie="${id}">${ESPECIES[id].nome}</button>`).join("")}
-                </div>
-                <div class="pets-cores">${Object.entries(CORES).map(([id, c]) => `
-                    <button type="button" class="pets-cor ${pet.cor === id ? "ativa" : ""}" data-cor="${id}" style="--c:${c.hex}" title="${c.nome}" aria-label="${c.nome}"></button>`).join("")}
-                </div>
-                ${acessorios.length ? `<div class="pets-opcoes">${acessorios.map((id) => `
-                    <button type="button" class="pets-opcao ${pet.acessorios.includes(id) ? "ativa" : ""}" data-acessorio="${id}">${ACESSORIOS[id].nome}</button>`).join("")}</div>` : ""}
+                <div class="pets-editor" id="pets-editor">${editorVisual(pet)}</div>
             </div>
         </div>
 
@@ -473,14 +506,14 @@ function aoClicar(evento) {
     const pet = estado.pets[fichaId];
 
     if (alvo.dataset.aba) { aba = alvo.dataset.aba; mostrarPainel(); return; }
+    if (alvo.dataset.secao) { secaoLoja = alvo.dataset.secao; mostrarPainel(); return; }
     if (alvo.dataset.pet) { abrir(Number(alvo.dataset.pet)); return; }
     if (alvo.hasAttribute("data-voltar")) { abrir(); return; }
     if (alvo.hasAttribute("data-ir-loja")) { aba = "loja"; abrir(); return; }
 
     if (alvo.dataset.comprar) {
         const id = alvo.dataset.comprar;
-        const custo = ESPECIES[id]?.custo ?? ACESSORIOS[id]?.custo ?? 0;
-        if (pontos() >= custo && !estado.compras.includes(id)) {
+        if (pontos() >= custo(id) && !estado.compras.includes(id)) {
             estado.compras.push(id);
             salvar();
             mostrarPainel();
@@ -490,9 +523,11 @@ function aoClicar(evento) {
 
     if (alvo.hasAttribute("data-fechar-adocao")) { $("pets-modal").close(); return; }
 
-    if (pet && (alvo.dataset.especie || alvo.dataset.cor || alvo.dataset.acessorio)) {
+    if (pet && (alvo.dataset.especie || alvo.dataset.tom || alvo.dataset.fundo || alvo.dataset.acessorio)) {
+        Object.assign(pet, normalizar(pet));   // traz pets do visual antigo pro novo
         if (alvo.dataset.especie) pet.especie = alvo.dataset.especie;
-        if (alvo.dataset.cor) pet.cor = alvo.dataset.cor;
+        if (alvo.dataset.tom) pet.tom = alvo.dataset.tom;
+        if (alvo.dataset.fundo) pet.fundo = alvo.dataset.fundo;
         if (alvo.dataset.acessorio) {
             const id = alvo.dataset.acessorio;
             const slot = ACESSORIOS[id].slot;
@@ -502,13 +537,10 @@ function aoClicar(evento) {
         }
         salvar();
         decorarPlanos();
-        if ($("pets-ficha").dataset.adocao) {
-            alvo.closest(".pets-opcoes, .pets-cores")?.querySelectorAll("button").forEach((b) =>
-                b.classList.toggle("ativa", alvo.dataset.acessorio ? pet.acessorios.includes(b.dataset.acessorio) : b === alvo));
-            $("pets-ficha-avatar").innerHTML = desenharPet(pet, "feliz", { titulo: pet.nome });
-        } else {
-            mostrarFicha(fichaId);
-        }
+        // redesenha só o bicho e o editor: a tela não pula e a barra da adoção continua andando
+        const humorAgora = $("pets-ficha").dataset.adocao ? "feliz" : (listarPets().find((p) => p.id === fichaId)?.humor || "esperando");
+        $("pets-ficha-avatar").innerHTML = desenharPet(pet, humorAgora, { titulo: pet.nome, cenario: true });
+        $("pets-editor").innerHTML = editorVisual(pet);
         return;
     }
 

@@ -103,10 +103,10 @@ function semear() {
 
     // pets ligados na demonstração: o Mochi cuida do React, a Hana mora no jardim
     dados.pets = {
-        ligado: true, encerrados: [], bonus: 1000, compras: ["cachecol-brasa", "chapeu-mago", "coruja"],
+        ligado: true, encerrados: [], bonus: 1000, compras: ["cachecol-brasa", "capelo", "coruja", "livros", "fundo:sakura", "oculos"],
         pets: {
-            1: { nome: "Mochi", especie: "gato", cor: "laranja", acessorios: ["cachecol-brasa"] },
-            2: { nome: "Hana", especie: "coruja", cor: "marrom", acessorios: ["chapeu-mago"] }
+            1: { nome: "Mochi", especie: "gato", tom: "original", fundo: "sakura", acessorios: ["cachecol-brasa", "capelo"] },
+            2: { nome: "Hana", especie: "coruja", tom: "original", fundo: "nenhum", acessorios: ["oculos", "livros"] }
         }
     };
 
