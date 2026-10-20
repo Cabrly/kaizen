@@ -40,6 +40,7 @@ assinatura do Claude, do Gemini ou do ChatGPT. Não precisa criar conta.
 - **Planos de estudo** gerados por IA, com materiais reais (a IA nunca inventa link)
 - **Flashcards prontos** do que você estudou nos últimos dias, com revisão espaçada
 - **IA que conhece seu progresso**: explica a partir do que você já estudou
+- **Pets de estudo** (opcional): cada plano vira um bichinho que fica feliz quando você estuda
 - **Assistente** que conversa olhando suas tarefas
 - **Cenas animadas** que evoluem a cada tarefa concluída
 - **IA local** ([Ollama](https://ollama.com)) instalada em um clique, ou na nuvem ([OpenRouter](https://openrouter.ai), Claude, ChatGPT, Gemini)

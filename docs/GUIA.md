@@ -188,6 +188,27 @@ A revisão é espaçada: o cartão que você acerta volta em 1, 3, 7, 14 e depoi
 30 dias; o que você erra volta no mesmo dia. No teclado: **espaço** vira o
 cartão, **1** = errei, **2** = acertei.
 
+### Pets de estudo (opcional)
+
+Em **🐾 Pets → Ativar os pets**, cada plano ganha um bichinho. Ao criar um
+plano, você adota o pet (bicho, cor, nome e roupinha) enquanto a IA monta o
+roteiro.
+
+- **Humor:** feliz quando você estuda no dia; tristinho quando a sessão passa
+  sem nada feito. Ele volta a sorrir quando você faz o que ficou pendente.
+- **Pontos:** 10 por item feito, 20 por sessão completa e 100 por plano
+  concluído. Na **Loja** eles viram novos bichos (gato, cachorro, coelho,
+  raposa, coruja, corvo) e acessórios (cachecóis das quatro casas, chapéu de
+  mago, gorro, coroa, óculos…).
+- **Jardim:** plano concluído, o pet vai morar lá. Clicando nele você vê tudo
+  o que estudaram juntos (tópicos, vídeos, documentação) e revisa os
+  flashcards daquele período.
+- **Aprender mais:** reative um pet do jardim pra criar um plano novo no mesmo
+  assunto. A IA recebe o que você já estudou, faz perguntas novas e monta um
+  plano que aprofunda, sem repetir o básico.
+
+Desligar os pets não apaga nada: aparência e compras ficam guardadas.
+
 ### O que a IA sabe de você
 
 O Kaizen monta sozinho um resumo do seu progresso: o que você contou ao criar
