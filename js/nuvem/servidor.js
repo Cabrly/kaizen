@@ -221,7 +221,7 @@ async function destinosComStatus(usarCache = true) {
         id: p,
         nome: PROVEDORES[p].nome,
         url: p === "compat" ? lerConfig().contas[p].url : "",
-        tipo: "nuvem",
+        tipo: p === "pc" ? "pc" : "nuvem",
         removivel: true,
         preferido: p === escolhido,
         ...(await modelosDe(p, usarCache))
@@ -711,7 +711,7 @@ async function listaDestinos() {
         modo: "nuvem",
         servidores: await destinosComStatus(false),
         nuvem: Object.entries(PROVEDORES).map(([id, p]) => ({
-            id, nome: p.nome, onde_pegar: p.ondePegar, pede_url: Boolean(p.pedeUrl),
+            id, nome: p.nome, onde_pegar: p.ondePegar, pede_url: Boolean(p.pedeUrl), pede_chave: Boolean(p.pedeChave),
             conectado: contasConectadas().includes(id)
         }))
     };
@@ -725,6 +725,11 @@ async function conectarNuvem(provedor, chave, url) {
     chave = String(chave || "").trim();
     url = String(url || "").trim().replace(/\/+$/, "");
 
+    // o endereço do PC vem como "meu-pc.tail1234.ts.net:8443"
+    if (provedor === "pc" && url && !/^https?:\/\//.test(url)) url = `https://${url}`;
+
+    if (PROVEDORES[provedor].pedeChave && !chave) throw new RangeError("Cole a chave que aparece no Kaizen do PC.");
+
     if (PROVEDORES[provedor].pedeUrl) {
         if (!/^https?:\/\//.test(url)) throw new RangeError("Informe a URL da API (ex.: https://openrouter.ai/api/v1).");
     } else if (chave.length < 20) {
@@ -736,6 +741,9 @@ async function conectarNuvem(provedor, chave, url) {
     try {
         modelos = await listarModelos(provedor, { chave, url });
     } catch (erro) {
+        if (provedor === "pc" && !erro.status) {
+            throw new RangeError("Não achei o PC. Confira se ele está ligado com o Kaizen aberto e se o Tailscale está ligado aqui no celular.");
+        }
         throw new RangeError(`Não funcionou (${erro.message}). Confira a chave${url ? " e a URL" : ""}.`);
     }
 

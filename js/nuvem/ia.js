@@ -32,6 +32,13 @@ export const PROVEDORES = {
         nome: "Compatível com OpenAI",
         ondePegar: "https://openrouter.ai/keys",
         pedeUrl: true
+    },
+    // o Kaizen do computador, pelo Tailscale (ver remoto.py): Ollama e agentes de lá
+    pc: {
+        nome: "Kaizen do meu PC",
+        ondePegar: "https://tailscale.com/download",
+        pedeUrl: true,
+        pedeChave: true
     }
 };
 
@@ -139,7 +146,7 @@ async function pedir(url, { corpo, cabecalhos = {}, tempo = 120000 } = {}) {
         const dados = await resposta.json().catch(() => ({}));
 
         if (!resposta.ok) {
-            const erro = dados.error;
+            const erro = dados.error ?? dados.erro;   // "erro" = o server.py do PC
             const mensagem = typeof erro === "string" ? erro : erro?.message;
             throw new ErroIA(`${resposta.status}: ${mensagem || resposta.statusText}`,
                              { status: resposta.status, ...(resposta.status === 429 ? lerLimite(erro) : {}) });
@@ -180,6 +187,12 @@ function autorizacao(conta) {
 /* ---------- modelos ---------- */
 
 export async function listarModelos(provedor, conta) {
+
+    if (provedor === "pc") {
+        // já vem com o melhor primeiro (o destino em uso no PC)
+        const dados = await pedir(`${conta.url}/api/remoto/modelos`, { cabecalhos: autorizacao(conta), tempo: 15000 });
+        return dados.modelos || [];
+    }
 
     if (provedor === "claude") {
         // a API já devolve os mais novos primeiro
@@ -334,6 +347,17 @@ export async function conversar(provedor, modelo, mensagens, formato = null) {
 
     if (provedor === "gemini") {
         return conversarGemini(modelo, conta, mensagens, formato);
+    }
+
+
+    if (provedor === "pc") {
+        // o PC repassa pro Ollama/agente dele, que entende o schema sozinho: vai a conversa original
+        const dados = await pedir(`${conta.url}/api/remoto/conversar`, {
+            corpo: { modelo, mensagens: mensagens.slice(formato ? 1 : 0), formato },
+            cabecalhos: autorizacao(conta),
+            tempo: 620000      // plano grande num agente demora (o PC corta em 600 s)
+        });
+        return dados.resposta || "";
     }
 
 

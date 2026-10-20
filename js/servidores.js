@@ -15,6 +15,9 @@
 const painel =
     document.querySelector("#ia-servidores");
 
+// pra onde o QR do "Usar no celular" leva (o mesmo da sincronia)
+const ENDERECO_APP = "https://cabrly.github.io/kaizen/";
+
 
 if (painel) {
     iniciarServidores();
@@ -180,7 +183,196 @@ function iniciarServidores() {
     // status atualizado sempre que a aba do assistente é aberta
     document.querySelector('.nav-tab[data-tela="ia"]')?.addEventListener("click", carregar);
 
+
+    // PC: liberar a IA daqui pro celular (só consulta o Tailscale quando abre)
+    const celular = painel.querySelector("#srv-celular");
+
+    celular.addEventListener("toggle", () => { if (celular.open) carregarCelular(); });
+
+    celular.addEventListener("click", async (evento) => {
+
+        const botao = evento.target.closest("[data-celular]");
+
+        if (!botao) return;
+        if (botao.dataset.celular === "recarregar") return carregarCelular();
+        if (botao.dataset.celular === "chave" && !confirm("Trocar a chave? O celular vai precisar da nova.")) return;
+
+        botao.disabled = true;
+        botao.textContent = "Aguarde…";
+
+        try {
+            const resposta = await fetch(`./api/remoto/${botao.dataset.celular}`, { method: "POST" });
+            const dados = await resposta.json();
+            if (!resposta.ok) throw new Error(dados.erro);
+            renderizarCelular(dados);
+        } catch (falha) {
+            renderizarCelular({ ...ultimaCelular, erro: falha.message || "Não consegui falar com o Tailscale." });
+        }
+
+    });
+
+
     carregar();
+
+    if (location.hash.startsWith("#pc=")) conectarPeloLink();
+
+}
+
+
+/*
+    Celular: o QR do PC abre .../#pc=ENDERECO~CHAVE, que conecta
+    o "Kaizen do meu PC" sem digitar nada.
+*/
+async function conectarPeloLink() {
+
+    const [url, chave] = decodeURIComponent(location.hash.slice(4)).split("~");
+
+    history.replaceState(null, "", location.pathname + location.search);   // a chave não fica no histórico
+
+    if ((await window.kaizenModo) !== "nuvem") return;   // aberto no próprio PC: não faz sentido
+
+    document.querySelector('.nav-tab[data-tela="ia"]')?.click();
+    painel.querySelector("#srv-mais").open = true;
+
+    const erro = painel.querySelector("#srv-erro");
+    erro.textContent = "Conectando no seu PC…";
+
+    try {
+        await api("/nuvem/pc", { method: "POST", body: { url, chave } });
+        erro.textContent = "";
+        await carregar();
+        avisarMudanca();
+    } catch (falha) {
+        erro.textContent = falha.message;
+    }
+
+}
+
+
+let ultimaCelular = {};
+let esperaCelular = null;
+
+
+async function carregarCelular(silencioso = false) {
+
+    const corpo = painel.querySelector("#srv-celular-corpo");
+
+    if (!silencioso) corpo.innerHTML = '<p class="srv-dica">Conferindo o Tailscale…</p>';
+
+    try {
+        const resposta = await fetch("./api/remoto");
+        renderizarCelular(await resposta.json());
+    } catch (falha) {
+        if (!silencioso) corpo.innerHTML = '<p class="srv-dica">Não consegui conferir o Tailscale.</p>';
+    }
+
+}
+
+
+/*
+    Um passo de cada vez, cada um com um botão só:
+    instalar → abrir → entrar → conectar → liberar → pronto (QR).
+    Enquanto espera a pessoa (login, instalação, ativar HTTPS),
+    confere sozinho a cada 3 s.
+*/
+const PASSOS_CELULAR = ["Tailscale", "Conta", "Liberar", "Celular"];
+
+const ETAPAS_CELULAR = {
+    instalar: {
+        passo: 0,
+        texto: "O celular fala com este PC por uma rede privada só sua, o <b>Tailscale</b> (grátis). Primeiro, instale ele aqui.",
+        botao: (s) => s.pode_instalar ? ["instalar", "Instalar o Tailscale"] : null,
+        link: (s) => s.pode_instalar ? null : ["https://tailscale.com/download", "Baixar o Tailscale ↗"],
+        trabalhando: "Instalando… se o Windows pedir permissão, clique em <b>Sim</b>."
+    },
+    abrir: {
+        passo: 0,
+        texto: "O Tailscale está instalado, mas desligado.",
+        botao: (s) => s.pode_abrir ? ["abrir", "Ligar o Tailscale"] : null,
+        trabalhando: "Ligando o Tailscale…"
+    },
+    entrar: {
+        passo: 1,
+        texto: "Entre na sua conta do Tailscale (dá pra usar a do Google). No celular, você vai usar a mesma.",
+        botao: (s) => s.link ? null : ["entrar", "Entrar na conta"],
+        link: (s) => s.link ? [s.link, "Abrir a página de login ↗"] : null,
+        trabalhando: "Esperando você entrar na página que abriu…"
+    },
+    conectar: {
+        passo: 1,
+        texto: "O Tailscale está desconectado.",
+        botao: () => ["conectar", "Conectar"]
+    },
+    liberar: {
+        passo: 2,
+        texto: `Agora é só liberar: o celular passa a usar os modelos deste PC (Ollama, Claude Code…).
+                Só aparelhos da sua conta enxergam, só a IA fica liberada e ela é protegida por uma chave.
+                Suas tarefas e chaves de API continuam só aqui.`,
+        botao: (s) => s.link ? null : ["ligar", "Liberar pro celular"],
+        link: (s) => s.link ? [s.link, "Ativar o HTTPS ↗"] : null,
+        trabalhando: "Falta um clique: o Tailscale pede pra ativar o HTTPS da sua rede (grátis). Clique em <b>Ativar o HTTPS</b>, confirme lá e volte aqui."
+    }
+};
+
+
+async function renderizarCelular(s) {
+
+    const corpo = painel.querySelector("#srv-celular-corpo");
+    const etapa = ETAPAS_CELULAR[s.etapa];
+
+    ultimaCelular = s;
+    clearTimeout(esperaCelular);
+
+    if (etapa) {
+
+        const passos = PASSOS_CELULAR.map((nome, i) =>
+            `<li class="${i < etapa.passo ? "feito" : i === etapa.passo ? "atual" : ""}">${nome}</li>`).join("");
+        const botao = etapa.botao?.(s);
+        const link = etapa.link?.(s);
+
+        corpo.innerHTML = `
+            <ol class="srv-etapas" aria-label="Passos">${passos}</ol>
+            <p class="srv-dica">${s.trabalhando && etapa.trabalhando ? etapa.trabalhando : etapa.texto}</p>
+            ${s.erro ? `<p class="est-erro">${esc(s.erro)}</p>` : ""}
+            <div class="srv-celular-acoes">
+                ${botao ? `<button type="button" class="btn-primario" data-celular="${botao[0]}">${botao[1]}</button>` : ""}
+                ${link ? `<a class="btn-primario" href="${esc(link[0])}" target="_blank" rel="noopener noreferrer">${link[1]}</a>` : ""}
+                <button type="button" class="srv-celular-conferir" data-celular="recarregar">Conferir de novo</button>
+            </div>`;
+
+        if (s.trabalhando || s.link) {
+            esperaCelular = setTimeout(() => painel.querySelector("#srv-celular").open && carregarCelular(true), 3000);
+        }
+
+        return;
+
+    }
+
+    const link = `${ENDERECO_APP}#pc=${encodeURIComponent(`${s.url}~${s.chave}`)}`;
+    const { default: qrcode } = await import("./vendor/qrcode.js");
+    const qr = qrcode(0, "M");
+    qr.addData(link);
+    qr.make();
+
+    corpo.innerHTML = `
+        <ol class="srv-etapas" aria-label="Passos">${PASSOS_CELULAR.map((nome, i) =>
+            `<li class="${i < 3 ? "feito" : "atual"}">${nome}</li>`).join("")}</ol>
+        <ol class="srv-passos">
+            <li>No celular, instale o <a href="https://tailscale.com/download" target="_blank" rel="noopener noreferrer">Tailscale</a>
+                e entre com a mesma conta deste PC.</li>
+            <li>Aponte a câmera pro QR. Ou, no Kaizen do celular, vá em <b>Conectar Kaizen do meu PC</b> e digite os dados abaixo.</li>
+            <li>Deixe este PC ligado com o Kaizen aberto enquanto usa.</li>
+        </ol>
+        <div class="sinc-qr">${qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true })}</div>
+        <div class="srv-celular-dados">
+            <small>Endereço</small><code>${esc(s.url.replace(/^https:\/\//, ""))}</code>
+            <small>Chave</small><code>${esc(s.chave)}</code>
+        </div>
+        ${s.erro ? `<p class="est-erro">${esc(s.erro)}</p>` : ""}
+        <div class="srv-celular-acoes">
+            <button type="button" class="btn-secundario" data-celular="chave">Trocar a chave</button>
+            <button type="button" class="btn-secundario" data-celular="desligar">Desligar</button>
+        </div>`;
 
 }
 
@@ -194,8 +386,9 @@ async function carregar() {
         // sem servidor (celular, site estático) a IA é só na nuvem:
         // nada de cadastrar Ollama
         const soNuvem = modo === "nuvem";
-        painel.querySelector("#srv-form").hidden = soNuvem;
+        painel.querySelector("#srv-form").closest("details").hidden = soNuvem;
         painel.querySelector(".srv-dica").hidden = soNuvem;
+        painel.querySelector("#srv-celular").hidden = soNuvem;
 
         renderizar(servidores, soNuvem);
         renderizarNuvem(nuvem || []);
@@ -226,10 +419,11 @@ function renderizar(servidores, soNuvem = false) {
 
         const situacao = s.online
             ? `${s.modelos.length} modelo${s.modelos.length === 1 ? "" : "s"}${s.ms == null ? "" : ` · ${s.ms} ms`}`
-            : (s.tipo === "nuvem" ? "chave recusada ou sem internet" : "offline");
+            : ({ nuvem: "chave recusada ou sem internet", pc: "PC desligado, Kaizen fechado ou Tailscale desligado" }[s.tipo] || "offline");
 
         const endereco = {
             nuvem: "☁ nuvem — os textos vão pra esse serviço",
+            pc: "💻 seu computador, pelo Tailscale",
             agente: "⌨ usa o login da sua conta"
         }[s.tipo] || s.url.replace(/^https?:\/\//, "");
 
@@ -269,6 +463,16 @@ const PASSOS_OPENROUTER = `
     </ol>`;
 
 
+const PASSOS_PC = `
+    <ol class="srv-passos">
+        <li>Instale o <a href="https://tailscale.com/download" target="_blank" rel="noopener noreferrer">Tailscale</a>
+            no PC e aqui, com a mesma conta.</li>
+        <li>No Kaizen do PC: aba do assistente → <b>Outras opções</b> → <b>Usar a IA deste PC no celular</b> →
+            <b>Liberar pro celular</b>.</li>
+        <li>Aponte a câmera pro QR que aparece lá, ou digite o endereço e a chave aqui.</li>
+    </ol>`;
+
+
 function renderizarNuvem(nuvem) {
 
     // só as que ainda não foram conectadas; as conectadas já estão na lista
@@ -276,12 +480,16 @@ function renderizarNuvem(nuvem) {
         <button type="button" class="srv-nuvem-botao" data-abrir-nuvem="${esc(n.id)}">☁ Conectar ${esc(n.nome)}</button>
         <form class="srv-form srv-caixa-nuvem" data-caixa-nuvem="${esc(n.id)}" hidden>
             ${n.id === "openrouter" ? PASSOS_OPENROUTER : ""}
-            ${n.pede_url ? `
+            ${n.id === "pc" ? PASSOS_PC : ""}
+            ${n.id === "pc" ? `
+            <input name="url" required autocomplete="off" spellcheck="false" autocapitalize="off"
+                   placeholder="Endereço (ex.: meu-pc.tail1234.ts.net:8443)" aria-label="Endereço do PC">` : n.pede_url ? `
             <input name="url" type="url" required autocomplete="off" spellcheck="false"
                    placeholder="URL da API (ex.: https://openrouter.ai/api/v1)" aria-label="URL da API">` : ""}
-            <input name="chave" type="password" ${n.pede_url ? "" : "required"} autocomplete="off" spellcheck="false"
-                   placeholder="Cole a chave de API${n.pede_url ? " (se precisar)" : ""}" aria-label="Chave de API do ${esc(n.nome)}">
-            <a href="${esc(n.onde_pegar)}" target="_blank" rel="noopener noreferrer">Onde pegar a chave →</a>
+            <input name="chave" type="password" ${n.pede_url && !n.pede_chave ? "" : "required"} autocomplete="off" spellcheck="false"
+                   placeholder="${n.id === "pc" ? "Chave do PC (XXXX-XXXX-XXXX-XXXX)" : `Cole a chave de API${n.pede_url ? " (se precisar)" : ""}`}"
+                   aria-label="Chave do ${esc(n.nome)}">
+            ${n.id === "pc" ? "" : `<a href="${esc(n.onde_pegar)}" target="_blank" rel="noopener noreferrer">Onde pegar a chave →</a>`}
             <button type="submit" class="btn-secundario">Salvar</button>
         </form>`).join("");
 

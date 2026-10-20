@@ -3947,6 +3947,113 @@ dialog.modal {
     margin-top: 8px;
 }
 
+.srv-celular-dados {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    margin-top: 10px;
+}
+
+.srv-celular-dados code {
+    display: block;
+
+    padding: 6px 8px;
+
+    font-size: 12px;
+    overflow-wrap: anywhere;
+    user-select: all;
+
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 6px;
+}
+
+.srv-celular-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.srv-celular-acoes a.btn-primario {
+    display: inline-flex;
+    align-items: center;
+
+    text-decoration: none;
+}
+
+.srv-celular-acoes .btn-secundario {
+    color: #d8d8d8;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.srv-celular-acoes .btn-secundario:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.srv-celular-conferir {
+    padding: 4px 2px;
+
+    font: inherit;
+    font-size: 11px;
+    color: #a8a8a8;
+
+    background: none;
+    border: none;
+
+    cursor: pointer;
+}
+
+.srv-celular-conferir:hover {
+    color: inherit;
+    text-decoration: underline;
+}
+
+.srv-etapas {
+    display: flex;
+    gap: 4px;
+
+    margin: 0 0 10px;
+    padding: 0;
+
+    list-style: none;
+    counter-reset: etapa;
+}
+
+.srv-etapas li {
+    flex: 1;
+
+    padding-top: 6px;
+
+    font-size: 10px;
+    color: #8a8a8a;
+    text-align: center;
+
+    border-top: 3px solid rgba(255, 255, 255, 0.12);
+
+    counter-increment: etapa;
+}
+
+.srv-etapas li::before {
+    content: counter(etapa) ". ";
+}
+
+.srv-etapas li.feito {
+    color: #b8b8b8;
+    border-top-color: rgba(220, 40, 50, 0.55);
+}
+
+.srv-etapas li.feito::before {
+    content: "✓ ";
+}
+
+.srv-etapas li.atual {
+    font-weight: 600;
+    color: inherit;
+    border-top-color: #dc2832;
+}
+
 .ia-config.ia-sem-ia > .iai {
     padding-top: 0;
     border-top: none;
