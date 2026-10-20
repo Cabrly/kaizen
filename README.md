@@ -45,6 +45,7 @@ assinatura do Claude, do Gemini ou do ChatGPT. Não precisa criar conta.
 - **Cenas animadas** que evoluem a cada tarefa concluída
 - **IA local** ([Ollama](https://ollama.com)) instalada em um clique, ou na nuvem ([OpenRouter](https://openrouter.ai), Claude, ChatGPT, Gemini)
 - **Claude Code, Gemini CLI e Codex** usando a assinatura que você já tem
+- **A IA do seu PC no celular**, pelo Tailscale, configurada pela tela e com QR Code
 - **Sincronia entre PC e celular** por QR Code, com criptografia de ponta a ponta
 - **Funciona offline** e instala como app no celular
 

@@ -117,6 +117,28 @@ planos de estudo, e o Kaizen roda cada uma em segundo plano: você conversa pela
 interface, sem abrir terminal. Rodam só com texto, numa pasta temporária vazia,
 sem ler nem alterar seus arquivos ([`agentes.py`](../agentes.py)).
 
+### A IA do seu PC no celular
+
+O celular pode usar os modelos do seu computador (Ollama, Claude Code, Gemini
+CLI, Codex) sem chave de API. A ligação passa pelo
+[Tailscale](https://tailscale.com), uma rede privada e grátis entre os seus
+aparelhos, e tudo se configura pela tela:
+
+1. No Kaizen do PC: aba do assistente → **Outras opções** → **Usar a IA deste
+   PC no celular**. Um passo de cada vez, cada um com um botão: instalar o
+   Tailscale (no Windows, pelo winget), entrar na conta, ativar o HTTPS da rede
+   (um clique, só na primeira vez) e **Liberar pro celular**.
+2. No celular, instale o Tailscale com a mesma conta e aponte a câmera pro QR
+   Code. Ou, no Kaizen do celular, toque em **Conectar Kaizen do meu PC** e
+   digite o endereço e a chave.
+
+O PC precisa estar ligado e com o Kaizen aberto. Os dados do celular continuam
+no celular: só o texto de cada pedido vai pro PC, que devolve a resposta. Pelo
+Tailscale, o PC responde só às duas rotas da IA (`/api/remoto/modelos` e
+`/api/remoto/conversar`), e só com a chave. Tarefas, backup e chaves de API
+continuam fechados ([`remoto.py`](../remoto.py)). Se a chave vazar, troque em
+**Trocar a chave**.
+
 ### Ollama em outro computador
 
 Sem placa de vídeo boa? Cadastre o endereço de outra máquina (ex.: o IP do
@@ -281,7 +303,8 @@ de IA não sincronizam (conecte em cada aparelho).
 - `server.py`: arquivos estáticos + API SQLite + ponte com a IA.
 - `estudos.py` (planejador), `busca.py` (vídeos e documentação),
   `servidores.py` (destinos de IA), `agentes.py` (Claude Code, Gemini CLI,
-  Codex), `ia_local.py` (instala o Ollama em um clique).
+  Codex), `ia_local.py` (instala o Ollama em um clique), `remoto.py` (a IA
+  do PC no celular, pelo Tailscale).
 - `prompts.json`: prompts e schemas usados pelo Python e pelo navegador.
 - `js/`: o app, sem build. O `js/modo.js` decide sozinho: se encontra o
   `server.py`, usa ele; se não, liga o "servidor de bolso" em `js/nuvem/`. É
