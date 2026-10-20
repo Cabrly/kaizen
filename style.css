@@ -4336,7 +4336,9 @@ body.contemplando .contemplar-aviso.some {
     white-space: normal;
 }
 
-.ia-md > * + * {
+.ia-md > * + *,
+.ia-bolha .ia-md > p + *,
+.ia-bolha .ia-md > * + p {
     margin-top: 8px;
 }
 
@@ -4409,4 +4411,9 @@ body.contemplando .contemplar-aviso.some {
     gap: 8px;
 
     margin-bottom: 10px;
+}
+
+/* Demonstração (js/demo.js, index.html?demo): sem backup, sincronia nem apoio no rodapé. */
+[data-demo] .rodape-backup {
+    display: none;
 }

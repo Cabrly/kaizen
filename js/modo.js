@@ -11,12 +11,21 @@
 ========================================================= */
 
 
+import { DEMO, rotaDemo } from "./demo.js";
+
+
 const fetchOriginal = window.fetch.bind(window);
 
 let modo = null;
 
 
 export function detectarModo() {
+
+    if (!modo && DEMO) {
+        // a demonstração nunca fala com o server.py, mesmo rodando no PC
+        modo = Promise.resolve("nuvem");
+        document.documentElement.dataset.modo = "nuvem";
+    }
 
     if (!modo) {
 
@@ -42,6 +51,11 @@ window.fetch = async (entrada, opcoes = {}) => {
 
     const url = new URL(typeof entrada === "string" ? entrada : entrada.url, location.href);
 
+    if (DEMO && url.origin === location.origin && url.pathname.includes("/api/")) {
+        const resposta = await rotaDemo(url, opcoes);
+        if (resposta) return resposta;
+    }
+
     if (url.origin === location.origin && url.pathname.includes("/api/") && (await detectarModo()) === "nuvem") {
         const { rotear } = await import("./nuvem/servidor.js");
         return rotear(url, opcoes);
@@ -56,7 +70,7 @@ window.fetch = async (entrada, opcoes = {}) => {
 window.kaizenModo = detectarModo();
 
 
-if ("serviceWorker" in navigator && location.protocol !== "file:") {
+if ("serviceWorker" in navigator && location.protocol !== "file:" && !DEMO) {
     window.addEventListener("load", () => {
         navigator.serviceWorker.register("./sw.js").catch(() => {
             /* sem service worker o app funciona igual, só não abre offline */
