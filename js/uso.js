@@ -18,7 +18,7 @@ import { servidor } from "./cofre.js";
 
 
 const CHAVE = "kaizen.uso.v1";        // { ultimo, pendentes, enviadoEm, desligado }
-const ENVIAR_A_CADA = 60 * 60 * 1000;  // contagens de funções: no máximo uma vez por hora
+const ENVIAR_A_CADA = 6 * 60 * 60 * 1000;  // contagens de funções: no máximo a cada 6 horas
 
 const modal = document.querySelector("#priv-modal");
 const botaoAbrir = document.querySelector("#priv-abrir");
@@ -151,7 +151,8 @@ async function enviarPendentes(aoSair = false) {
 
     const estado = ler();
     if (estado.desligado || !estado.ultimo || !Object.keys(estado.pendentes).length) return;
-    if (!aoSair && Date.now() - (estado.enviadoEm || 0) < ENVIAR_A_CADA) return;
+    // ao sair também respeita o intervalo: as contagens ficam guardadas e vão na próxima
+    if (Date.now() - (estado.enviadoEm || 0) < ENVIAR_A_CADA) return;
 
     const eventos = { ...estado.pendentes };
     try {
