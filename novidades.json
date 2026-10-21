@@ -1,5 +1,14 @@
 [
     {
+        "versao": "1.6.0",
+        "data": "2026-10-21",
+        "itens": [
+            "Sincronia ao vivo: o que você muda num aparelho aparece no outro em cerca de um segundo, sem esperar.",
+            "Mais leve: com a tela parada, o Kaizen não fica mais perguntando ao servidor de sincronia se algo mudou. Isso economiza bateria e internet, e deixa o servidor gratuito atender muito mais gente.",
+            "Correção: o aparelho que recebia uma atualização às vezes reenviava tudo de volta sem necessidade."
+        ]
+    },
+    {
         "versao": "1.5.0",
         "data": "2026-10-20",
         "itens": [
