@@ -23,7 +23,8 @@ const CHAVE_AVISO = "kaizen.sincronia.aviso";        // sessionStorage: recado d
 
 const ALFABETO = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";  // base32 do Crockford: sem I, L, O, U
 const OLHAR_AQUI = 4000;     // ms entre comparações do retrato local (barato)
-const OLHAR_NUVEM = 30000;   // ms entre consultas ao servidor com a tela aberta
+const OLHAR_NUVEM = 5 * 60 * 1000;  // ms entre consultas ao servidor quando a conexão ao vivo caiu
+const PING = 2 * 60 * 1000;         // ms entre pings da conexão ao vivo (só com a tela aberta)
 
 
 const modal = document.querySelector("#sinc-modal");
@@ -34,6 +35,11 @@ const el = (id) => document.querySelector(`#sinc-${id}`);
 
 let ocupado = false;
 let ultimaNuvem = 0;
+let versaoNuvem = 0;     // a última versão que o servidor avisou pela conexão ao vivo
+let esperando = null;    // cofre já baixado, esperando a pessoa terminar de editar
+let aoVivo = null;       // { id, ws, pong }
+let reconectarEm = 0;
+let espera = 5000;
 let situacao = { tipo: "ok", texto: "" };
 const derivadas = new Map();
 
@@ -205,13 +211,103 @@ function falhou(r) {
 
 
 
+/* ---------- conexão ao vivo ----------
+
+   Em vez de perguntar ao servidor de tempos em tempos, o app deixa um
+   WebSocket aberto com o cofre: o servidor avisa a versão ao conectar e a
+   cada gravação, e o app só baixa quando há novidade. Parada, a conexão
+   hiberna no servidor e não gasta nada. Se ela cair, o app volta a
+   perguntar a cada OLHAR_NUVEM enquanto tenta reconectar. */
+
+function vivo() {
+    return Boolean(aoVivo) && aoVivo.ws.readyState <= WebSocket.OPEN;
+}
+
+
+function ligarAoVivo(id) {
+
+    if (aoVivo?.id === id && (vivo() || Date.now() < reconectarEm)) return;
+
+    if (aoVivo?.id !== id) {
+        versaoNuvem = 0;
+        espera = 5000;
+    }
+    desligarAoVivo();
+
+    let ws;
+    try {
+        ws = new WebSocket(`${servidor().replace(/^http/, "ws")}/v1/cofre/${id}`);
+    } catch (erro) {
+        return;
+    }
+
+    const conexao = { id, ws, pong: Date.now() };
+    aoVivo = conexao;
+
+    ws.addEventListener("open", () => { espera = 5000; });
+
+    ws.addEventListener("message", (evento) => {
+        conexao.pong = Date.now();
+        if (evento.data === "pong") return;
+        try {
+            versaoNuvem = Math.max(versaoNuvem, JSON.parse(evento.data).versao || 0);
+        } catch (erro) {
+            return;
+        }
+        ciclo();  // chega na hora, sem esperar o próximo retrato
+    });
+
+    ws.addEventListener("close", (evento) => {
+        if (aoVivo !== conexao) return;
+        reconectarEm = Date.now() + espera;
+        espera = Math.min(espera * 2, OLHAR_NUVEM);
+        ciclo(evento.code === 4404);  // 4404: cofre apagado; o GET confirma e desliga
+    });
+
+}
+
+
+function desligarAoVivo() {
+    const velha = aoVivo;
+    aoVivo = null;
+    try {
+        velha?.ws.close(1000);
+    } catch (erro) {
+        /* já fechada */
+    }
+}
+
+
+// a conexão pode parecer aberta e estar morta (celular que dormiu): sem pong, reconecta
+function testarAoVivo() {
+    if (!aoVivo || aoVivo.ws.readyState !== WebSocket.OPEN) return;
+    const conexao = aoVivo;
+    const enviado = Date.now();
+    try {
+        conexao.ws.send("ping");
+    } catch (erro) {
+        /* o close cuida */
+    }
+    setTimeout(() => {
+        if (aoVivo === conexao && conexao.pong < enviado) {
+            aoVivo = null;
+            reconectarEm = 0;
+            try { conexao.ws.close(); } catch (erro) { /* tanto faz */ }
+            ciclo();
+        }
+    }, 8000);
+}
+
+
+
 /* ---------- o ciclo ---------- */
 
 async function ciclo(olharNuvem = false) {
 
     const estado = lerEstado();
 
-    if (!estado || ocupado) return;
+    if (!estado) return desligarAoVivo();
+    if (ocupado) return;
 
     ocupado = true;
 
@@ -224,6 +320,8 @@ async function ciclo(olharNuvem = false) {
         const atual = await marca(local);
         const { id, chave } = await derivar(estado.codigo);
 
+        ligarAoVivo(id);
+
         if (atual !== estado.marca) {
 
             mostrarSituacao("andando", "Enviando…");
@@ -235,16 +333,22 @@ async function ciclo(olharNuvem = false) {
             else if (r.status === 404) return esquecido();
             else throw falhou(r);
 
-        } else if (olharNuvem || Date.now() - ultimaNuvem > OLHAR_NUVEM) {
+        } else if (esperando || versaoNuvem > estado.versao ||
+                   (!vivo() && (olharNuvem || Date.now() - ultimaNuvem > OLHAR_NUVEM))) {
 
             ultimaNuvem = Date.now();
 
-            const r = await pedir("GET", id);
+            let cofre = esperando;
+            esperando = null;
 
-            if (r.status === 404) return esquecido();
-            if (r.status !== 200) throw falhou(r);
+            if (!cofre || cofre.versao < versaoNuvem) {
+                const r = await pedir("GET", id);
+                if (r.status === 404) return esquecido();
+                if (r.status !== 200) throw falhou(r);
+                cofre = r.corpo;
+            }
 
-            if (r.corpo.versao > estado.versao) await chegou(estado, r.corpo, local, atual, chave);
+            if (cofre.versao > estado.versao) await chegou(estado, cofre, local, atual, chave);
             else gravarEstado({ ...estado, quando: Date.now() });
 
         }
@@ -285,8 +389,8 @@ async function chegou(estado, cofre, local, atual, chave) {
 
     }
 
-    if (editando()) {  // não recarrega no meio de uma edição; tenta de novo logo
-        ultimaNuvem = 0;
+    if (editando()) {  // não recarrega no meio de uma edição; tenta de novo logo, sem baixar de novo
+        esperando = cofre;
         return;
     }
 
@@ -671,9 +775,17 @@ if (modal && botaoAbrir) {
         // dá um tempo pro quadro carregar antes do primeiro retrato
         setTimeout(() => ciclo(true), 1500);
         setInterval(() => { if (!document.hidden) ciclo(); }, OLHAR_AQUI);
+        setInterval(() => { if (!document.hidden) testarAoVivo(); }, PING);
 
-        document.addEventListener("visibilitychange", () => ciclo(!document.hidden));
-        window.addEventListener("online", () => ciclo(true));
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) return ciclo();  // manda o que ficou pendente antes de sair
+            testarAoVivo();
+            ciclo();
+        });
+        window.addEventListener("online", () => {
+            reconectarEm = 0;
+            ciclo();
+        });
 
     });
 
