@@ -1,5 +1,13 @@
 [
     {
+        "versao": "1.5.0",
+        "data": "2026-10-20",
+        "itens": [
+            "Botão Privacidade no rodapé: o Kaizen passa a contar, de forma anônima, quantas pessoas usam o app (só \"abri hoje\", o tipo de aparelho e a versão, sem nome nem nada do que você estuda). Dá pra desligar ali mesmo.",
+            "Isso ajuda a mostrar quantas pessoas o Kaizen ajuda e quais funções valem melhorar."
+        ]
+    },
+    {
         "versao": "1.4.0",
         "data": "2026-10-20",
         "itens": [
