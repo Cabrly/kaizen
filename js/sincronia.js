@@ -152,8 +152,9 @@ function canonico(valor) {
 async function marca(retrato) {
 
     // o quadro sempre completa as categorias com "Geral" e as das tarefas ao abrir
-    // (main.js, sincronizarControles); sem isso, só abrir já pareceria mudança
-    const tarefas = retrato.kanban?.tarefas || [];
+    // (main.js, sincronizarControles), inclusive a da tarefa sem categoria;
+    // sem isso, só abrir já pareceria mudança e o aparelho reenviaria o que recebeu
+    const tarefas = (retrato.kanban?.tarefas || []).map((t) => ({ ...t, categoria: t.categoria || "Geral" }));
     const categorias = [...new Set(["Geral", ...(retrato.kanban?.categorias || []),
         ...tarefas.map((t) => t.categoria || "Geral")])].sort();
 
