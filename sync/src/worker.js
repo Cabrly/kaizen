@@ -8,6 +8,14 @@
    PUT    /v1/cofre/:id  { base, dados } → grava se a versão atual for "base"
                                            (0 = cofre novo); senão 409 com a atual
    DELETE /v1/cofre/:id                 → apaga o cofre
+   GET    /v1/cofre/:id  (Upgrade: websocket)
+                                        → conexão ao vivo: manda { versao } ao
+                                          conectar e a cada gravação; fecha com
+                                          4404 quando o cofre é apagado
+
+   A conexão ao vivo é o que deixa o app sem perguntar de tempos em tempos:
+   ela hiberna enquanto nada muda (não conta pedido nem tempo), então cada
+   aparelho gasta um pedido ao abrir e só volta a pedir quando há novidade.
 
    Cada cofre é um Durable Object: um código atende um pedido por vez, então
    dois aparelhos gravando juntos não se atropelam. O blob vai em pedaços de
@@ -77,6 +85,17 @@ export class Cofre extends DurableObject {
 
     async fetch(pedido) {
 
+        if (pedido.headers.get("Upgrade") === "websocket") {
+            const versao = await this.ctx.storage.get("versao");
+            if (!versao) return json(404, { erro: "Nada sincronizado com esse código ainda." });
+            const [cliente, servidor] = Object.values(new WebSocketPair());
+            this.ctx.acceptWebSocket(servidor);
+            // o ping do app é respondido sem acordar o objeto
+            this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
+            servidor.send(JSON.stringify({ versao }));
+            return new Response(null, { status: 101, webSocket: cliente });
+        }
+
         if (pedido.method === "GET") {
             const cofre = await this.ler();
             return cofre ? json(200, cofre) : json(404, { erro: "Nada sincronizado com esse código ainda." });
@@ -85,6 +104,7 @@ export class Cofre extends DurableObject {
         if (pedido.method === "DELETE") {
             await this.ctx.storage.deleteAlarm();
             await this.ctx.storage.deleteAll();
+            this.avisar(null);
             return json(200, { ok: true });
         }
 
@@ -121,6 +141,7 @@ export class Cofre extends DurableObject {
         const agora = Date.now();
         await this.gravar(base + 1, dados, agora);
         await this.ctx.storage.setAlarm(agora + UM_ANO);  // cofre esquecido por um ano se apaga sozinho
+        this.avisar(base + 1);
 
         return json(200, { versao: base + 1, atualizado_em: agora });
 
@@ -128,6 +149,29 @@ export class Cofre extends DurableObject {
 
     async alarm() {
         await this.ctx.storage.deleteAll();
+        this.avisar(null);
+    }
+
+    // conta a versão nova pros aparelhos conectados (null = o cofre sumiu)
+    avisar(versao) {
+        for (const ws of this.ctx.getWebSockets()) {
+            try {
+                if (versao) ws.send(JSON.stringify({ versao }));
+                else ws.close(4404, "cofre apagado");
+            } catch (erro) {
+                /* conexão já caída */
+            }
+        }
+    }
+
+    async webSocketMessage() { /* o app só manda ping, que a resposta automática atende */ }
+
+    async webSocketClose(ws, codigo) {
+        try {
+            ws.close(codigo === 1005 ? 1000 : codigo, "tchau");
+        } catch (erro) {
+            /* já fechada */
+        }
     }
 
 }
