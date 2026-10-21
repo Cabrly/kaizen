@@ -732,6 +732,28 @@
 
     </dialog>
 
+    <dialog class="modal comp-modal" id="priv-modal" aria-labelledby="priv-titulo">
+
+        <h2 class="modal-titulo" id="priv-titulo">Privacidade</h2>
+
+        <p class="sinc-texto">
+            Suas tarefas, seus planos, o chat e as entregas ficam no seu aparelho. Só saem dele se você
+            ligar a sincronia ou compartilhar um plano, e mesmo assim vão criptografados.
+        </p>
+
+        <label class="aces-opcao"><input type="checkbox" id="priv-contar">
+            <span><strong>Contar meu uso de forma anônima</strong>
+                <small>Uma vez por dia o Kaizen avisa só "abri hoje", o tipo de aparelho e a versão, e de vez em
+                quando quantas vezes cada função foi usada (planos criados, entregas, flashcards…). Sem nome,
+                sem código, sem nada do que você escreve ou estuda. Isso mostra quantas pessoas o Kaizen
+                ajuda e o que vale melhorar.</small></span></label>
+
+        <div class="form-acoes">
+            <button type="button" class="btn-primario" data-fechar>Pronto</button>
+        </div>
+
+    </dialog>
+
     <dialog class="modal comp-modal" id="aces-modal" aria-labelledby="aces-titulo">
 
         <h2 class="modal-titulo" id="aces-titulo">Acessibilidade</h2>
@@ -1363,6 +1385,10 @@
                     title="Texto maior, alto contraste, menos movimento e leitura em voz alta">
                 Acessibilidade
             </button>
+            <button type="button" class="btn-secundario" id="priv-abrir"
+                    title="O que o Kaizen conta (de forma anônima) e como desligar">
+                Privacidade
+            </button>
             <button type="button" class="btn-secundario" id="pin-abrir"
                     title="Pede um PIN pra abrir o Kaizen neste aparelho">
                 PIN
@@ -1407,22 +1433,27 @@
 
     <script
         type="module"
-        src="./js/compartilhar.js?v=1"
+        src="./js/compartilhar.js?v=2"
     ></script>
 
     <script
         type="module"
-        src="./js/agenda.js?v=1"
+        src="./js/agenda.js?v=2"
     ></script>
 
     <script
         type="module"
-        src="./js/resumo.js?v=1"
+        src="./js/resumo.js?v=2"
     ></script>
 
     <script
         type="module"
-        src="./js/acessibilidade.js?v=1"
+        src="./js/acessibilidade.js?v=2"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/uso.js?v=1"
     ></script>
 
     <script

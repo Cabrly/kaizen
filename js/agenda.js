@@ -163,6 +163,7 @@ function baixar() {
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+    document.dispatchEvent(new CustomEvent("kaizen:uso", { detail: "agenda" }));
 
     $("agenda-baixar").textContent = "Baixado! Abra o arquivo";
     setTimeout(() => ($("agenda-baixar").textContent = "Baixar pra agenda"), 3000);

@@ -203,6 +203,7 @@ if (modal && botaoAbrir) {
     modal.addEventListener("change", (evento) => {
         const alvo = evento.target;
         if (alvo.dataset.opcao) opcoes[alvo.dataset.opcao] = alvo.checked;
+        if (alvo.checked) document.dispatchEvent(new CustomEvent("kaizen:uso", { detail: "acessibilidade" }));
         if (alvo.id === "aces-velocidade") opcoes.velocidade = Number(alvo.value);
         gravar();
         aplicar();

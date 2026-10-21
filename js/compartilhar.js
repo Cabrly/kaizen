@@ -135,6 +135,7 @@ async function abrirCompartilhar(planoId, nome) {
             await cofreRemoto("PUT", cofre, { base: 0, dados: await cifrar(await chaveDe(bruta), await montarPacote(planoId)) });
             guardado = { cofre, chave: paraLink(bruta) };
             gravarLinks({ ...lerLinks(), [planoId]: guardado });
+            document.dispatchEvent(new CustomEvent("kaizen:uso", { detail: "plano_compartilhado" }));
         }
 
         mostrarLink(linkDe(guardado), nome);

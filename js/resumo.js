@@ -204,6 +204,8 @@ function desenhar(r) {
 
 async function abrir() {
 
+    document.dispatchEvent(new CustomEvent("kaizen:uso", { detail: "resumo" }));
+
     corpo.innerHTML = `<p class="resumo-periodo">Somando a sua semana…</p>`;
     if (!modal.open) modal.showModal();
 

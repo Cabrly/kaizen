@@ -354,6 +354,11 @@ No botão **Acessibilidade** do rodapé:
   banco SQLite na pasta do usuário. Limpar o cache do navegador não apaga nada.
 - **PIN pra abrir** (botão **PIN** no rodapé), opcional, pra computador compartilhado.
 - **Fazer backup / Restaurar backup** no rodapé, pra guardar um arquivo.
+- **Contagem anônima de uso** (botão **Privacidade** no rodapé, dá pra desligar):
+  uma vez por dia o app avisa só "abri hoje", o tipo de aparelho (computador,
+  navegador ou celular) e a versão, e de vez em quando quantas vezes cada função
+  foi usada. Não vai nome, código, nem nada do que você escreve ou estuda. As
+  contagens ficam no mesmo servidor da sincronia, somadas por dia.
 
 ### PC e celular com os mesmos dados
 
