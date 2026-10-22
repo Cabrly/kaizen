@@ -6701,3 +6701,179 @@ html.alto-contraste :focus-visible {
     outline: 3px solid #0050ff !important;
     outline-offset: 2px !important;
 }
+
+
+/* =========================================================
+   TUTORIAL (js/tutorial.js) — o passeio da primeira abertura
+========================================================= */
+
+.tut {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+}
+
+/* quatro faixas embaçadas em volta do alvo: ele fica nítido no meio */
+.tut-veu {
+    position: fixed;
+
+    background: rgba(23, 23, 23, 0.42);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+
+    transition: all 0.3s ease;
+}
+
+.tut-anel {
+    position: fixed;
+
+    border: 2px solid #c90016;
+    border-radius: 10px;
+    box-shadow: 0 0 0 4px rgba(201, 0, 22, 0.18);
+
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.tut-balao {
+    position: fixed;
+
+    width: min(380px, calc(100vw - 32px));
+    padding: 20px 20px 16px;
+
+    background: #fff;
+    border-top: 4px solid #c90016;
+    border-radius: 12px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+
+    color: #222;
+
+    transition: top 0.3s ease, left 0.3s ease;
+}
+
+.tut-balao.tut-centro {
+    top: 50%;
+    left: 50%;
+
+    transform: translate(-50%, -50%);
+}
+
+.tut-balao:focus {
+    outline: none;
+}
+
+.tut-passo {
+    margin: 0 0 4px;
+
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+
+    color: #c90016;
+}
+
+.tut-titulo {
+    margin: 0 0 8px;
+
+    font-size: 19px;
+}
+
+.tut-texto {
+    margin: 0;
+
+    font-size: 14px;
+    line-height: 1.55;
+
+    color: #444;
+}
+
+.tut-aviso {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+
+    font-size: 13px;
+    line-height: 1.5;
+
+    background: #fff4e5;
+    border-left: 3px solid #e08a00;
+    border-radius: 6px;
+
+    color: #5a3a00;
+}
+
+.tut-pontos {
+    display: flex;
+    gap: 6px;
+
+    margin: 16px 0 12px;
+}
+
+.tut-pontos span {
+    width: 7px;
+    height: 7px;
+
+    background: #ddd;
+    border-radius: 99px;
+
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.tut-pontos span.ativo {
+    width: 20px;
+
+    background: #c90016;
+}
+
+.tut-acoes {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tut-espaco {
+    flex: 1;
+}
+
+.tut-pular {
+    padding: 8px 4px;
+
+    font: inherit;
+    font-size: 12px;
+
+    background: none;
+    border: 0;
+
+    color: #888;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.tut-acoes [hidden] {
+    display: none;
+}
+
+/* celular: o balão fica sempre embaixo, na largura toda */
+@media (max-width: 600px) {
+    .tut-balao,
+    .tut-balao.tut-centro {
+        top: auto !important;
+        left: 16px !important;
+        bottom: 16px;
+
+        width: calc(100vw - 32px);
+
+        transform: none;
+    }
+}
+
+html.menos-movimento .tut-veu,
+html.menos-movimento .tut-anel,
+html.menos-movimento .tut-balao {
+    transition: none;
+}
+
+html.alto-contraste .tut-veu {
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: none;
+}

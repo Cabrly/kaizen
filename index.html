@@ -33,7 +33,7 @@
         onload="this.media='all'"
     >
 
-    <link rel="stylesheet" href="./style.css?v=refazer1">
+    <link rel="stylesheet" href="./style.css?v=tutorial1">
 
     <!-- com PIN, esconde o app antes de desenhar qualquer coisa (js/pin.js destrava) -->
     <script>
@@ -1393,6 +1393,10 @@
                     title="Pede um PIN pra abrir o Kaizen neste aparelho">
                 PIN
             </button>
+            <button type="button" class="btn-secundario" id="tutorial-abrir"
+                    title="Mostra de novo o passeio pelo Kaizen">
+                Tutorial
+            </button>
             <button type="button" class="btn-secundario" id="novidades-abrir" hidden
                     title="O que mudou nas últimas versões">
                 Novidades
@@ -1464,6 +1468,11 @@
     <script
         type="module"
         src="./js/novidades.js?v=1"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/tutorial.js?v=1"
     ></script>
 
     <script
