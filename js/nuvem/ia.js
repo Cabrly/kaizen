@@ -16,8 +16,8 @@ import { servidor } from "../cofre.js";
 const CHAVE_CONFIG = "kaizen.nuvem.config.v1";
 const CHAVE_APARELHO = "kaizen.ia.aparelho";   // id aleatório: é por ele que o Worker conta o limite de cada um
 
-// o que o Worker usa (ver sync/src/worker.js); o nome bate com o FORTES das entregas
-const MODELO_KAIZEN = "gemini-3.5-flash";
+// o Worker escolhe quem responde (ver sync/src/worker.js); as entregas liberam a correção pelo provedor
+const MODELO_KAIZEN = "automatico";
 
 
 // os grátis primeiro: é assim que aparecem na tela

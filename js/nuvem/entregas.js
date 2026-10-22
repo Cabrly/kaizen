@@ -69,6 +69,7 @@ navigator.storage?.persist?.().catch(() => null);
 
 export function podeCorrigir(motor) {
     if (!motor || motor === "demo") return motor === "demo";
+    if (motor.startsWith("nuvem@kaizen:")) return true;   // a IA do Kaizen escolhe um modelo bom sozinha
     const modelo = (motor.match(/^nuvem@[^:]+:(.+)$/) || [])[1] || motor;
     const tamanho = modelo.match(TAMANHO);
     if (tamanho && Number(tamanho[1]) < MINIMO_B) return false;

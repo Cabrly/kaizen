@@ -32,8 +32,9 @@
    GET  /v1/painel  Authorization: Bearer <PAINEL_CHAVE> → as contagens
 
    IA do Kaizen (grátis pra quem não tem chave própria): o Worker fala com o
-   Gemini usando a chave do projeto, guardada como secret (GEMINI_CHAVE, e
-   GEMINI_CHAVE_2 de reserva) — elas nunca vão pro navegador nem pro git.
+   OpenRouter (OPENROUTER_CHAVE, modelos grátis) e, de reserva, com o Gemini
+   (GEMINI_CHAVE e GEMINI_CHAVE_2), chaves guardadas como secret — elas nunca
+   vão pro navegador nem pro git.
 
    POST /v1/ia  { mensagens: [{ role, content }], json, usuario }  → { resposta, modelo }
    GET  /v1/ia                                                    → { modelos, ativa }
@@ -340,10 +341,15 @@ async function estatisticas(pedido, env, recurso, ip) {
 // soma. Os "-latest" e o 3.7 são apelidos que gastam a cota de outro, por isso ficam de fora.
 const MODELOS_IA = ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"];
 
+// OpenRouter primeiro (chave grátis: 50 pedidos por dia no total, em qualquer modelo ":free"); o MiniMax
+// respondeu em ~4 s com JSON certinho; "openrouter/free" escolhe sozinho um modelo livre (mais lento, ~25 s)
+const MODELOS_OPENROUTER = ["minimax/minimax-m3.1-flash:free", "openrouter/free"];
+const OPENROUTER_API = "https://openrouter.ai/api/v1/chat/completions";
+
 const AVISO_SEM_COTA = "A IA grátis do Kaizen chegou no limite de hoje e volta amanhã. Pra continuar agora, conecte " +
                        "uma IA sua em “Onde a IA roda” (o Gemini e o OpenRouter têm chave grátis).";
 
-// "chave:modelo" → até quando a cota dele acabou (por instância do Worker): não gasta pedido batendo na porta
+// "provedor:modelo" → até quando a cota dele acabou (por instância do Worker): não gasta pedido batendo na porta
 const esgotados = new Map();
 
 
@@ -383,6 +389,55 @@ function mensagensValidas(corpo) {
 const chavesGemini = (env) => [env.GEMINI_CHAVE, env.GEMINI_CHAVE_2].filter(Boolean);
 
 
+// tudo o que dá pra tentar, em ordem. "marca" é o que esgota junto: no OpenRouter a cota grátis é da chave
+// inteira; no Gemini, de cada modelo
+function tentativas(env) {
+    const lista = [];
+    if (env.OPENROUTER_CHAVE) {
+        for (const modelo of MODELOS_OPENROUTER) {
+            lista.push({ chamar: chamarOpenRouter, chave: env.OPENROUTER_CHAVE, modelo, marca: "openrouter", grupo: "openrouter" });
+        }
+    }
+    chavesGemini(env).forEach((chave, n) => {
+        for (const modelo of MODELOS_IA) {
+            lista.push({ chamar: chamarGemini, chave, modelo, marca: `gemini${n}:${modelo}`, grupo: `gemini${n}` });
+        }
+    });
+    return lista;
+}
+
+
+async function chamarOpenRouter(chave, modelo, mensagens) {
+
+    const resposta = await fetch(OPENROUTER_API, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json", Authorization: `Bearer ${chave}`,
+            "HTTP-Referer": "https://cabrly.github.io/kaizen/", "X-Title": "Kaizen"
+        },
+        // pensar pouco e sem devolver o raciocínio; o schema do JSON já vai no prompt (nem todo modelo
+        // grátis aceita response_format)
+        body: JSON.stringify({ model: modelo, messages: mensagens, max_tokens: 16000, reasoning: { effort: "low", exclude: true } })
+    });
+    const dados = await resposta.json().catch(() => ({}));
+
+    if (!resposta.ok || dados.error) {
+        const status = Number(dados.error?.code) >= 400 ? Number(dados.error.code) : resposta.status;
+        const detalhe = `${dados.error?.message || ""} ${JSON.stringify(dados.error?.metadata || {}).slice(0, 300)}`;
+        // a cota do dia: o cabeçalho diz quando volta (ms); o 429 de "provedor ocupado" é coisa de minutos
+        const volta = Number(resposta.headers.get("X-RateLimit-Reset")) || 0;
+        const doDia = status === 429 && /per-day|per day/i.test(detalhe);
+        return { status, detalhe, espera: doDia ? Math.max(3600, (volta - Date.now()) / 1000) : 0 };
+    }
+
+    const texto = dados.choices?.[0]?.message?.content || "";
+    if (!texto.trim()) return { status: 503, detalhe: "resposta vazia", espera: 0 };
+    // alguns modelos soltam o raciocínio antes da resposta
+    return { texto: texto.includes("</think>") ? texto.split("</think>").pop().trim() : texto.trim(), modelo: dados.model };
+
+}
+
+
 async function chamarGemini(chave, modelo, mensagens, comoJson) {
 
     const sistema = mensagens.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
@@ -418,8 +473,9 @@ async function ia(pedido, env, ip) {
     const origem = pedido.headers.get("Origin");
     if (origem && !ORIGENS_IA.test(origem)) return json(403, { erro: "A IA do Kaizen só atende o próprio app." });
 
-    const ativa = chavesGemini(env).length > 0;
-    if (pedido.method === "GET") return json(200, { modelos: [MODELOS_IA[0]], ativa });
+    const ativa = tentativas(env).length > 0;
+    // "automatico": quem responde muda (OpenRouter, Gemini…), então o app não mostra o nome de um modelo
+    if (pedido.method === "GET") return json(200, { modelos: ["automatico"], ativa });
     if (pedido.method !== "POST") return json(405, { erro: "Método não permitido." });
     if (!ativa) return json(503, { erro: "A IA do Kaizen está desligada no momento." });
 
@@ -446,7 +502,7 @@ async function ia(pedido, env, ip) {
     const contador = env.ESTATISTICAS.get(env.ESTATISTICAS.idFromName("geral"));
     const [quem, usuario] = await Promise.all([hashDoDia(ip), hashDoDia(corpo.usuario)]);
     const recusa = await contador.reservarIA(quem, usuario, {
-        cotaDia: Number(env.IA_COTA_DIA) || 75,
+        cotaDia: Number(env.IA_COTA_DIA) || 120,
         porIp: Number(env.IA_POR_IP) || 20,
         porUsuario: Number(env.IA_POR_USUARIO) || 10
     });
@@ -458,30 +514,31 @@ async function ia(pedido, env, ip) {
         return json(429, { erro: "Você chegou no limite diário da IA grátis do Kaizen. Ela volta amanhã; pra usar mais, conecte uma chave sua em \"Onde a IA roda\".", motivo: recusa });
     }
 
+    const lista = tentativas(env);
+    const negados = new Set();   // grupos com chave negada (401/402/403): não adianta outro modelo dela
     let ultimo = null;
-    let semCota = 0;   // quantos modelos estão sem cota (de agora ou de antes)
-    tentativas:
-    for (const [n, chave] of chavesGemini(env).entries()) {
-        for (const modelo of MODELOS_IA) {
-            const marca = `${n}:${modelo}`;
-            if ((esgotados.get(marca) || 0) > Date.now()) { semCota++; continue; }
-            const r = await chamarGemini(chave, modelo, mensagens, corpo.json === true);
-            if (r.texto !== undefined) return json(200, { resposta: r.texto, modelo });
-            ultimo = r;
-            console.error(`gemini chave ${n + 1} ${modelo}: ${r.status} ${r.detalhe.slice(0, 200)}`);
-            if (r.status === 429 && r.espera > 120) {
-                // cota do dia (não a do minuto): só volta quando o Google disse
-                esgotados.set(marca, Date.now() + r.espera * 1000);
-                semCota++;
-            }
-            if ([401, 403].includes(r.status)) continue tentativas;            // chave negada: vai pra próxima
-            if (![429, 500, 503, 504].includes(r.status)) break tentativas;    // erro do pedido: nada resolve
+    let semCota = 0;   // quantas tentativas estão sem cota (de agora ou de antes)
+    for (const t of lista) {
+        if (negados.has(t.grupo)) continue;
+        if ((esgotados.get(t.marca) || 0) > Date.now()) { semCota++; continue; }
+        const r = await t.chamar(t.chave, t.modelo, mensagens, corpo.json === true);
+        if (r.texto !== undefined) return json(200, { resposta: r.texto, modelo: r.modelo || t.modelo });
+        ultimo = r;
+        console.error(`${t.marca} ${t.modelo}: ${r.status} ${r.detalhe.slice(0, 200)}`);
+        if (r.status === 429 && r.espera > 120) {
+            // cota do dia (não a do minuto): só volta quando o serviço disse
+            esgotados.set(t.marca, Date.now() + r.espera * 1000);
+            semCota++;
         }
+        if ([401, 402, 403].includes(r.status)) negados.add(t.grupo);
+        // erro no próprio pedido (ex.: 400) não se resolve com outro modelo… a não ser no OpenRouter, onde
+        // cada modelo grátis roda num provedor diferente
+        else if (![404, 429, 500, 502, 503, 504].includes(r.status) && t.grupo !== "openrouter") break;
     }
 
     await contador.devolverIA(quem, usuario);
     if (ultimo?.status === 422) return json(422, { erro: "A IA não quis responder esse pedido. Tente reformular." });
-    if (semCota && (!ultimo || ultimo.status === 429 || semCota >= MODELOS_IA.length)) {
+    if (semCota && (!ultimo || ultimo.status === 429 || semCota >= lista.length)) {
         return json(429, { erro: AVISO_SEM_COTA, motivo: "cota-google" });
     }
     return json(503, { erro: "A IA do Kaizen está sobrecarregada agora. Tente de novo em alguns minutos." });

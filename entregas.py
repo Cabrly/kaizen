@@ -56,6 +56,8 @@ def pode_corrigir(motor):
         return False
     if motor == "claude" or motor.startswith("agente@"):
         return True                                   # Claude Code, Gemini CLI, Codex
+    if motor.startswith("nuvem@kaizen:"):
+        return True                                   # a IA do Kaizen escolhe um modelo bom sozinha
     _, modelo = estudos._separar_motor(motor)
     tamanho = TAMANHO.search(modelo)
     if tamanho and float(tamanho.group(1)) < MINIMO_B:

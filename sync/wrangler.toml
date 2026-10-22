@@ -49,10 +49,10 @@ name = "LIMITE_IA"
 namespace_id = "1005"
 simple = { limit = 10, period = 60 }
 
-# IA grátis por dia. A chave está no nível gratuito do Google: 20 pedidos por dia em CADA modelo (4 modelos
-# no worker.js ≈ 80). Cada aparelho, 10 (um plano gasta ~3, cada sessão estudada 1, cada correção 1); por IP
+# IA grátis por dia. OpenRouter grátis: 50 pedidos por dia; Gemini no nível gratuito: 20 por dia em CADA
+# modelo (4 no worker.js ≈ 80). Juntos ≈ 130. Cada aparelho, 10 (um plano gasta ~3, cada sessão estudada 1, cada correção 1); por IP
 # o dobro (CGNAT junta gente num IP). Com faturamento ativado no Google, sobe tudo (ex.: 6500 / 300 / 40).
 [vars]
-IA_COTA_DIA = "75"
+IA_COTA_DIA = "120"
 IA_POR_IP = "20"
 IA_POR_USUARIO = "10"
