@@ -37,11 +37,12 @@ const PASSOS = [
     },
     {
         tela: "ia",
-        alvo: "#srv-mais .srv-corpo",
+        alvo: "#ia-servidores",
         abrir: "#srv-mais",
         titulo: "2. Conecte a sua IA",
-        texto: "O Kaizen funciona melhor com uma IA sua: o Gemini e o OpenRouter têm chave grátis, e também dá pra usar " +
-               "Claude, ChatGPT ou o Ollama no seu computador. A chave fica só no seu aparelho.",
+        texto: "O Kaizen funciona melhor com uma IA sua. No app de computador, o Claude Code e o Codex aparecem aqui " +
+               "sozinhos, com o login da sua conta. Em “Outras opções” dá pra colar uma chave de API (o Gemini e o " +
+               "OpenRouter têm chave grátis); ela fica só no seu aparelho.",
         aviso: "Sem chave nenhuma, você usa a <b>IA do Kaizen</b>: grátis, mas mais simples e com limite por dia. " +
                "Ela monta planos, flashcards e corrige atividades, mas <b>não conversa no chat</b>. " +
                "Com uma IA sua, tudo fica melhor e sem esse limite."

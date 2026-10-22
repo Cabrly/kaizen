@@ -402,12 +402,6 @@ async function carregar() {
 
 function renderizar(servidores, soNuvem = false) {
 
-    // No celular é o único jeito de ter IA; no PC, abre se a IA em uso não é a daqui.
-    // Só abre, nunca fecha: quem abriu na mão continua vendo.
-    if (soNuvem || servidores.some((s) => s.preferido && s.id !== "local")) {
-        painel.querySelector("#srv-mais").open = true;
-    }
-
     if (soNuvem && servidores.length === 0) {
         painel.querySelector("#srv-lista").innerHTML = `
             <p class="srv-dica">Nenhuma IA conectada. Conecte o <b>OpenRouter</b> (modelos grátis)
@@ -425,7 +419,7 @@ function renderizar(servidores, soNuvem = false) {
                         <strong>${esc(s.nome)}</strong>
                         <small>⌨ não instalado neste computador</small>
                         <small><a href="${esc(s.como_instalar)}" target="_blank" rel="noopener noreferrer">Como instalar</a>
-                            (depois faça login no terminal e reabra o Kaizen)</small>
+                            (depois faça login no terminal: ele aparece aqui sozinho)</small>
                     </span>
                 </div>
             </div>`;
