@@ -1,5 +1,15 @@
 [
     {
+        "versao": "1.7.1",
+        "data": "2026-10-21",
+        "itens": [
+            "Claude Code, Codex e Gemini CLI agora ficam à vista em “Onde a IA roda”, sem precisar abrir nada. As chaves de API foram pra “Outras opções”.",
+            "O Kaizen acha essas ferramentas em mais computadores: instaladas com o app aberto, pelo npm, nvm, Volta, Homebrew e outros jeitos.",
+            "Quando o login de uma delas expira, o aviso diz o comando certo pra entrar de novo.",
+            "O Gemini CLI passou a usar o modelo da sua conta (o 2.5 saiu do ar)."
+        ]
+    },
+    {
         "versao": "1.7.0",
         "data": "2026-10-21",
         "itens": [
