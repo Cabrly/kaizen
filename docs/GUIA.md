@@ -91,9 +91,15 @@ Pelo terminal, se preferir: `ollama pull qwen3:8b`.
 
 ### IA de graça com o OpenRouter
 
-1. Crie uma conta grátis em [openrouter.ai](https://openrouter.ai) (dá pra entrar com a conta Google).
-2. Em [openrouter.ai/keys](https://openrouter.ai/keys), clique em **Create Key** e copie a chave (`sk-or-…`).
-3. No Kaizen: **Assistente IA → Onde a IA roda → ☁ Conectar OpenRouter (modelos grátis)**, cole e salve.
+1. No Kaizen: **Assistente IA → Outras opções → Entrar com o OpenRouter (grátis)**.
+2. No site do OpenRouter, entre com a conta Google (ou crie a conta ali mesmo) e clique em **Authorize**.
+3. Você volta pro Kaizen com a IA conectada. Sem chave pra copiar e sem cartão.
+
+No programa de computador, o login abre no navegador: termine lá e volte pro
+app. Se o PC não tem IA instalada, o chat passa a usar o OpenRouter sozinho.
+
+Prefere colar uma chave? Crie em [openrouter.ai/keys](https://openrouter.ai/keys)
+(**Create Key**, começa com `sk-or-`) e use **Prefiro colar uma chave do OpenRouter**.
 
 Chat e planos passam a usar o `openrouter/free`, que escolhe sozinho um modelo
 gratuito a cada pedido (a lista mostra só os grátis, se quiser fixar um).
