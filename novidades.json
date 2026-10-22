@@ -1,5 +1,15 @@
 [
     {
+        "versao": "1.7.0",
+        "data": "2026-10-21",
+        "itens": [
+            "IA do Kaizen grátis: agora dá pra montar planos, gerar flashcards e corrigir atividades sem conectar chave nenhuma. Ela é mais simples que uma IA sua e tem um limite por dia; o chat continua precisando de uma IA sua.",
+            "Plano que deu erro na hora de gerar ganhou o botão “Tentar de novo”: ele refaz com as mesmas respostas, sem passar pelo assistente outra vez.",
+            "Tutorial na primeira abertura: um passeio rápido pelo Kanban, pela IA e pelo cronograma de estudos. Dá pra ver de novo no botão Tutorial do rodapé.",
+            "Quando a IA grátis chega no limite do dia, o Kaizen avisa com clareza e diz o que fazer."
+        ]
+    },
+    {
         "versao": "1.6.0",
         "data": "2026-10-21",
         "itens": [
