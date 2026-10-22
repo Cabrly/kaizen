@@ -406,6 +406,12 @@ class Handler(SimpleHTTPRequestHandler):
                 corpo = self.ler_json()
                 servidores.conectar_nuvem(partes[1], corpo.get("chave"), corpo.get("url"))
                 self.responder(200, {"servidores": servidores.listar_com_status()})
+            elif metodo == "POST" and partes == ["openrouter", "entrar"]:
+                self.responder(200, {"url": servidores.entrar_openrouter(self.ler_json().get("volta"))})
+            elif metodo == "POST" and partes == ["openrouter", "concluir"]:
+                corpo = self.ler_json()
+                servidores.concluir_openrouter(corpo.get("codigo"), corpo.get("estado"))
+                self.responder(200, {"servidores": servidores.listar_com_status()})
             elif metodo == "POST" and not ident:
                 corpo = self.ler_json()
                 self.responder(201, {"servidor": servidores.adicionar(corpo.get("nome"), corpo.get("url"))})

@@ -3278,6 +3278,18 @@ dialog.modal {
     display: none;
 }
 
+/* Entrar com o OpenRouter: o caminho grátis, em destaque antes das outras contas */
+.srv-openrouter {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.srv-openrouter .btn-primario {
+    align-self: flex-start;
+}
+
 .srv-nuvem-botao {
     padding: 8px 10px;
 
