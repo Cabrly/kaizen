@@ -114,6 +114,8 @@ def ollama_chat(modelo, mensagens):
     Se o preferido for um Ollama de outra máquina e ela estiver fora do ar,
     tenta este computador.
     """
+    if servidores.preferido() == "kaizen":
+        raise ValueError(servidores.AVISO_CHAT)
     sistema = estudos.PROMPTS["sistema_chat"]
     historico = estudos.perfil_texto()
     if historico:
@@ -216,6 +218,9 @@ class Handler(SimpleHTTPRequestHandler):
             return self.responder(200, ia_local.progresso())
         if self.path == "/api/ia/status":
             servidor = servidores.obter(servidores.preferido())
+            if servidor["id"] == "kaizen":
+                return self.responder(200, {"disponivel": False, "modelos": [], "servidor": servidor["nome"],
+                                            "aviso": servidores.AVISO_CHAT})
             try:
                 modelos = ollama_modelos()
                 return self.responder(200, {"disponivel": True, "modelos": modelos, "servidor": servidor["nome"]})
@@ -324,8 +329,10 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.responder(200, {"perguntas": estudos.perguntas(
                     str(corpo.get("tema", "")).strip(), corpo.get("motor") or estudos.motor_padrao(),
                     corpo.get("continua_de"))}) or True
-            if metodo == "POST" and recurso == "planos":
+            if metodo == "POST" and recurso == "planos" and not ident:
                 return self.responder(201, {"plano": estudos.criar_plano(corpo)}) or True
+            if metodo == "POST" and recurso == "planos" and ident and acao == "refazer":
+                return self.responder(200, {"plano": estudos.refazer_plano(ident)}) or True
             if metodo == "POST" and recurso == "importar-plano":
                 return self.responder(201, {"plano": estudos.importar_plano(corpo)}) or True
             if metodo == "POST" and recurso == "sessoes" and ident and acao == "adiar":

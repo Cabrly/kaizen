@@ -5,6 +5,9 @@
   casa, ou um servidor alcançado pelo Tailscale (http://100.80.57.121:11434).
 - Dá pra conectar uma conta da OpenAI (ChatGPT) ou do Google (Gemini) com
   uma chave de API. A chave fica só no banco local.
+- "IA do Kaizen (grátis)" vem conectada pra todo mundo: o Worker da
+  sincronia (sync/) fala com o Gemini com a chave do projeto, que nunca
+  chega aqui, e limita o uso por aparelho e por dia.
 - Claude Code, Gemini CLI e Codex instalados no computador aparecem sozinhos
   (tipo "agente", ver agentes.py) e usam o login da própria ferramenta.
 
@@ -16,7 +19,9 @@ deixá-lo visível só numa rede privada (Tailscale, VPN), nunca na internet.
 """
 from concurrent.futures import ThreadPoolExecutor
 import json
+import os
 import re
+import secrets
 import sqlite3
 import time
 import urllib.error
@@ -31,6 +36,14 @@ URL_LOCAL = "http://127.0.0.1:11434"   # o server.py troca pelo OLLAMA_URL
 _status_cache = {}                      # chave -> (quando, status)
 CACHE_SEGUNDOS = 10
 CACHE_NUVEM = 600                       # lista de modelos da nuvem muda pouco
+
+# a IA do Kaizen: o mesmo Worker da sincronia (KAIZEN_SYNC troca, pra testar com o wrangler dev)
+URL_KAIZEN = (os.environ.get("KAIZEN_SYNC") or "https://kaizen-sync.kaizen-sync.workers.dev").rstrip("/")
+# a IA grátis do Kaizen não atende o chat (é o que mais gasta): só quem tem IA própria conversa
+AVISO_CHAT = ("O chat não usa a IA grátis do Kaizen: ela fica pros planos, flashcards e correções. Pra "
+              "conversar, conecte uma IA sua em “Onde a IA roda” (o OpenRouter e o Gemini têm opções grátis).")
+DESTINO_KAIZEN = {"id": "kaizen", "nome": "IA do Kaizen (grátis)", "url": "grátis, com limite diário",
+                  "tipo": "nuvem", "removivel": False}
 
 # os grátis primeiro: é assim que aparecem na tela
 NUVEM = {
@@ -139,13 +152,16 @@ def normalizar_url(url):
 def _http(url, corpo=None, cabecalhos=None, timeout=20):
     """GET/POST JSON. Erro HTTP vira ErroConexao com a mensagem do serviço."""
     dados = json.dumps(corpo).encode() if corpo is not None else None
-    req = urllib.request.Request(url, dados, {"Content-Type": "application/json", **(cabecalhos or {})})
+    # o "Python-urllib" padrão leva 403 da proteção anti-robô da Cloudflare (o Worker da IA do Kaizen)
+    req = urllib.request.Request(url, dados, {"Content-Type": "application/json", "User-Agent": "Kaizen",
+                                              **(cabecalhos or {})})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return json.loads(r.read())
     except urllib.error.HTTPError as erro:
         try:
-            detalhe = json.loads(erro.read()).get("error", {})
+            corpo_erro = json.loads(erro.read())
+            detalhe = corpo_erro.get("error") or corpo_erro.get("erro") or {}   # "erro" = o Worker da IA do Kaizen
             mensagem = detalhe.get("message") if isinstance(detalhe, dict) else str(detalhe)
         except (ValueError, AttributeError):
             detalhe, mensagem = {}, ""
@@ -186,6 +202,12 @@ def _cabecalhos(provedor, chave_api):
 
 def _modelos_nuvem(provedor, chave_api, url=None):
     """Só modelos de conversa, os mais novos primeiro (a lista crua tem dezenas)."""
+    if provedor == "kaizen":
+        dados = _http(f"{URL_KAIZEN}/v1/ia", timeout=10)
+        if not dados.get("ativa"):
+            raise ErroConexao("A IA do Kaizen está desligada no momento.")
+        return dados.get("modelos") or []
+
     if provedor == "compat":
         dados = _http(f"{(url or _url_compat())}/models", cabecalhos=_cabecalhos(provedor, chave_api))
         return sorted(m["id"] for m in dados.get("data", []))[:40]
@@ -265,7 +287,7 @@ def listar():
                     "instalado": bool(agentes.caminho(a)), "como_instalar": info["como_instalar"]}
                    for a, info in agentes.AGENTES.items()]
     return ([{"id": "local", "nome": "Este computador", "url": URL_LOCAL, "tipo": "ollama", "removivel": False}]
-            + cadastrados + nuvem + ferramentas)
+            + cadastrados + nuvem + [DESTINO_KAIZEN] + ferramentas)
 
 
 def obter(destino_id):
@@ -350,8 +372,8 @@ def adicionar(nome, url):
 
 def remover(destino_id):
     destino_id = str(destino_id)
-    if destino_id == "local":
-        raise ValueError("\"Este computador\" não pode ser removido.")
+    if destino_id in ("local", "kaizen"):
+        raise ValueError("Esse destino não pode ser removido.")
     if destino_id in NUVEM:
         _config(f"chave_{destino_id}", apagar=True)
         _config(f"url_{destino_id}", apagar=True)
@@ -433,13 +455,27 @@ def _sem_raciocinio(texto):
     return texto.strip()
 
 
+def _id_aparelho():
+    """Id aleatório deste PC: é por ele que o Worker conta o limite diário de cada um."""
+    id_ = _config("ia_aparelho")
+    if not id_:
+        id_ = secrets.token_hex(16)
+        _config("ia_aparelho", id_)
+    return id_
+
+
 def _conversar_nuvem(provedor, modelo, mensagens, formato):
-    chave_api = chave(provedor)
+    chave_api = chave(provedor) if provedor in NUVEM else None
     if formato:
         # nem todo modelo aceita schema estrito; pedir JSON + mostrar o schema é o que funciona em todos
         aviso = ("Responda SOMENTE com um objeto JSON válido que siga este JSON Schema:\n"
                  + json.dumps(formato, ensure_ascii=False))
         mensagens = [{"role": "system", "content": aviso}] + mensagens
+
+    if provedor == "kaizen":
+        # o Worker escolhe o modelo; o schema já foi no prompt acima
+        corpo = {"mensagens": mensagens, "json": bool(formato), "usuario": _id_aparelho()}
+        return (_http(f"{URL_KAIZEN}/v1/ia", corpo, timeout=300).get("resposta") or "").strip()
 
     if provedor == "claude":
         cabecalhos = _cabecalhos(provedor, chave_api)

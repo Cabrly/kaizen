@@ -493,14 +493,16 @@ async function verificarStatus() {
 
         }
 
-        throw new Error("indisponível");
+        throw new Error(documento.aviso || "indisponível");
 
     } catch (erro) {
 
         statusPonto.className = "status-dot status-offline";
 
-        statusTexto.textContent =
-            "IA indisponível. Confira a IA em uso (abaixo).";
+        // aviso = a IA em uso não atende o chat (a grátis do Kaizen); diz o que fazer
+        statusTexto.textContent = erro.message !== "indisponível" && erro.message.startsWith("O chat")
+            ? erro.message
+            : "IA indisponível. Confira a IA em uso (abaixo).";
 
     }
 

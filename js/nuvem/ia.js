@@ -4,14 +4,29 @@
    Usado quando o Kaizen roda sem servidor (celular, site
    estático). As chamadas saem direto do navegador, com a
    chave que a pessoa colou — ela fica só neste aparelho.
+
+   A "IA do Kaizen" vem conectada pra todo mundo: o Worker da
+   sincronia fala com o Gemini com a chave do projeto (que
+   nunca chega aqui) e limita o uso por aparelho e por dia.
 ========================================================= */
+
+import { servidor } from "../cofre.js";
 
 
 const CHAVE_CONFIG = "kaizen.nuvem.config.v1";
+const CHAVE_APARELHO = "kaizen.ia.aparelho";   // id aleatório: é por ele que o Worker conta o limite de cada um
+
+// o que o Worker usa (ver sync/src/worker.js); o nome bate com o FORTES das entregas
+const MODELO_KAIZEN = "gemini-3.5-flash";
 
 
 // os grátis primeiro: é assim que aparecem na tela
 export const PROVEDORES = {
+    // sem chave: sempre conectado, não aparece na lista de "conectar"
+    kaizen: {
+        nome: "IA do Kaizen (grátis)",
+        embutido: true
+    },
     gemini: {
         nome: "Gemini (Google)",
         ondePegar: "https://aistudio.google.com/apikey"
@@ -121,8 +136,23 @@ export function salvarConfig(config) {
 }
 
 
+// a do Kaizen por último: quem conectou uma chave própria continua usando a dela
 export function contasConectadas() {
-    return Object.keys(lerConfig().contas).filter((p) => PROVEDORES[p]);
+    return [...Object.keys(lerConfig().contas).filter((p) => PROVEDORES[p] && !PROVEDORES[p].embutido), "kaizen"];
+}
+
+
+function idDoAparelho() {
+    try {
+        let id = localStorage.getItem(CHAVE_APARELHO);
+        if (!id) {
+            id = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+            localStorage.setItem(CHAVE_APARELHO, id);
+        }
+        return id;
+    } catch (erro) {
+        return "sem-armazenamento-" + "0".repeat(16);   // navegador sem localStorage: divide o limite com os iguais
+    }
 }
 
 
@@ -187,6 +217,12 @@ function autorizacao(conta) {
 /* ---------- modelos ---------- */
 
 export async function listarModelos(provedor, conta) {
+
+    if (provedor === "kaizen") {
+        const dados = await pedir(`${servidor()}/v1/ia`, { tempo: 15000 });
+        if (!dados.ativa) throw new ErroIA("A IA do Kaizen está desligada no momento.");
+        return dados.modelos?.length ? dados.modelos : [MODELO_KAIZEN];
+    }
 
     if (provedor === "pc") {
         // já vem com o melhor primeiro (o destino em uso no PC)
@@ -299,7 +335,7 @@ export function modeloSugerido(provedor, modelos) {
 */
 export async function conversar(provedor, modelo, mensagens, formato = null) {
 
-    const conta = lerConfig().contas[provedor];
+    const conta = provedor === "kaizen" ? {} : lerConfig().contas[provedor];
 
     if (!conta) {
         throw new ErroIA(`${PROVEDORES[provedor]?.nome || provedor} não está conectado.`);
@@ -347,6 +383,16 @@ export async function conversar(provedor, modelo, mensagens, formato = null) {
 
     if (provedor === "gemini") {
         return conversarGemini(modelo, conta, mensagens, formato);
+    }
+
+
+    if (provedor === "kaizen") {
+        // o Worker escolhe o modelo; o schema já foi no prompt acima
+        const dados = await pedir(`${servidor()}/v1/ia`, {
+            corpo: { mensagens, json: Boolean(formato), usuario: idDoAparelho() },
+            tempo: 300000
+        });
+        return (dados.resposta || "").trim();
     }
 
 

@@ -225,9 +225,9 @@ async function destinosComStatus(usarCache = true) {
     return Promise.all(contasConectadas().map(async (p) => ({
         id: p,
         nome: PROVEDORES[p].nome,
-        url: p === "compat" ? lerConfig().contas[p].url : "",
+        url: p === "compat" ? lerConfig().contas[p].url : p === "kaizen" ? "grátis, com limite diário" : "",
         tipo: p === "pc" ? "pc" : "nuvem",
-        removivel: true,
+        removivel: !PROVEDORES[p].embutido,
         preferido: p === escolhido,
         ...(await modelosDe(p, usarCache))
     })));
@@ -566,6 +566,21 @@ function criarPlano(corpo) {
 }
 
 
+// plano que deu erro gera de novo com as mesmas respostas (as sessões só são gravadas no fim, então não há nenhuma)
+function refazerPlano(id) {
+
+    const plano = ler().planos.find((p) => p.id === id);
+
+    if (plano?.status !== "erro") throw new RangeError("Só dá pra tentar de novo um plano que deu erro.");
+
+    atualizarPlano(id, { status: "gerando", etapa: "Na fila…", erro: null });
+    gerarPlano(id);
+
+    return obterPlano(id);
+
+}
+
+
 // os cartões que vieram num plano importado entram na revisão de hoje
 function acordarCartoes(sessaoId) {
     const dados = completar(ler());
@@ -793,7 +808,7 @@ async function listaDestinos() {
     return {
         modo: "nuvem",
         servidores: await destinosComStatus(false),
-        nuvem: Object.entries(PROVEDORES).map(([id, p]) => ({
+        nuvem: Object.entries(PROVEDORES).filter(([, p]) => !p.embutido).map(([id, p]) => ({
             id, nome: p.nome, onde_pegar: p.ondePegar, pede_url: Boolean(p.pedeUrl), pede_chave: Boolean(p.pedeChave),
             conectado: contasConectadas().includes(id)
         }))
@@ -803,7 +818,7 @@ async function listaDestinos() {
 
 async function conectarNuvem(provedor, chave, url) {
 
-    if (!PROVEDORES[provedor]) throw new RangeError("Provedor desconhecido.");
+    if (!PROVEDORES[provedor] || PROVEDORES[provedor].embutido) throw new RangeError("Provedor desconhecido.");
 
     chave = String(chave || "").trim();
     url = String(url || "").trim().replace(/\/+$/, "");
@@ -859,11 +874,16 @@ function definirPreferido(provedor) {
 }
 
 
+// a IA grátis do Kaizen não atende o chat (é o que mais gasta): só quem conectou uma IA própria conversa
+const AVISO_CHAT = "O chat não usa a IA grátis do Kaizen: ela fica pros planos, flashcards e correções. Pra conversar, conecte uma IA sua em “Onde a IA roda” (o OpenRouter e o Gemini têm opções grátis).";
+
+
 async function statusChat() {
 
     const p = preferido();
 
     if (!p) return { disponivel: false, modelos: [], servidor: "nenhuma IA conectada" };
+    if (p === "kaizen") return { disponivel: false, modelos: [], servidor: PROVEDORES[p].nome, aviso: AVISO_CHAT };
 
     const estado = await modelosDe(p);
     const sugerido = modeloSugerido(p, estado.modelos);
@@ -881,6 +901,7 @@ async function chat(corpo) {
     const p = preferido();
 
     if (!p) throw new ErroIA("Conecte uma IA em \"Onde a IA roda\" (o OpenRouter tem modelos grátis).");
+    if (p === "kaizen") throw new ErroIA(AVISO_CHAT);
 
     const { sistema_chat } = await carregarPrompts();
     const mensagens = Array.isArray(corpo.mensagens) ? corpo.mensagens : [];
@@ -1295,7 +1316,8 @@ export async function rotear(url, opcoes = {}) {
             if (metodo === "GET" && recurso === "calendario") return json(200, { sessoes: calendario(url.searchParams.get("inicio"), url.searchParams.get("fim")) });
             if (metodo === "GET" && recurso === "sessoes") return json(200, { sessao: obterSessao(id) });
             if (metodo === "POST" && recurso === "perguntas") return json(200, { perguntas: await perguntas(String(corpo.tema || "").trim(), corpo.motor, corpo.continua_de) });
-            if (metodo === "POST" && recurso === "planos") return json(201, { plano: criarPlano(corpo) });
+            if (metodo === "POST" && recurso === "planos" && acao === "refazer") return json(200, { plano: refazerPlano(id) });
+            if (metodo === "POST" && recurso === "planos" && !ident) return json(201, { plano: criarPlano(corpo) });
             if (metodo === "POST" && recurso === "importar-plano") return json(201, { plano: await importarPlano(corpo) });
             if (metodo === "POST" && recurso === "sessoes" && acao === "adiar") return json(200, { sessao: adiarPendentes(id) });
             if (metodo === "PATCH" && recurso === "itens") return json(200, { sessao: marcarItem(id, corpo.estado) });
