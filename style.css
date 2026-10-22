@@ -2417,6 +2417,10 @@ footer p,
     color: #c90016;
 }
 
+.est-refazer {
+    margin-top: 8px;
+}
+
 .est-plano-etapa {
     display: flex;
     align-items: center;

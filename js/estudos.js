@@ -238,7 +238,8 @@ function renderizarPlanos() {
         if (p.status === "gerando") {
             corpo = `<p class="est-plano-etapa"><span class="est-girando"></span>${esc(p.etapa || "Gerando…")}</p>`;
         } else if (p.status === "erro") {
-            corpo = `<p class="est-plano-erro">Não deu certo: ${esc(p.erro)}</p>`;
+            corpo = `<p class="est-plano-erro">Não deu certo: ${esc(p.erro)}</p>
+                <button type="button" class="btn-secundario est-refazer" data-refazer-plano="${p.id}">↻ Tentar de novo</button>`;
         } else {
             corpo = `
                 <div class="est-progresso"><div style="width:${pct}%; background:${esc(p.cor)}"></div></div>
@@ -272,6 +273,20 @@ function renderizarPlanos() {
 
 
 async function cliqueNosPlanos(evento) {
+
+    // deu erro: gera de novo com as mesmas respostas, sem refazer o assistente
+    const refazer = evento.target.closest("[data-refazer-plano]");
+
+    if (refazer) {
+        refazer.disabled = true;
+        try {
+            await api(`/planos/${refazer.dataset.refazerPlano}/refazer`, { method: "POST" });
+        } catch (erro) {
+            alert(`Não consegui tentar de novo: ${erro.message}`);
+        }
+        atualizarTudo();
+        return;
+    }
 
     const botao = evento.target.closest("[data-excluir-plano]");
 

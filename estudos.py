@@ -549,6 +549,18 @@ def listar_planos():
         return [_plano(l) for l in con.execute(f"{_SELECT_PLANOS} GROUP BY p.id ORDER BY p.id DESC")]
 
 
+def refazer_plano(plano_id):
+    """Plano que deu erro gera de novo com as mesmas respostas, sem passar pelo assistente.
+    As sessões só são gravadas no fim da geração, então um plano com erro não tem nenhuma."""
+    with conectar() as con:
+        mudou = con.execute("UPDATE planos SET status = 'gerando', etapa = 'Na fila…', erro = NULL "
+                            "WHERE id = ? AND status = 'erro'", (plano_id,)).rowcount
+    if not mudou:
+        raise ValueError("Só dá pra tentar de novo um plano que deu erro.")
+    threading.Thread(target=_gerar_plano, args=(plano_id,), daemon=True).start()
+    return obter_plano(plano_id)
+
+
 def excluir_plano(plano_id):
     with conectar() as con:
         con.execute("DELETE FROM planos WHERE id = ?", (plano_id,))
