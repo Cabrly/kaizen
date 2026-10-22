@@ -247,6 +247,11 @@ def conectar_nuvem(provedor, chave_api, url=None):
     _config(f"{provedor}_sem_cota", apagar=True)
     _config(f"{provedor}_negado", apagar=True)
     _status_cache.pop(provedor, None)
+    # Sem IA rodando neste computador, a conta nova passa a ser a do chat (como no celular).
+    # Antes o chat continuava tentando um Ollama que nem estava instalado.
+    local = status(obter("local"))
+    if preferido() == "local" and not (local["online"] and local["modelos"]):
+        _config("servidor_preferido", provedor)
 
 
 # =========================================================
