@@ -388,11 +388,16 @@ export async function conversar(provedor, modelo, mensagens, formato = null) {
 
     if (provedor === "kaizen") {
         // o Worker escolhe o modelo; o schema já foi no prompt acima
-        const dados = await pedir(`${servidor()}/v1/ia`, {
-            corpo: { mensagens, json: Boolean(formato), usuario: idDoAparelho() },
-            tempo: 300000
-        });
-        return (dados.resposta || "").trim();
+        try {
+            const dados = await pedir(`${servidor()}/v1/ia`, {
+                corpo: { mensagens, json: Boolean(formato), usuario: idDoAparelho() },
+                tempo: 300000
+            });
+            return (dados.resposta || "").trim();
+        } catch (erro) {
+            // as mensagens do Worker já explicam o que fazer: sem o "429:" na frente
+            throw new ErroIA(erro.message.replace(/^\d{3}: /, ""), { status: erro.status });
+        }
     }
 
 

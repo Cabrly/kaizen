@@ -49,9 +49,10 @@ name = "LIMITE_IA"
 namespace_id = "1005"
 simple = { limit = 10, period = 60 }
 
-# IA grátis por dia: o total fica abaixo das 7000 da chave; cada aparelho, 40 (um plano gasta ~4,
-# cada sessão estudada ~1-2, cada mensagem do chat 1); por IP mais folgado (CGNAT junta muita gente num IP)
+# IA grátis por dia. A chave está no nível gratuito do Google: 20 pedidos por dia em CADA modelo (4 modelos
+# no worker.js ≈ 80). Cada aparelho, 10 (um plano gasta ~3, cada sessão estudada 1, cada correção 1); por IP
+# o dobro (CGNAT junta gente num IP). Com faturamento ativado no Google, sobe tudo (ex.: 6500 / 300 / 40).
 [vars]
-IA_COTA_DIA = "6500"
-IA_POR_IP = "300"
-IA_POR_USUARIO = "40"
+IA_COTA_DIA = "75"
+IA_POR_IP = "20"
+IA_POR_USUARIO = "10"

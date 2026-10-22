@@ -475,7 +475,11 @@ def _conversar_nuvem(provedor, modelo, mensagens, formato):
     if provedor == "kaizen":
         # o Worker escolhe o modelo; o schema já foi no prompt acima
         corpo = {"mensagens": mensagens, "json": bool(formato), "usuario": _id_aparelho()}
-        return (_http(f"{URL_KAIZEN}/v1/ia", corpo, timeout=300).get("resposta") or "").strip()
+        try:
+            return (_http(f"{URL_KAIZEN}/v1/ia", corpo, timeout=300).get("resposta") or "").strip()
+        except ErroConexao as erro:
+            # as mensagens do Worker já explicam o que fazer: sem o "429:" na frente
+            raise ErroConexao(re.sub(r"^\d{3}: ", "", str(erro)), status=erro.status)
 
     if provedor == "claude":
         cabecalhos = _cabecalhos(provedor, chave_api)

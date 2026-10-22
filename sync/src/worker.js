@@ -336,7 +336,24 @@ async function estatisticas(pedido, env, recurso, ip) {
 
 // em ordem: o primeiro que responder (o 3.5-flash responde em ~3 s; o 3.8 é melhor, mas leva ~12 s e vive
 // em "alta demanda"). "Alta demanda" (503) ou limite (429) passa pro próximo
-const MODELOS_IA = ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite"];
+// No nível gratuito cada modelo tem a própria cota diária (20 pedidos no 3.5/3.6 e no 3.8), então ter vários
+// soma. Os "-latest" e o 3.7 são apelidos que gastam a cota de outro, por isso ficam de fora.
+const MODELOS_IA = ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"];
+
+const AVISO_SEM_COTA = "A IA grátis do Kaizen chegou no limite de hoje e volta amanhã. Pra continuar agora, conecte " +
+                       "uma IA sua em “Onde a IA roda” (o Gemini e o OpenRouter têm chave grátis).";
+
+// "chave:modelo" → até quando a cota dele acabou (por instância do Worker): não gasta pedido batendo na porta
+const esgotados = new Map();
+
+
+// quanto o Google mandou esperar: RetryInfo ("18826s") ou o texto ("retry in 5h13m46.7s")
+function esperaDoGoogle(erro) {
+    const atraso = (erro?.details || []).find((d) => String(d["@type"]).endsWith("RetryInfo"))?.retryDelay;
+    if (atraso) return parseFloat(atraso);
+    const [, h = 0, m = 0, seg = 0] = String(erro?.message || "").match(/retry in (?:(\d+)h)?(?:(\d+)m)?(?:([\d.]+)s)?/) || [];
+    return Number(h) * 3600 + Number(m) * 60 + Number(seg);
+}
 const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/models";
 const MAX_CARACTERES_IA = 260_000;   // a entrega mais o enunciado (o app corta a entrega em 200 mil)
 
@@ -386,7 +403,7 @@ async function chamarGemini(chave, modelo, mensagens, comoJson) {
     const dados = await resposta.json().catch(() => ({}));
 
     // a mensagem do Google não volta pro app (pode citar o projeto da chave)
-    if (!resposta.ok) return { status: resposta.status, detalhe: dados.error?.message || "" };
+    if (!resposta.ok) return { status: resposta.status, detalhe: dados.error?.message || "", espera: esperaDoGoogle(dados.error) };
 
     const partes = dados.candidates?.[0]?.content?.parts;
     if (!partes) return { status: 422, detalhe: dados.promptFeedback?.blockReason || "resposta vazia" };
@@ -429,9 +446,9 @@ async function ia(pedido, env, ip) {
     const contador = env.ESTATISTICAS.get(env.ESTATISTICAS.idFromName("geral"));
     const [quem, usuario] = await Promise.all([hashDoDia(ip), hashDoDia(corpo.usuario)]);
     const recusa = await contador.reservarIA(quem, usuario, {
-        cotaDia: Number(env.IA_COTA_DIA) || 6500,
-        porIp: Number(env.IA_POR_IP) || 300,
-        porUsuario: Number(env.IA_POR_USUARIO) || 40
+        cotaDia: Number(env.IA_COTA_DIA) || 75,
+        porIp: Number(env.IA_POR_IP) || 20,
+        porUsuario: Number(env.IA_POR_USUARIO) || 10
     });
 
     if (recusa === "cota-dia") {
@@ -442,21 +459,32 @@ async function ia(pedido, env, ip) {
     }
 
     let ultimo = null;
+    let semCota = 0;   // quantos modelos estão sem cota (de agora ou de antes)
     tentativas:
     for (const [n, chave] of chavesGemini(env).entries()) {
         for (const modelo of MODELOS_IA) {
+            const marca = `${n}:${modelo}`;
+            if ((esgotados.get(marca) || 0) > Date.now()) { semCota++; continue; }
             const r = await chamarGemini(chave, modelo, mensagens, corpo.json === true);
             if (r.texto !== undefined) return json(200, { resposta: r.texto, modelo });
             ultimo = r;
             console.error(`gemini chave ${n + 1} ${modelo}: ${r.status} ${r.detalhe.slice(0, 200)}`);
+            if (r.status === 429 && r.espera > 120) {
+                // cota do dia (não a do minuto): só volta quando o Google disse
+                esgotados.set(marca, Date.now() + r.espera * 1000);
+                semCota++;
+            }
             if ([401, 403].includes(r.status)) continue tentativas;            // chave negada: vai pra próxima
             if (![429, 500, 503, 504].includes(r.status)) break tentativas;    // erro do pedido: nada resolve
         }
     }
 
     await contador.devolverIA(quem, usuario);
-    if (ultimo.status === 422) return json(422, { erro: "A IA não quis responder esse pedido. Tente reformular." });
-    return json(503, { erro: "A IA do Kaizen está sobrecarregada agora. Tente de novo daqui a pouco." });
+    if (ultimo?.status === 422) return json(422, { erro: "A IA não quis responder esse pedido. Tente reformular." });
+    if (semCota && (!ultimo || ultimo.status === 429 || semCota >= MODELOS_IA.length)) {
+        return json(429, { erro: AVISO_SEM_COTA, motivo: "cota-google" });
+    }
+    return json(503, { erro: "A IA do Kaizen está sobrecarregada agora. Tente de novo em alguns minutos." });
 
 }
 
