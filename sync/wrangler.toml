@@ -42,3 +42,16 @@ simple = { limit = 3, period = 60 }
 name = "LIMITE_USO"
 namespace_id = "1004"
 simple = { limit = 20, period = 60 }
+
+# IA do Kaizen: por IP, 10 pedidos por minuto (um plano grande gasta uns 3 de uma vez)
+[[ratelimits]]
+name = "LIMITE_IA"
+namespace_id = "1005"
+simple = { limit = 10, period = 60 }
+
+# IA grátis por dia: o total fica abaixo das 7000 da chave; cada aparelho, 40 (um plano gasta ~4,
+# cada sessão estudada ~1-2, cada mensagem do chat 1); por IP mais folgado (CGNAT junta muita gente num IP)
+[vars]
+IA_COTA_DIA = "6500"
+IA_POR_IP = "300"
+IA_POR_USUARIO = "40"

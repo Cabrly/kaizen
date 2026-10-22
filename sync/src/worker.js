@@ -31,6 +31,21 @@
    POST /v1/visita  { acao, origem }  o site conta visitas e cliques
    GET  /v1/painel  Authorization: Bearer <PAINEL_CHAVE> → as contagens
 
+   IA do Kaizen (grátis pra quem não tem chave própria): o Worker fala com o
+   Gemini usando a chave do projeto, guardada como secret (GEMINI_CHAVE, e
+   GEMINI_CHAVE_2 de reserva) — elas nunca vão pro navegador nem pro git.
+
+   POST /v1/ia  { mensagens: [{ role, content }], json, usuario }  → { resposta, modelo }
+   GET  /v1/ia                                                    → { modelos, ativa }
+
+   Quem escolhe o modelo é o Worker (o pedido não pede um "pro" caro). Só
+   aceita o app como origem (ou nenhuma, que é o server.py do PC). Limites:
+   10 pedidos por minuto por IP; por dia, IA_POR_USUARIO por aparelho
+   ("usuario" = id aleatório que o app sorteia uma vez), IA_POR_IP por IP
+   (pega quem sorteia ids novos pra burlar) e IA_COTA_DIA no total — abaixo
+   do limite diário da chave. IP e id vão pro contador só como hash do dia;
+   a contagem "ia:pedidos" aparece no painel.
+
    Limite por IP: 120 pedidos por minuto no total, 10 por minuto em cofre que
    não existe (404) e 3 cofres novos por minuto. Quem tenta adivinhar códigos
    bate no segundo logo; o terceiro impede alguém de encher o armazenamento
@@ -44,7 +59,7 @@ const UM_ANO = 365 * 24 * 60 * 60 * 1000;
 
 const CORS = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Max-Age": "86400"
 };
@@ -212,7 +227,33 @@ export class Estatisticas extends DurableObject {
 
     ler() {
         const desde = new Date(Date.now() - DIAS_NO_PAINEL * 86400000).toISOString().slice(0, 10);
-        return this.ctx.storage.sql.exec("SELECT dia, chave, valor FROM contagem WHERE dia >= ? ORDER BY dia", desde).toArray();
+        return this.ctx.storage.sql.exec(
+            "SELECT dia, chave, valor FROM contagem WHERE dia >= ? AND chave NOT LIKE 'ia:ip:%' ORDER BY dia", desde).toArray();
+    }
+
+    valorDe(dia, chave) {
+        return this.ctx.storage.sql.exec("SELECT valor FROM contagem WHERE dia = ? AND chave = ?", dia, chave).toArray()[0]?.valor || 0;
+    }
+
+    // confere e já conta, de uma vez (o objeto atende um pedido por vez, então dois juntos não passam do teto)
+    // ip e usuario já chegam como hash; os dois ficam em "ia:ip:*", que o painel não mostra
+    reservarIA(ip, usuario, { cotaDia, porIp, porUsuario }) {
+        const dia = hojeBr();
+        const total = this.valorDe(dia, "ia:pedidos");
+        if (total >= cotaDia) return "cota-dia";
+        if (this.valorDe(dia, `ia:ip:u:${usuario}`) >= porUsuario) return "cota-usuario";
+        if (this.valorDe(dia, `ia:ip:${ip}`) >= porIp) return "cota-ip";
+        if (total === 0) {
+            // primeiro pedido do dia: os contadores de ontem não servem mais
+            this.ctx.storage.sql.exec("DELETE FROM contagem WHERE dia < ? AND chave LIKE 'ia:ip:%'", dia);
+        }
+        this.somar({ "ia:pedidos": 1, [`ia:ip:${ip}`]: 1, [`ia:ip:u:${usuario}`]: 1 });
+        return null;
+    }
+
+    // o Google falhou: o pedido não gasta a cota de ninguém
+    devolverIA(ip, usuario) {
+        this.somar({ "ia:pedidos": -1, [`ia:ip:${ip}`]: -1, [`ia:ip:u:${usuario}`]: -1, "ia:falhas": 1 });
     }
 
 }
@@ -291,6 +332,135 @@ async function estatisticas(pedido, env, recurso, ip) {
 }
 
 
+/* ---------- IA do Kaizen ---------- */
+
+// em ordem: o primeiro que responder (o 3.5-flash responde em ~3 s; o 3.8 é melhor, mas leva ~12 s e vive
+// em "alta demanda"). "Alta demanda" (503) ou limite (429) passa pro próximo
+const MODELOS_IA = ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite"];
+const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/models";
+const MAX_CARACTERES_IA = 260_000;   // a entrega mais o enunciado (o app corta a entrega em 200 mil)
+
+// o app no GitHub Pages, o app de computador e quem testa em casa; sem Origin = server.py do PC
+const ORIGENS_IA = /^(https:\/\/cabrly\.github\.io|https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?|tauri:\/\/localhost|https?:\/\/tauri\.localhost)$/;
+
+
+async function hashDoDia(texto) {
+    const bits = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`kaizen-ia:${hojeBr()}:${texto}`));
+    return [...new Uint8Array(bits).slice(0, 8)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+
+function mensagensValidas(corpo) {
+    const mensagens = corpo?.mensagens;
+    if (!Array.isArray(mensagens) || !mensagens.length || mensagens.length > 80) return null;
+    let total = 0;
+    for (const m of mensagens) {
+        if (!m || !["system", "user", "assistant"].includes(m.role) || typeof m.content !== "string") return null;
+        total += m.content.length;
+    }
+    return total <= MAX_CARACTERES_IA ? mensagens : null;
+}
+
+
+// a principal primeiro; a reserva entra quando a principal é negada (403) ou estoura (429)
+const chavesGemini = (env) => [env.GEMINI_CHAVE, env.GEMINI_CHAVE_2].filter(Boolean);
+
+
+async function chamarGemini(chave, modelo, mensagens, comoJson) {
+
+    const sistema = mensagens.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
+    const corpo = {
+        contents: mensagens.filter((m) => m.role !== "system")
+            .map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+        // pensar pouco: plano e flashcards saem bons assim, e bem mais rápido
+        generationConfig: { maxOutputTokens: 24000, thinkingConfig: { thinkingLevel: "low" } }
+    };
+    if (sistema) corpo.systemInstruction = { parts: [{ text: sistema }] };
+    if (comoJson) corpo.generationConfig.responseMimeType = "application/json";
+
+    const resposta = await fetch(`${GEMINI_API}/${modelo}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": chave },
+        body: JSON.stringify(corpo)
+    });
+    const dados = await resposta.json().catch(() => ({}));
+
+    // a mensagem do Google não volta pro app (pode citar o projeto da chave)
+    if (!resposta.ok) return { status: resposta.status, detalhe: dados.error?.message || "" };
+
+    const partes = dados.candidates?.[0]?.content?.parts;
+    if (!partes) return { status: 422, detalhe: dados.promptFeedback?.blockReason || "resposta vazia" };
+    // só o texto da resposta (as partes "thought" são o raciocínio)
+    return { texto: partes.filter((p) => !p.thought).map((p) => p.text || "").join("") };
+
+}
+
+
+async function ia(pedido, env, ip) {
+
+    const origem = pedido.headers.get("Origin");
+    if (origem && !ORIGENS_IA.test(origem)) return json(403, { erro: "A IA do Kaizen só atende o próprio app." });
+
+    const ativa = chavesGemini(env).length > 0;
+    if (pedido.method === "GET") return json(200, { modelos: [MODELOS_IA[0]], ativa });
+    if (pedido.method !== "POST") return json(405, { erro: "Método não permitido." });
+    if (!ativa) return json(503, { erro: "A IA do Kaizen está desligada no momento." });
+
+    if (!(await dentroDoLimite(env.LIMITE_IA, ip))) {
+        return json(429, { erro: "Muitos pedidos seguidos pra IA do Kaizen. Espere um minuto.", motivo: "minuto", espera: 60 });
+    }
+
+    const texto = await pedido.text();
+    if (texto.length > MAX_CARACTERES_IA * 2) return json(413, { erro: "Pedido grande demais pra IA." });
+
+    let corpo;
+    try {
+        corpo = JSON.parse(texto);
+    } catch {
+        return json(400, { erro: "JSON inválido." });
+    }
+    const mensagens = mensagensValidas(corpo);
+    if (!mensagens) return json(400, { erro: "Esperava { mensagens: [{ role, content }] }." });
+    if (typeof corpo.usuario !== "string" || !/^[A-Za-z0-9_-]{16,64}$/.test(corpo.usuario)) {
+        return json(400, { erro: "Falta o id do aparelho. Atualize o Kaizen." });
+    }
+
+    // o id do aparelho é o limite de cada pessoa; o do IP pega quem troca de id pra burlar
+    const contador = env.ESTATISTICAS.get(env.ESTATISTICAS.idFromName("geral"));
+    const [quem, usuario] = await Promise.all([hashDoDia(ip), hashDoDia(corpo.usuario)]);
+    const recusa = await contador.reservarIA(quem, usuario, {
+        cotaDia: Number(env.IA_COTA_DIA) || 6500,
+        porIp: Number(env.IA_POR_IP) || 300,
+        porUsuario: Number(env.IA_POR_USUARIO) || 40
+    });
+
+    if (recusa === "cota-dia") {
+        return json(429, { erro: "A IA grátis do Kaizen já atendeu todo mundo que dava hoje. Volta amanhã, ou conecte uma chave sua em \"Onde a IA roda\".", motivo: recusa });
+    }
+    if (recusa) {
+        return json(429, { erro: "Você chegou no limite diário da IA grátis do Kaizen. Ela volta amanhã; pra usar mais, conecte uma chave sua em \"Onde a IA roda\".", motivo: recusa });
+    }
+
+    let ultimo = null;
+    tentativas:
+    for (const [n, chave] of chavesGemini(env).entries()) {
+        for (const modelo of MODELOS_IA) {
+            const r = await chamarGemini(chave, modelo, mensagens, corpo.json === true);
+            if (r.texto !== undefined) return json(200, { resposta: r.texto, modelo });
+            ultimo = r;
+            console.error(`gemini chave ${n + 1} ${modelo}: ${r.status} ${r.detalhe.slice(0, 200)}`);
+            if ([401, 403].includes(r.status)) continue tentativas;            // chave negada: vai pra próxima
+            if (![429, 500, 503, 504].includes(r.status)) break tentativas;    // erro do pedido: nada resolve
+        }
+    }
+
+    await contador.devolverIA(quem, usuario);
+    if (ultimo.status === 422) return json(422, { erro: "A IA não quis responder esse pedido. Tente reformular." });
+    return json(503, { erro: "A IA do Kaizen está sobrecarregada agora. Tente de novo daqui a pouco." });
+
+}
+
+
 const MUITAS_TENTATIVAS = () => json(429, { erro: "Muitas tentativas. Espere um minuto e tente de novo." });
 
 // IPs que estouraram a cota de erros (por instância do Worker; o limite da Cloudflare cobre o resto)
@@ -313,6 +483,17 @@ export default {
         const [, versaoApi, recurso, id] = url.pathname.split("/");
 
         if (url.pathname === "/") return json(200, { app: "kaizen-sync", ok: true });
+
+        if (versaoApi === "v1" && recurso === "ia" && !id) {
+            const ip = pedido.headers.get("CF-Connecting-IP") || "sem-ip";
+            if ((bloqueados.get(ip) || 0) > Date.now()) return MUITAS_TENTATIVAS();
+            try {
+                return await ia(pedido, env, ip);
+            } catch (erro) {
+                console.error(erro);
+                return json(500, { erro: "A IA do Kaizen falhou. Tente de novo daqui a pouco." });
+            }
+        }
 
         if (versaoApi === "v1" && ["uso", "visita", "painel"].includes(recurso) && !id) {
             const ip = pedido.headers.get("CF-Connecting-IP") || "sem-ip";
