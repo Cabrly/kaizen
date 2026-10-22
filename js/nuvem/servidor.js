@@ -858,6 +858,64 @@ async function conectarNuvem(provedor, chave, url) {
 }
 
 
+/*
+    Entrar com o OpenRouter (OAuth PKCE): a pessoa entra no site dele, clica
+    em "Authorize" e volta com um código que vira a chave. Mesmo fluxo do
+    servidores.py; aqui a volta cai nesta mesma página, então o verificador
+    fica no aparelho até ela voltar.
+*/
+const LOGIN_OPENROUTER = "kaizen.nuvem.openrouter.login";
+const LOGIN_SEGUNDOS = 600;   // o código do OpenRouter vale 10 min
+
+
+function base64url(bytes) {
+    return btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+
+async function entrarOpenRouter(volta) {
+
+    if (!/^https?:\/\//.test(volta || "")) throw new RangeError("Endereço de volta inválido.");
+
+    const verificador = base64url(crypto.getRandomValues(new Uint8Array(48)));
+    const desafio = base64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verificador)));
+    const estado = base64url(crypto.getRandomValues(new Uint8Array(16)));
+
+    localStorage.setItem(LOGIN_OPENROUTER, JSON.stringify({ estado, verificador, quando: Date.now() }));
+
+    const parametros = new URLSearchParams({ callback_url: volta, code_challenge: desafio,
+                                             code_challenge_method: "S256", state: estado, key_label: "Kaizen" });
+    return `https://openrouter.ai/auth?${parametros}`;
+
+}
+
+
+async function concluirOpenRouter(codigo, estado) {
+
+    let login = null;
+    try { login = JSON.parse(localStorage.getItem(LOGIN_OPENROUTER)); } catch { /* sem login guardado */ }
+    localStorage.removeItem(LOGIN_OPENROUTER);
+
+    if (!login || !codigo || login.estado !== estado || Date.now() - login.quando > LOGIN_SEGUNDOS * 1000) {
+        throw new RangeError("O login no OpenRouter expirou. Clique em \"Entrar com o OpenRouter\" de novo.");
+    }
+
+    const resposta = await fetch("https://openrouter.ai/api/v1/auth/keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: codigo, code_verifier: login.verificador, code_challenge_method: "S256" })
+    });
+    const dados = await resposta.json().catch(() => ({}));
+
+    if (!resposta.ok || !dados.key) {
+        throw new RangeError(`O OpenRouter não confirmou o login (${resposta.status}). Tente de novo.`);
+    }
+
+    return conectarNuvem("openrouter", dados.key);
+
+}
+
+
 function removerConta(provedor) {
     const config = lerConfig();
     delete config.contas[provedor];
@@ -1303,6 +1361,8 @@ export async function rotear(url, opcoes = {}) {
 
         if (area === "ia" && recurso === "servidores") {
             if (metodo === "GET" && !ident) return json(200, await listaDestinos());
+            if (metodo === "POST" && ident === "openrouter" && acao === "entrar") return json(200, { url: await entrarOpenRouter(corpo.volta) });
+            if (metodo === "POST" && ident === "openrouter" && acao === "concluir") return json(200, { servidores: await concluirOpenRouter(corpo.codigo, corpo.estado) });
             if (metodo === "POST" && ident === "nuvem") return json(200, { servidores: await conectarNuvem(acao, corpo.chave, corpo.url) });
             if (metodo === "POST" && acao === "preferido") { definirPreferido(ident); return json(200, { servidores: await destinosComStatus() }); }
             if (metodo === "DELETE" && ident) { removerConta(ident); return json(200, { servidores: await destinosComStatus() }); }

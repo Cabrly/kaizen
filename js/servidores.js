@@ -135,6 +135,8 @@ function iniciarServidores() {
 
         const abrir = evento.target.closest("[data-abrir-nuvem]");
 
+        if (evento.target.closest("[data-entrar-openrouter]")) return entrarOpenRouter(evento.target.closest("button"));
+
         if (abrir) {
             const caixa = painel.querySelector(`[data-caixa-nuvem="${abrir.dataset.abrirNuvem}"]`);
             caixa.hidden = !caixa.hidden;
@@ -215,6 +217,70 @@ function iniciarServidores() {
     carregar();
 
     if (location.hash.startsWith("#pc=")) conectarPeloLink();
+
+    const volta = new URLSearchParams(location.search);
+    if (volta.has("code") && volta.has("state")) concluirOpenRouter(volta);
+
+    // no programa de computador o login do OpenRouter termina no navegador:
+    // ao voltar pra janela, a lista já mostra a IA conectada
+    window.addEventListener("focus", () => { if (painel.offsetParent) carregar(); });
+
+    // o cartão da IA local também oferece o OpenRouter
+    window.addEventListener("kaizen:entrar-openrouter", (evento) => entrarOpenRouter(evento.detail));
+
+}
+
+
+/*
+    Entrar com o OpenRouter: abre o login dele, que volta pra cá com
+    ?code=&state=. Quem guarda o verificador é o servidor (server.py ou o
+    de bolso), então a volta pode cair até no navegador do sistema.
+*/
+async function entrarOpenRouter(botao) {
+
+    const erro = painel.querySelector("#srv-erro");
+
+    botao.disabled = true;
+    erro.textContent = "";
+
+    try {
+        const volta = location.origin + location.pathname + (window.KAIZEN_DESKTOP ? "?de=programa" : "");
+        const { url } = await api("/openrouter/entrar", { method: "POST", body: { volta } });
+        location.href = url;   // no programa, abre no navegador do sistema
+        if (window.KAIZEN_DESKTOP) {
+            painel.querySelector("#srv-mais").open = true;
+            erro.textContent = "Termine o login no navegador que abriu e volte pra cá.";
+        }
+    } catch (falha) {
+        painel.querySelector("#srv-mais").open = true;   // o erro aparece lá dentro
+        erro.textContent = falha.message;
+    } finally {
+        botao.disabled = false;
+    }
+
+}
+
+
+async function concluirOpenRouter(volta) {
+
+    history.replaceState(null, "", location.pathname);   // o código não fica no histórico
+
+    document.querySelector('.nav-tab[data-tela="ia"]')?.click();
+    painel.querySelector("#srv-mais").open = true;
+
+    const erro = painel.querySelector("#srv-erro");
+    erro.textContent = "Conectando o OpenRouter…";
+
+    try {
+        await api("/openrouter/concluir", { method: "POST", body: { codigo: volta.get("code"), estado: volta.get("state") } });
+        erro.textContent = volta.get("de") === "programa"
+            ? "OpenRouter conectado! Pode fechar esta aba e voltar pro programa do Kaizen."
+            : "OpenRouter conectado! Os modelos grátis já estão prontos pra usar.";
+        await carregar();
+        avisarMudanca();
+    } catch (falha) {
+        erro.textContent = falha.message;
+    }
 
 }
 
@@ -458,7 +524,15 @@ function renderizar(servidores, soNuvem = false) {
 }
 
 
-// Pra quem nunca mexeu com chave de API: o OpenRouter é o caminho grátis recomendado.
+// O OpenRouter é o caminho grátis recomendado: entra com um clique, e colar
+// a chave fica de plano B (quando o login não volta, por exemplo).
+const ENTRAR_OPENROUTER = `
+    <div class="srv-openrouter">
+        <button type="button" class="btn-primario" data-entrar-openrouter>Entrar com o OpenRouter (grátis)</button>
+        <p class="srv-dica">Abre o site do OpenRouter: entre com a conta Google, clique em <b>Authorize</b>
+            e você volta pra cá com a IA pronta. Não precisa de cartão nem de copiar chave.</p>
+    </div>`;
+
 const PASSOS_OPENROUTER = `
     <ol class="srv-passos">
         <li>Abra <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer">openrouter.ai</a>
@@ -483,8 +557,12 @@ const PASSOS_PC = `
 function renderizarNuvem(nuvem) {
 
     // só as que ainda não foram conectadas; as conectadas já estão na lista
-    painel.querySelector("#srv-nuvem").innerHTML = nuvem.filter((n) => !n.conectado).map((n) => `
-        <button type="button" class="srv-nuvem-botao" data-abrir-nuvem="${esc(n.id)}">☁ Conectar ${esc(n.nome)}</button>
+    painel.querySelector("#srv-nuvem").innerHTML = nuvem.filter((n) => !n.conectado)
+        .sort((a, b) => (b.id === "openrouter") - (a.id === "openrouter"))   // o grátis primeiro
+        .map((n) => `
+        ${n.id === "openrouter" ? ENTRAR_OPENROUTER : ""}
+        <button type="button" class="srv-nuvem-botao" data-abrir-nuvem="${esc(n.id)}">${n.id === "openrouter"
+            ? "Prefiro colar uma chave do OpenRouter" : `☁ Conectar ${esc(n.nome)}`}</button>
         <form class="srv-form srv-caixa-nuvem" data-caixa-nuvem="${esc(n.id)}" hidden>
             ${n.id === "openrouter" ? PASSOS_OPENROUTER : ""}
             ${n.id === "pc" ? PASSOS_PC : ""}

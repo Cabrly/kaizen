@@ -18,6 +18,8 @@ Ollama não tem senha: quem for liberar o seu pra outras máquinas deve
 deixá-lo visível só numa rede privada (Tailscale, VPN), nunca na internet.
 """
 from concurrent.futures import ThreadPoolExecutor
+import base64
+import hashlib
 import json
 import os
 import re
@@ -269,6 +271,54 @@ def conectar_nuvem(provedor, chave_api, url=None):
     _config(f"{provedor}_sem_cota", apagar=True)
     _config(f"{provedor}_negado", apagar=True)
     _status_cache.pop(provedor, None)
+    # Sem IA rodando neste computador, a conta nova passa a ser a do chat (como no celular).
+    # Antes o chat continuava tentando um Ollama que nem estava instalado.
+    local = status(obter("local"))
+    if preferido() == "local" and not (local["online"] and local["modelos"]):
+        _config("servidor_preferido", provedor)
+
+
+# =========================================================
+#   Entrar com o OpenRouter (OAuth PKCE)
+# =========================================================
+# Em vez de criar e colar uma chave, a pessoa entra no site do OpenRouter,
+# clica em "Authorize" e volta pro Kaizen com um código que vira a chave.
+# O verificador fica aqui (não na página) porque no programa de computador
+# a volta acontece no navegador do sistema, não na janela do app.
+
+OPENROUTER_LOGIN = "https://openrouter.ai/auth"
+OPENROUTER_CHAVES = "https://openrouter.ai/api/v1/auth/keys"
+LOGIN_SEGUNDOS = 600                    # o código do OpenRouter vale 10 min
+_logins_openrouter = {}                 # estado -> (quando, verificador)
+
+
+def entrar_openrouter(volta):
+    """Endereço da página de login do OpenRouter, que volta pra `volta` com ?code=&state=."""
+    if not re.match(r"^https?://", volta or ""):
+        raise ValueError("Endereço de volta inválido.")
+    agora = time.time()
+    for estado, (quando, _) in list(_logins_openrouter.items()):
+        if agora - quando > LOGIN_SEGUNDOS:
+            _logins_openrouter.pop(estado, None)
+    verificador = secrets.token_urlsafe(48)
+    desafio = base64.urlsafe_b64encode(hashlib.sha256(verificador.encode()).digest()).rstrip(b"=").decode()
+    estado = secrets.token_urlsafe(16)
+    _logins_openrouter[estado] = (agora, verificador)
+    parametros = urllib.parse.urlencode({"callback_url": volta, "code_challenge": desafio,
+                                         "code_challenge_method": "S256", "state": estado, "key_label": "Kaizen"})
+    return f"{OPENROUTER_LOGIN}?{parametros}"
+
+
+def concluir_openrouter(codigo, estado):
+    """Troca o código da volta pela chave e conecta o OpenRouter."""
+    quando, verificador = _logins_openrouter.pop(estado or "", (0, None))
+    if not verificador or not codigo or time.time() - quando > LOGIN_SEGUNDOS:
+        raise ValueError("O login no OpenRouter expirou. Clique em \"Entrar com o OpenRouter\" de novo.")
+    try:
+        dados = _http(OPENROUTER_CHAVES, {"code": codigo, "code_verifier": verificador, "code_challenge_method": "S256"})
+    except ErroConexao as erro:
+        raise ValueError(f"O OpenRouter não confirmou o login ({erro}). Tente de novo.")
+    conectar_nuvem("openrouter", dados.get("key"))
 
 
 # =========================================================

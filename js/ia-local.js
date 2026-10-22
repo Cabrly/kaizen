@@ -23,9 +23,11 @@ let escolhido = null;
 let acompanhando = null;
 let listaAberta = false;      // "Trocar modelo" aberto continua aberto ao redesenhar
 let aceitoMarcado = false;
+let instalarAberto = false;   // com a nuvem em uso, o instalador só aparece se a pessoa pedir
 
 if (cartao) {
     conferir();
+    window.addEventListener("kaizen:servidores-mudaram", () => { if (!acompanhando) conferir(); });
 }
 
 
@@ -51,7 +53,7 @@ async function conferir() {
         return;
     }
     cartao.hidden = false;
-    abaIa?.classList.toggle("aba-aviso", !situacao.pronto);
+    abaIa?.classList.toggle("aba-aviso", !situacao.pronto && situacao.usa_local);
     // Sem IA, o seletor de modelo e o "IA indisponível" só repetem o que o cartão já diz.
     cartao.closest(".ia-config")?.classList.toggle("ia-sem-ia", !situacao.pronto && situacao.usa_local);
     if (!situacao.recomendado) document.querySelector("#srv-mais")?.setAttribute("open", "");
@@ -103,6 +105,19 @@ function desenhar() {
         return;
     }
 
+    if (!s.usa_local && !instalarAberto) {
+        cartao.innerHTML = `
+            <p class="iai-ok"><span class="status-dot status-online"></span>
+                O chat está usando a IA na nuvem</p>
+            <p class="iai-dica">Quer uma IA que roda neste computador, sem internet?
+                <button type="button" class="iai-link" data-acao="instalar-aqui">Instalar aqui</button></p>`;
+        cartao.querySelector('[data-acao="instalar-aqui"]').addEventListener("click", () => {
+            instalarAberto = true;
+            desenhar();
+        });
+        return;
+    }
+
     const opcao = s.opcoes.find((o) => o.nome === escolhido);
     const total = opcao.download + (s.ollama.instalado ? 0 : s.download_ollama);
     const situacaoTexto = !s.recomendado
@@ -139,6 +154,8 @@ function desenhar() {
             ${s.ollama.instalado ? "Baixar o modelo" : "Instalar tudo"} · ${gb(total)}
         </button>
         <p class="est-erro" id="iai-erro" role="alert">${esc(s.instalacao.erro || "")}</p>
+        ${s.recomendado ? `<p class="iai-dica">Não quer baixar nada? Use a IA na nuvem, grátis:
+            <button type="button" class="iai-link" data-acao="nuvem">Entrar com o OpenRouter</button></p>` : ""}
         <details class="iai-detalhes">
             <summary>Seu computador</summary>${resumoHardware(s.hardware)}
         </details>`;
@@ -150,6 +167,8 @@ function desenhar() {
     const botao = cartao.querySelector("#iai-instalar");
     aceito.addEventListener("change", () => { aceitoMarcado = aceito.checked; botao.disabled = !aceito.checked; });
     botao.addEventListener("click", instalar);
+    cartao.querySelector('[data-acao="nuvem"]')?.addEventListener("click", (evento) =>
+        window.dispatchEvent(new CustomEvent("kaizen:entrar-openrouter", { detail: evento.target })));
 }
 
 
@@ -197,6 +216,7 @@ function acompanhar() {
         if (p.ativo) return desenharProgresso(p);
 
         clearInterval(acompanhando);
+        acompanhando = null;
         if (p.concluido) {
             try { localStorage.setItem(CHAVE_MODELO_CHAT, p.modelo); } catch (erro) { /* aba privada */ }
             window.dispatchEvent(new CustomEvent("kaizen:servidores-mudaram"));
