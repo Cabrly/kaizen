@@ -1,5 +1,15 @@
 [
     {
+        "versao": "1.7.2",
+        "data": "2026-10-22",
+        "itens": [
+            "Entrar com o OpenRouter agora é em um clique, sem criar e colar chave. Colar a chave continua como plano B.",
+            "Se a sua conta da nuvem está conectada e o computador não tem IA, ela vira a IA do chat automaticamente.",
+            "Com a nuvem em uso, o cartão “IA neste computador” não insiste mais em pedir instalação.",
+            "O guia explica o novo jeito de conectar a IA."
+        ]
+    },
+    {
         "versao": "1.7.1",
         "data": "2026-10-21",
         "itens": [
