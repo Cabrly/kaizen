@@ -23,6 +23,7 @@ from concurrent.futures import ThreadPoolExecutor
 from html import unescape
 import gzip
 import json
+import math
 import os
 import re
 import sqlite3
@@ -64,6 +65,67 @@ IDIOMAS = {
 
 def idioma_valido(idioma):
     return idioma if idioma in IDIOMAS else "pt"
+
+
+# ---------- Áreas do conhecimento (fontes de autoridade) ----------
+# areas.json guarda, por área (direito, saúde, engenharia…), os sites de autoridade onde a
+# documentação deve ser procurada primeiro. Sem o arquivo tudo cai na busca livre.
+
+ARQUIVO_AREAS = None      # o server.py aponta pro areas.json; sem isso procura ao lado deste arquivo
+_areas = None
+
+
+def _carregar_areas():
+    global _areas
+    if _areas is None:
+        caminho = ARQUIVO_AREAS or os.path.join(os.path.dirname(os.path.abspath(__file__)), "areas.json")
+        try:
+            with open(caminho, encoding="utf-8") as arquivo:
+                dados = json.load(arquivo)
+            _areas = {"areas": {a["id"]: a for a in dados["areas"]}, "evitar": tuple(dados.get("evitar", []))}
+        except (OSError, ValueError, KeyError, TypeError):
+            _areas = {"areas": {}, "evitar": ()}
+    return _areas
+
+
+def ids_de_areas():
+    return list(_carregar_areas()["areas"])
+
+
+def descricao_das_areas():
+    """'direito (Direito, legislação…); saude (…)' pro prompt do roteiro."""
+    return "; ".join(f"{a['id']} ({a['nome']})" for a in _carregar_areas()["areas"].values())
+
+
+def area_valida(area):
+    return area if area in _carregar_areas()["areas"] else ""
+
+
+def area_tecnica(area):
+    """Tecnologia: termos de busca em inglês e a palavra 'documentação' ajudam. Nas outras áreas atrapalham."""
+    return bool((_carregar_areas()["areas"].get(area) or {}).get("tecnica"))
+
+
+def detectar_area(texto):
+    """Chute pelas palavras do tema, pra quando a IA não escolheu a área. '' = não sei."""
+    limpo = " " + re.sub(r"[^a-z0-9+#/]+", " ", _sem_acento(texto or "")) + " "
+    melhor, melhor_pontos = "", 0
+    for area in _carregar_areas()["areas"].values():
+        pontos = 0
+        for palavra in area.get("palavras", []):
+            palavra = _sem_acento(palavra)
+            achou = f" {palavra[:-1]}" in limpo if palavra.endswith("*") else f" {palavra} " in limpo
+            if achou:
+                pontos += 1 + palavra.count(" ")      # frase vale mais que palavra solta
+        if pontos > melhor_pontos:
+            melhor, melhor_pontos = area["id"], pontos
+    return melhor
+
+
+def dominios_da_area(area, idioma="pt"):
+    """Sites de autoridade da área em ordem de prioridade: os do idioma primeiro, depois os gerais."""
+    dominios = (_carregar_areas()["areas"].get(area) or {}).get("dominios") or {}
+    return list(dict.fromkeys(dominios.get(idioma, []) + dominios.get("geral", [])))
 
 
 class Bloqueado(Exception):
@@ -225,13 +287,14 @@ def buscar_web(consulta, idioma="pt"):
 
 # ---------- Vídeos ----------
 
-def _video(video_id, titulo, canal, segundos):
+def _video(video_id, titulo, canal, segundos, visualizacoes=None):
     return {
         "tipo": "video",
         "titulo": titulo,
         "url": f"https://www.youtube.com/watch?v={video_id}",
         "fonte": canal or "YouTube",
         "minutos": max(1, round(segundos / 60)) if segundos else None,
+        "visualizacoes": visualizacoes if isinstance(visualizacoes, int) and visualizacoes >= 0 else None,
     }
 
 
@@ -251,11 +314,12 @@ def _youtube(consulta, idioma):
                 segundos = 0
                 for p in partes:
                     segundos = segundos * 60 + p
+                numeros = re.sub(r"\D", "", (v.get("viewCountText") or {}).get("simpleText", ""))
                 videos.append(_video(
                     v["videoId"],
                     "".join(r.get("text", "") for r in v.get("title", {}).get("runs", [])),
                     "".join(r.get("text", "") for r in v.get("ownerText", {}).get("runs", [])),
-                    segundos))
+                    segundos, int(numeros) if numeros else None))
             pilha.extend(atual.values())
         elif isinstance(atual, list):
             pilha.extend(reversed(atual))
@@ -283,7 +347,7 @@ def _invidious(consulta, idioma):
             _instancias_invidious.remove(host)
             _instancias_invidious.append(host)  # vai pro fim da fila
             continue
-        return [_video(v["videoId"], v.get("title", ""), v.get("author"), v.get("lengthSeconds"))
+        return [_video(v["videoId"], v.get("title", ""), v.get("author"), v.get("lengthSeconds"), v.get("viewCount"))
                 for v in itens if v.get("type") == "video" and v.get("lengthSeconds")]
     raise Bloqueado("invidious")
 
@@ -299,7 +363,7 @@ def _piped(consulta, idioma):  # o Piped não tem filtro de idioma: vale a consu
         for v in dados.get("items", []):
             m = re.search(r"v=([\w-]{11})", v.get("url", ""))
             if m and v.get("duration", 0) > 0:
-                videos.append(_video(m.group(1), v.get("title", ""), v.get("uploaderName"), v["duration"]))
+                videos.append(_video(m.group(1), v.get("title", ""), v.get("uploaderName"), v["duration"], v.get("views")))
         return videos
     raise Bloqueado("piped")
 
@@ -342,8 +406,75 @@ def buscar_videos(consulta, minutos_max=None, limite=2, idioma="pt"):
             return 3                       # não cabe na sessão
         return 0 if m >= 4 else 2          # muito curto costuma ser raso
 
-    # sort é estável: dentro da mesma nota fica a ordem de relevância da busca
-    return sorted(videos, key=nota)[:limite]
+    # dentro da mesma nota: o que a busca achou relevante, que fala do assunto no título e que mais gente assistiu
+    posicao = {v["url"]: i for i, v in enumerate(videos)}
+    total = len(videos)
+    termos = _tokens(consulta) - GENERICAS_VIDEO
+
+    def ordem(v):
+        return nota(v), -_pontos(v, posicao[v["url"]], total, termos)
+
+    ordenados = sorted(videos, key=ordem)
+
+    # desempate dos 3 primeiros que cabem na sessão: a taxa de curtidas separa o bom do só famoso
+    finalistas = [v for v in ordenados if nota(v) <= 1][:3]
+    if len(finalistas) > 1:
+        curtidas = em_paralelo(_curtidas, finalistas, paralelo=3)
+        com_curtidas = [{**v, "curtidas": n} for v, n in zip(finalistas, curtidas)]
+        com_curtidas.sort(key=ordem)
+        ids = {v["url"] for v in finalistas}
+        ordenados = com_curtidas + [v for v in ordenados if v["url"] not in ids]
+
+    return ordenados[:limite]
+
+
+def _popularidade(visualizacoes):
+    """0 a 1 em escala logarítmica: ~1 mil visualizações = 0, ~10 milhões = 1. Sem número = neutro."""
+    if not visualizacoes:
+        return 0.3
+    return min(1.0, max(0.0, (math.log10(visualizacoes) - 3) / 4))
+
+
+# palavras da busca que não dizem o assunto (marca do idioma, "aula", "curso"…)
+GENERICAS_VIDEO = {"aula", "aulas", "curso", "video", "videos", "tutorial", "completo", "completa", "portugues",
+                   "espanol", "english", "passo", "explicado", "iniciantes", "basico", "resumo"}
+
+
+def _pontos(video, posicao, total, termos=frozenset()):
+    """0 a 1. Só visualização premiava o vídeo famoso e genérico (um "Parte 01" geral passava na frente de três
+    aulas específicas), então o título também precisa falar do assunto da busca."""
+    relevancia = 1 - posicao / max(total, 1)
+    cobertura = len(termos & _tokens(video["titulo"])) / len(termos) if termos else 0.5
+    popularidade = _popularidade(video.get("visualizacoes"))
+    curtidas, visualizacoes = video.get("curtidas"), video.get("visualizacoes")
+    if curtidas is not None and visualizacoes:
+        aprovacao = min(1.0, curtidas / visualizacoes / 0.04)     # 4% de curtidas por visualização = nota máxima
+        return 0.30 * relevancia + 0.35 * cobertura + 0.20 * popularidade + 0.15 * aprovacao
+    return (0.30 * relevancia + 0.35 * cobertura + 0.20 * popularidade) / 0.85
+
+
+def _pagina_de_curtidas(video_id):
+    html = _baixar(f"https://www.youtube.com/watch?v={video_id}&hl=pt-BR", timeout=8)
+    m = re.search(r'"likeCount":\s*"?(\d+)"?', html)
+    return {"n": int(m.group(1))} if m else {}
+
+
+# as instâncias públicas do Invidious não dão curtidas de forma confiável: vem da página do vídeo
+_FONTE_CURTIDAS = Fonte("curtidas", _pagina_de_curtidas, 0.4, descanso=900)
+
+
+def _curtidas(video):
+    m = re.search(r"v=([\w-]{11})", video["url"])
+    if not m:
+        return None
+
+    def buscar():
+        return _FONTE_CURTIDAS(m.group(1)) if _FONTE_CURTIDAS.disponivel() else {}
+
+    try:
+        return (_cache(f"curtidas:{m.group(1)}", buscar) or {}).get("n")
+    except ERROS:
+        return None
 
 
 _PORTUGUES = re.compile(r"[ãõç]|\b(do|da|dos|das|com|aula|em|no|na|um|uma|seu|sua|você|não|é|para|pra|como|neste|"
@@ -538,22 +669,71 @@ def titulo_de_url(url):
     return re.sub(r"[-_]+", " ", pedaco).strip().capitalize()
 
 
-def buscar_documentacao(termos, dominio_oficial="", ignorar=(), limite=2, idioma="pt", consulta_web=None):
-    """Docs pra uma sessão: oficial pelo menu/sitemap; se não achar, busca web
-    (com `consulta_web`, se vier — ela deve estar no idioma dos materiais)."""
+def _host(url):
+    return urllib.parse.urlparse(url).netloc.lower().removeprefix("www.")
+
+
+def _do_dominio(url, dominios):
+    host = _host(url)
+    return any(host == d or host.endswith("." + d) for d in dominios)
+
+
+def _variados(resultados, limite):
+    """Um resultado por site primeiro; só repete o site se faltar."""
+    unicos, repetidos, hosts = [], [], set()
+    for r in resultados:
+        (repetidos if _host(r["url"]) in hosts else unicos).append(r)
+        hosts.add(_host(r["url"]))
+    return (unicos + repetidos)[:limite]
+
+
+def _docs_de_autoridade(termos, dominios, idioma, limite):
+    """Busca restrita aos sites de autoridade da área: até 2 buscas de 6 sites, os mais importantes primeiro."""
+    candidatos, vistos = [], set()
+    for inicio in range(0, min(len(dominios), 12), 6):
+        grupo = dominios[inicio:inicio + 6]
+        consulta = f"{termos} ({' OR '.join('site:' + d for d in grupo)})"
+        for r in buscar_web(consulta, idioma):
+            if r["url"] not in vistos and _do_dominio(r["url"], grupo) and _idioma_aceito(r["url"], idioma):
+                vistos.add(r["url"])
+                candidatos.append(r)
+        if len({_host(r["url"]) for r in candidatos}) >= limite:
+            break
+    return _variados(candidatos, limite)
+
+
+def buscar_documentacao(termos, dominio_oficial="", ignorar=(), limite=2, idioma="pt", consulta_web=None,
+                        area="", consulta_area=None):
+    """Docs pra uma sessão, da fonte mais confiável pra menos:
+    1. site oficial do assunto (menu/sitemap), quando a IA indicou um;
+    2. sites de autoridade da área (areas.json: Planalto e STF no direito, SciELO na saúde…);
+    3. busca web livre, com os sites de apostila e resumo (scribd, docsity…) no fim da fila.
+    `consulta_area` e `consulta_web` devem estar no idioma dos materiais."""
     idioma = idioma_valido(idioma)
     escolhidas = escolher_paginas(paginas_oficiais(dominio_oficial, idioma), termos, ignorar, limite, idioma)
     if escolhidas:
         return [{"tipo": "doc", "titulo": p["titulo"] or titulo_de_url(p["url"]), "url": p["url"],
                  "fonte": urllib.parse.urlparse(p["url"]).netloc} for p in escolhidas]
 
+    def doc(r):
+        return {"tipo": "doc", "titulo": r["titulo"], "url": r["url"], "fonte": _host(r["url"])}
+
+    dominios = dominios_da_area(area, idioma)
+    docs = [doc(r) for r in _docs_de_autoridade(consulta_area or termos, dominios, idioma, limite)] if dominios else []
+    if len(docs) >= limite:
+        return docs
+
     fora = ("youtube.com", "facebook.com", "instagram.com", "tiktok.com", "x.com", "twitter.com")
-    docs = []
-    for r in buscar_web(consulta_web or termos, idioma):
-        dominio = urllib.parse.urlparse(r["url"]).netloc.removeprefix("www.")
-        if not any(dominio.endswith(f) for f in fora) and _idioma_aceito(r["url"], idioma):
-            docs.append({"tipo": "doc", "titulo": r["titulo"], "url": r["url"], "fonte": dominio})
-    return docs[:limite]
+    evitar = _carregar_areas()["evitar"]
+    livres = [r for r in buscar_web(consulta_web or termos, idioma)
+              if not any(_host(r["url"]).endswith(f) for f in fora) and _idioma_aceito(r["url"], idioma)]
+    # os sites da área primeiro e os de resumo/apostila por último (ordenação estável)
+    livres.sort(key=lambda r: (_do_dominio(r["url"], evitar), not _do_dominio(r["url"], dominios)))
+    usadas = {d["url"] for d in docs}
+    for r in _variados(livres, limite):
+        if r["url"] not in usadas and len(docs) < limite:
+            docs.append(doc(r))
+    return docs
 
 
 def em_paralelo(funcao, lista, paralelo=4):

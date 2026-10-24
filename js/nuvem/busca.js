@@ -78,13 +78,14 @@ async function baixarJson(url, tempo = 8000) {
 
 /* ---------- vídeos ---------- */
 
-function video(id, titulo, canal, segundos) {
+function video(id, titulo, canal, segundos, visualizacoes) {
     return {
         tipo: "video",
         titulo,
         url: `https://www.youtube.com/watch?v=${id}`,
         fonte: canal || "YouTube",
-        minutos: segundos ? Math.max(1, Math.round(segundos / 60)) : null
+        minutos: segundos ? Math.max(1, Math.round(segundos / 60)) : null,
+        visualizacoes: Number.isInteger(visualizacoes) && visualizacoes >= 0 ? visualizacoes : null
     };
 }
 
@@ -110,7 +111,7 @@ async function viaInvidious(consulta, idioma) {
 
             return itens
                 .filter((v) => v.type === "video" && v.lengthSeconds)
-                .map((v) => video(v.videoId, v.title, v.author, v.lengthSeconds));
+                .map((v) => video(v.videoId, v.title, v.author, v.lengthSeconds, v.viewCount));
 
         } catch (erro) {
 
@@ -137,7 +138,7 @@ async function viaPiped(consulta) {
             return (dados.items || [])
                 .map((v) => ({ v, id: (v.url || "").match(/v=([\w-]{11})/)?.[1] }))
                 .filter(({ v, id }) => id && v.duration > 0)
-                .map(({ v, id }) => video(id, v.title, v.uploaderName, v.duration));
+                .map(({ v, id }) => video(id, v.title, v.uploaderName, v.duration, v.views));
 
         } catch (erro) {
             /* próxima instância */
@@ -192,6 +193,17 @@ async function tituloOriginal(v) {
 }
 
 
+// palavras da busca que não dizem o assunto (marca do idioma, "aula", "curso"…)
+const GENERICAS_VIDEO = new Set(["aula", "aulas", "curso", "video", "videos", "tutorial", "completo", "completa", "portugues",
+                                 "espanol", "english", "passo", "explicado", "iniciantes", "basico", "resumo"]);
+
+const VAZIAS = new Set(["de", "da", "do", "das", "dos", "e", "em", "com", "para", "um", "uma", "no", "na", "the", "and",
+                        "in", "to", "of", "a", "o", "os", "as", "how", "como"]);
+
+const tokensDe = (texto) => new Set(String(texto ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+    .split(/[^a-z0-9]+/).filter((t) => t.length > 1 && !VAZIAS.has(t)));
+
+
 /*
     Até `limite` vídeos que cabem em `minutosMax`, no idioma
     escolhido primeiro. Nunca lança erro: no pior caso, [].
@@ -230,8 +242,24 @@ export async function buscarVideos(consulta, { idioma = "pt", minutosMax = null,
         return v.minutos >= 4 ? 0 : 2;                        // muito curto costuma ser raso
     };
 
+    // dentro da mesma nota: o que a busca achou mais relevante E mais gente assistiu vem na frente
+    // (curtidas não dá: o navegador não consegue ler a página do YouTube)
+    const posicao = new Map(videos.map((v, i) => [v.url, i]));
+    const popularidade = (v) => v.visualizacoes
+        ? Math.min(1, Math.max(0, (Math.log10(v.visualizacoes) - 3) / 4))   // ~1 mil = 0, ~10 milhões = 1
+        : 0.3;
+    // só visualização premiava o vídeo famoso e genérico: o título também precisa falar do assunto da busca
+    const termos = [...tokensDe(consulta)].filter((t) => !GENERICAS_VIDEO.has(t));
+    const cobertura = (v) => {
+        if (!termos.length) return 0.5;
+        const titulo = tokensDe(v.titulo);
+        return termos.filter((t) => titulo.has(t)).length / termos.length;
+    };
+    const pontos = (v) => (0.30 * (1 - posicao.get(v.url) / Math.max(videos.length, 1))
+                         + 0.35 * cobertura(v) + 0.20 * popularidade(v)) / 0.85;
+
     const candidatos = await Promise.all(
-        [...videos].sort((a, b) => nota(a) - nota(b)).slice(0, limite).map(tituloOriginal));
+        [...videos].sort((a, b) => nota(a) - nota(b) || pontos(b) - pontos(a)).slice(0, limite).map(tituloOriginal));
 
     return candidatos.sort((a, b) =>
         (nota(a) === 3) - (nota(b) === 3) || pareceIdioma(b.titulo, idioma) - pareceIdioma(a.titulo, idioma));
@@ -242,19 +270,106 @@ export async function buscarVideos(consulta, { idioma = "pt", minutosMax = null,
 
 /* ---------- documentação ---------- */
 
-export function linkDocumentacao({ tema, topico, termos, dominio, idioma = "pt" }) {
+export function linkDocumentacao({ tema, topico, termos, dominio, idioma = "pt", area = "", areas = null }) {
 
     const site = (dominio || "").replace(/^https?:\/\//, "").split("/")[0].replace(/^www\./, "");
+    const assunto = `${tema} ${termos || topico}`;
+    const dominios = site ? [] : dominiosDaArea(areas, area, idioma);
 
-    const consulta = site
-        ? `!ducky site:${site} ${termos || topico}`
-        : `!ducky ${tema} ${termos || topico} ${IDIOMAS[idioma].documentacao}`;
+    let consulta;
+    let rotulo;
+
+    if (site) {
+        consulta = `!ducky site:${site} ${termos || topico}`;
+        rotulo = "documentação oficial";
+    } else if (dominios.length) {
+        // os 6 sites de autoridade mais importantes da área; o primeiro resultado é o que abre
+        consulta = `!ducky ${areaTecnica(areas, area) ? termos || topico : assunto} (${dominios.slice(0, 6).map((d) => `site:${d}`).join(" OR ")})`;
+        rotulo = "fontes oficiais";
+    } else {
+        // "documentação" na busca só ajuda em tecnologia (nas outras áreas puxava artigo sobre "documentação")
+        consulta = `!ducky ${assunto}${area && !areaTecnica(areas, area) ? "" : ` ${IDIOMAS[idioma].documentacao}`}`;
+        rotulo = "documentação";
+    }
 
     return {
         tipo: "doc",
-        titulo: `${topico} — ${site ? "documentação oficial" : "documentação"}`,
+        titulo: `${topico} — ${rotulo}`,
         url: `https://duckduckgo.com/?q=${encodeURIComponent(consulta)}`,
-        fonte: site || "busca"
+        fonte: site || (dominios.length ? "fontes oficiais da área" : "busca")
     };
+
+}
+
+
+
+/* ---------- áreas do conhecimento (areas.json, o mesmo do busca.py) ---------- */
+
+let areasPromessa = null;
+
+/* { areas: {id: {...}}, evitar: [...] }. Sem o arquivo, volta vazio e tudo cai na busca livre. */
+export function carregarAreas() {
+
+    areasPromessa ||= fetch("./areas.json")
+        .then((resposta) => (resposta.ok ? resposta.json() : {}))
+        .catch(() => ({}))
+        .then((dados) => ({
+            areas: Object.fromEntries((dados.areas || []).map((a) => [a.id, a])),
+            evitar: dados.evitar || []
+        }));
+
+    return areasPromessa;
+
+}
+
+
+const semAcento = (texto) => String(texto ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+
+export const idsDeAreas = (areas) => Object.keys(areas?.areas || {});
+
+export const descricaoDasAreas = (areas) =>
+    Object.values(areas?.areas || {}).map((a) => `${a.id} (${a.nome})`).join("; ");
+
+export const areaValida = (areas, id) => (areas?.areas?.[id] ? id : "");
+
+export const areaTecnica = (areas, id) => Boolean(areas?.areas?.[id]?.tecnica);
+
+
+/* Chute pelas palavras do tema, pra quando a IA não escolheu a área. "" = não sei. */
+export function detectarArea(areas, texto) {
+
+    const limpo = ` ${semAcento(texto).replace(/[^a-z0-9+#/]+/g, " ")} `;
+    let melhor = "";
+    let melhorPontos = 0;
+
+    for (const area of Object.values(areas?.areas || {})) {
+
+        let pontos = 0;
+
+        for (const original of area.palavras || []) {
+            const palavra = semAcento(original);
+            const achou = palavra.endsWith("*") ? limpo.includes(` ${palavra.slice(0, -1)}`) : limpo.includes(` ${palavra} `);
+            if (achou) pontos += 1 + (palavra.match(/ /g) || []).length;   // frase vale mais que palavra solta
+        }
+
+        if (pontos > melhorPontos) {
+            melhor = area.id;
+            melhorPontos = pontos;
+        }
+
+    }
+
+    return melhor;
+
+}
+
+
+/* Sites de autoridade da área em ordem de prioridade: os do idioma primeiro, depois os gerais. */
+export function dominiosDaArea(areas, area, idioma = "pt") {
+
+    const dominios = areas?.areas?.[area]?.dominios || {};
+
+    return [...new Set([...(dominios[idioma] || []), ...(dominios.geral || [])])];
 
 }

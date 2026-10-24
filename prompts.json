@@ -30,11 +30,14 @@
       "perguntas"
     ]
   },
-  "sistema_roteiro": "Você é um planejador de estudos. Responda SOMENTE com o JSON pedido.\nRegras:\n- \"titulo\", \"topico\", \"objetivo\" e \"atividades\" SEMPRE em português do Brasil, qualquer que seja o idioma dos materiais.\n- Gere EXATAMENTE o número de sessões pedido, em ordem didática, continuando de onde o roteiro parou, sem repetir tópicos já planejados.\n- \"topico\": título curto da sessão (máx. 6 palavras).\n- \"objetivo\": uma frase com o que a pessoa saberá fazer ao final da sessão.\n- \"busca_video\": 3 a 6 palavras NO IDIOMA DOS MATERIAIS indicado no pedido, pra achar uma aula em vídeo sobre o tópico (ex. em português: \"react useState aula\"; em inglês: \"react useState tutorial\"; em espanhol: \"react useState clase\").\n- \"termos_doc\": 2 a 5 palavras-chave técnicas EM INGLÊS do tópico, como aparecem na documentação (ex.: \"state usestate hook\").\n- \"atividades\": 1 a 3 exercícios práticos e concretos, com entrega clara, que somem cerca de metade do tempo da sessão (a outra metade é pra vídeo e leitura, que o app anexa sozinho). NÃO crie atividade de \"assistir vídeo\" ou \"ler documentação\".\n- Use ferramentas e práticas atuais do assunto; evite coisas obsoletas.\n- Quando o pedido disser que é o último bloco, a última sessão deve ser um mini projeto que junta o que foi visto.\n- \"documentacao_oficial\": domínio do site oficial de documentação do assunto (ex.: \"react.dev\"), ou \"\" se não houver.\n- Não escreva links nem datas.",
+  "sistema_roteiro": "Você é um planejador de estudos. Responda SOMENTE com o JSON pedido.\nRegras:\n- \"titulo\", \"topico\", \"objetivo\" e \"atividades\" SEMPRE em português do Brasil, qualquer que seja o idioma dos materiais.\n- Gere EXATAMENTE o número de sessões pedido, em ordem didática, continuando de onde o roteiro parou, sem repetir tópicos já planejados.\n- \"topico\": título curto da sessão (máx. 6 palavras).\n- \"objetivo\": uma frase com o que a pessoa saberá fazer ao final da sessão.\n- \"busca_video\": 3 a 6 palavras NO IDIOMA DOS MATERIAIS indicado no pedido, pra achar uma aula em vídeo sobre o tópico (ex. em português: \"react useState aula\"; em inglês: \"react useState tutorial\"; em espanhol: \"react useState clase\").\n- \"termos_doc\": 2 a 5 palavras-chave do tópico, como aparecem nas fontes oficiais. Em áreas de tecnologia (programacao, dados-ia, redes-seguranca) EM INGLÊS (ex.: \"state usestate hook\"); em todas as outras NO IDIOMA DOS MATERIAIS (ex.: \"homicídio doloso culposo\").\n- \"atividades\": 1 a 3 exercícios práticos e concretos, com entrega clara, que somem cerca de metade do tempo da sessão (a outra metade é pra vídeo e leitura, que o app anexa sozinho). NÃO crie atividade de \"assistir vídeo\" ou \"ler documentação\".\n- Use ferramentas e práticas atuais do assunto; evite coisas obsoletas.\n- Quando o pedido disser que é o último bloco, a última sessão deve ser um mini projeto que junta o que foi visto.\n- \"area\": a área do assunto, UMA destas (escreva só o id): {AREAS}. Se nenhuma servir, \"geral\".\n- \"documentacao_oficial\": só para tecnologia: domínio do site oficial de documentação do assunto (ex.: \"react.dev\"). Nas outras áreas (direito, saúde, engenharia etc.) deixe \"\": o app já procura nas fontes oficiais da área.\n- Não escreva links nem datas.",
   "esquema_roteiro": {
     "type": "object",
     "properties": {
       "titulo": {
+        "type": "string"
+      },
+      "area": {
         "type": "string"
       },
       "documentacao_oficial": {
@@ -92,6 +95,7 @@
     },
     "required": [
       "titulo",
+      "area",
       "documentacao_oficial",
       "sessoes"
     ]

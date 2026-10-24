@@ -1,0 +1,248 @@
+{
+  "_leia": "Fontes de autoridade por área do conhecimento. A IA escolhe o id da área no roteiro (ou o código adivinha pelas palavras do tema) e a busca de documentação procura primeiro nesses sites. 'pt' vale só quando os materiais são em português; 'geral' vale pra qualquer idioma. Os sites vêm em ordem de prioridade (os 6 primeiros entram na 1ª busca). 'palavras' só é usada quando a IA não escolhe a área: termo* casa o começo da palavra. 'tecnica' = termos de busca em inglês e a palavra 'documentação' na busca livre.",
+
+  "areas": [
+    {
+      "id": "programacao", "nome": "Programação e desenvolvimento de software", "tecnica": true,
+      "palavras": ["programacao*", "programar", "software", "desenvolvimento web", "desenvolvedor*", "javascript", "typescript", "python", "java", "react", "angular", "vue", "node", "html", "css", "sql", "banco de dados", "api", "backend", "frontend", "algoritmo*", "logica de programacao", "c++", "c#", "php", "git", "flutter", "android", "ios", "kotlin", "golang", "rust", "docker", "kubernetes", "devops", "web"],
+      "dominios": {
+        "pt": [],
+        "geral": ["developer.mozilla.org", "learn.microsoft.com", "docs.python.org", "javascript.info", "web.dev", "docs.oracle.com", "nodejs.org", "git-scm.com", "docs.github.com", "postgresql.org", "sqlite.org", "docs.docker.com", "kubernetes.io", "go.dev", "rust-lang.org", "kotlinlang.org", "php.net", "typescriptlang.org", "react.dev", "angular.dev", "vuejs.org", "developer.android.com", "developer.apple.com", "cs50.harvard.edu", "freecodecamp.org"]
+      }
+    },
+    {
+      "id": "dados-ia", "nome": "Ciência de dados, estatística aplicada e inteligência artificial", "tecnica": true,
+      "palavras": ["ciencia de dados", "machine learning", "aprendizado de maquina", "inteligencia artificial", "deep learning", "redes neurais", "analise de dados", "big data", "nlp", "visao computacional", "power bi", "excel", "pandas", "data science", "mineracao de dados", "business intelligence"],
+      "dominios": {
+        "pt": [],
+        "geral": ["scikit-learn.org", "pandas.pydata.org", "numpy.org", "pytorch.org", "tensorflow.org", "huggingface.co", "kaggle.com", "arxiv.org", "learn.microsoft.com", "support.microsoft.com", "docs.python.org", "matplotlib.org", "statsmodels.org", "ocw.mit.edu"]
+      }
+    },
+    {
+      "id": "redes-seguranca", "nome": "Redes, infraestrutura, sistemas operacionais e segurança da informação", "tecnica": true,
+      "palavras": ["redes de computadores", "seguranca da informacao", "ciberseguranca", "seguranca digital", "hacking", "pentest", "firewall", "linux", "servidor*", "tcp/ip", "infraestrutura", "cloud", "nuvem", "aws", "azure", "criptografia", "cisco", "sistemas operacionais", "suporte tecnico", "ti"],
+      "dominios": {
+        "pt": ["cert.br", "nic.br", "anpd.gov.br", "serpro.gov.br"],
+        "geral": ["owasp.org", "nist.gov", "cisa.gov", "attack.mitre.org", "cve.mitre.org", "learn.microsoft.com", "cisco.com", "kernel.org", "man7.org", "wireshark.org", "ietf.org", "rfc-editor.org", "docs.aws.amazon.com", "wiki.archlinux.org", "ubuntu.com"]
+      }
+    },
+    {
+      "id": "direito", "nome": "Direito, legislação e carreiras jurídicas", "tecnica": false,
+      "palavras": ["direito*", "juridic*", "lei", "leis", "penal", "civil", "constitucional", "tributario", "trabalhista", "processo penal", "processo civil", "oab", "advocacia", "advogado*", "lgpd", "contratos", "magistratura", "jurisprudencia", "codigo", "legislacao", "crime*", "tribunal", "stf", "stj", "concurso juridico", "eca", "consumidor"],
+      "dominios": {
+        "pt": ["planalto.gov.br", "stf.jus.br", "stj.jus.br", "senado.leg.br", "camara.leg.br", "cnj.jus.br", "tst.jus.br", "tse.jus.br", "mpf.mp.br", "oab.org.br", "gov.br", "conjur.com.br", "migalhas.com.br", "jusbrasil.com.br", "tjsp.jus.br", "trf1.jus.br"],
+        "geral": ["law.cornell.edu", "un.org", "icj-cij.org", "echr.coe.int", "oyez.org", "plato.stanford.edu"]
+      }
+    },
+    {
+      "id": "saude", "nome": "Medicina, enfermagem, farmácia, fisioterapia, odontologia e outras ciências da saúde", "tecnica": false,
+      "palavras": ["medicina", "medic*", "enfermagem", "farmacia", "farmaco*", "fisioterapia", "odontologia", "anatomia", "fisiologia", "patologia", "saude", "clinic*", "sus", "biomedicina", "fonoaudiologia", "terapia ocupacional", "urgencia", "emergencia", "uti", "cirurgia", "doenca*", "diagnostico", "semiologia", "imunologia", "epidemiologia", "vacina*"],
+      "dominios": {
+        "pt": ["scielo.br", "saude.gov.br", "bvsms.saude.gov.br", "gov.br", "anvisa.gov.br", "fiocruz.br", "inca.gov.br", "conitec.gov.br", "cofen.gov.br", "portal.cfm.org.br", "cff.org.br", "coffito.gov.br", "cfo.org.br", "bvsalud.org", "msdmanuals.com", "sbp.com.br", "paho.org"],
+        "geral": ["who.int", "pubmed.ncbi.nlm.nih.gov", "ncbi.nlm.nih.gov", "cdc.gov", "nih.gov", "medlineplus.gov", "mayoclinic.org", "cochrane.org", "msdmanuals.com"]
+      }
+    },
+    {
+      "id": "psicologia", "nome": "Psicologia, psicanálise e psiquiatria", "tecnica": false,
+      "palavras": ["psicologia", "psicolog*", "psicanalise", "terapia", "comportamento", "cognitivo", "tcc", "psicopatologia", "neuropsicologia", "psiquiatria", "freud", "jung", "piaget", "vygotsky", "transtorno*", "saude mental", "desenvolvimento humano"],
+      "dominios": {
+        "pt": ["pepsic.bvsalud.org", "scielo.br", "cfp.org.br", "bvsalud.org", "saude.gov.br", "crpsp.org.br", "ufrgs.br"],
+        "geral": ["apa.org", "nimh.nih.gov", "who.int", "ncbi.nlm.nih.gov", "simplypsychology.org", "plato.stanford.edu"]
+      }
+    },
+    {
+      "id": "nutricao-esporte", "nome": "Nutrição, educação física e esportes", "tecnica": false,
+      "palavras": ["nutricao", "nutri*", "dieta", "alimentacao", "treino*", "musculacao", "educacao fisica", "esporte*", "fisiologia do exercicio", "atleta*", "emagrecimento", "suplementa*", "futebol", "corrida", "crossfit"],
+      "dominios": {
+        "pt": ["scielo.br", "gov.br", "cfn.org.br", "confef.org.br", "saude.gov.br", "bvsms.saude.gov.br", "sbd.org.br"],
+        "geral": ["who.int", "nutritionsource.hsph.harvard.edu", "acsm.org", "nih.gov", "ncbi.nlm.nih.gov", "fdc.nal.usda.gov", "olympics.com"]
+      }
+    },
+    {
+      "id": "educacao", "nome": "Educação, pedagogia e docência", "tecnica": false,
+      "palavras": ["pedagogia", "educacao", "ensino", "professor*", "docencia", "didatica", "bncc", "alfabetizacao", "licenciatura", "psicopedagogia", "educacao infantil", "metodologia de ensino", "aprendizagem", "inclusao", "currículo", "curriculo"],
+      "dominios": {
+        "pt": ["gov.br", "basenacionalcomum.mec.gov.br", "inep.gov.br", "scielo.br", "novaescola.org.br", "undime.org.br", "capes.gov.br", "fnde.gov.br", "todospelaeducacao.org.br"],
+        "geral": ["unesco.org", "edutopia.org", "khanacademy.org", "ocw.mit.edu", "oecd.org"]
+      }
+    },
+    {
+      "id": "matematica", "nome": "Matemática", "tecnica": false,
+      "palavras": ["matematica", "calculo", "algebra", "geometria", "trigonometria", "estatistica", "probabilidade", "aritmetica", "equacao", "equacoes", "matriz*", "derivada*", "integral", "logaritmo*", "analise real", "funcoes", "combinatoria", "matematico*"],
+      "dominios": {
+        "pt": ["obmep.org.br", "impa.br", "sbm.org.br", "matematica.obmep.org.br", "portaldosaber.obmep.org.br", "ime.usp.br"],
+        "geral": ["khanacademy.org", "mathworld.wolfram.com", "ocw.mit.edu", "tutorial.math.lamar.edu", "openstax.org", "3blue1brown.com", "mathsisfun.com", "brilliant.org", "proofwiki.org"]
+      }
+    },
+    {
+      "id": "fisica-quimica", "nome": "Física, química e astronomia", "tecnica": false,
+      "palavras": ["fisica", "quimica", "termodinamica", "eletromagnetismo", "optica", "quantica", "organica", "inorganica", "estequiometria", "astronomia", "cinematica", "dinamica", "ondulatoria", "mecanica classica", "mecanica quantica", "reacoes", "atomo*", "cosmologia", "relatividade"],
+      "dominios": {
+        "pt": ["sbfisica.org.br", "sbq.org.br", "if.ufrgs.br", "cienciahoje.org.br", "scielo.br", "cbpf.br"],
+        "geral": ["hyperphysics.phy-astr.gsu.edu", "phet.colorado.edu", "khanacademy.org", "openstax.org", "ocw.mit.edu", "chem.libretexts.org", "phys.libretexts.org", "nasa.gov", "nist.gov", "pubchem.ncbi.nlm.nih.gov", "feynmanlectures.caltech.edu"]
+      }
+    },
+    {
+      "id": "biologia-ambiente", "nome": "Biologia, ecologia, meio ambiente e biotecnologia", "tecnica": false,
+      "palavras": ["biologia", "ecologia", "genetica", "evolucao", "botanica", "zoologia", "microbiologia", "meio ambiente", "ambiental", "sustentabilidade", "citologia", "bioquimica", "biotecnologia", "clima", "climatica", "mudancas climaticas", "ecossistema*", "biodiversidade", "bioma*"],
+      "dominios": {
+        "pt": ["scielo.br", "embrapa.br", "icmbio.gov.br", "ibama.gov.br", "gov.br", "inpa.gov.br", "butantan.gov.br", "fiocruz.br", "cienciahoje.org.br", "mapbiomas.org"],
+        "geral": ["ncbi.nlm.nih.gov", "nature.com", "khanacademy.org", "ocw.mit.edu", "iucnredlist.org", "ipcc.ch", "unep.org", "nationalgeographic.com"]
+      }
+    },
+    {
+      "id": "engenharia", "nome": "Engenharias, eletrônica e automação", "tecnica": false,
+      "palavras": ["engenharia", "engenheiro*", "eletrica", "eletronica", "circuito*", "estruturas", "resistencia dos materiais", "automacao", "mecatronica", "materiais", "hidraulica", "cad", "mecanica dos fluidos", "controle", "robotica", "arduino", "energia solar", "instalacoes eletricas", "producao industrial"],
+      "dominios": {
+        "pt": ["inmetro.gov.br", "abnt.org.br", "confea.org.br", "aneel.gov.br", "ipt.br", "scielo.br", "gov.br", "cienciahoje.org.br"],
+        "geral": ["ocw.mit.edu", "allaboutcircuits.com", "electronics-tutorials.ws", "engineeringtoolbox.com", "ieee.org", "asme.org", "nist.gov", "khanacademy.org", "arduino.cc", "learn.sparkfun.com"]
+      }
+    },
+    {
+      "id": "arquitetura-construcao", "nome": "Arquitetura, urbanismo e construção civil", "tecnica": false,
+      "palavras": ["arquitetura", "arquiteto*", "urbanismo", "construcao civil", "obra*", "paisagismo", "interiores", "projeto arquitetonico", "alvenaria", "topografia", "fundacoes", "concreto", "orcamento de obras", "patologia das construcoes"],
+      "dominios": {
+        "pt": ["caubr.gov.br", "iab.org.br", "abnt.org.br", "gov.br", "scielo.br", "archdaily.com.br", "inmetro.gov.br"],
+        "geral": ["archdaily.com", "dezeen.com", "ocw.mit.edu", "architectural-review.com", "nist.gov"]
+      }
+    },
+    {
+      "id": "administracao", "nome": "Administração, gestão, empreendedorismo, marketing, RH e logística", "tecnica": false,
+      "palavras": ["administracao", "gestao", "empreendedorismo", "negocios", "marketing", "vendas", "recursos humanos", "rh", "lideranca", "estrategia", "logistica", "gerenciamento de projetos", "startup*", "plano de negocios", "empresa*", "qualidade", "gestao de processos", "empreender", "publicidade", "comercial", "atendimento", "cadeia de suprimentos", "supply chain"],
+      "dominios": {
+        "pt": ["sebrae.com.br", "endeavor.org.br", "fgv.br", "ibgc.org.br", "pmi.org", "abrh.org.br", "anpad.org.br", "scielo.br", "gov.br"],
+        "geral": ["hbr.org", "pmi.org", "ocw.mit.edu", "investopedia.com", "mckinsey.com", "asq.org", "khanacademy.org"]
+      }
+    },
+    {
+      "id": "contabil-financas", "nome": "Contabilidade, finanças, investimentos e tributação", "tecnica": false,
+      "palavras": ["contabilidade", "contabil*", "financas", "financeiro", "investimento*", "bolsa de valores", "tributos", "imposto*", "fiscal", "auditoria", "custos", "balanco", "mercado financeiro", "renda fixa", "acoes", "orcamento", "tesouraria", "cpa", "tributaria", "controladoria", "fluxo de caixa", "educacao financeira", "financeir*", "dinheiro", "poupanca"],
+      "dominios": {
+        "pt": ["cfc.org.br", "cpc.org.br", "gov.br", "bcb.gov.br", "cvm.gov.br", "b3.com.br", "tesourodireto.com.br", "tesourotransparente.gov.br", "investidor.gov.br", "anbima.com.br", "susep.gov.br", "ibracon.com.br"],
+        "geral": ["investopedia.com", "ifrs.org", "sec.gov", "fasb.org", "imf.org", "khanacademy.org"]
+      }
+    },
+    {
+      "id": "economia", "nome": "Economia e políticas econômicas", "tecnica": false,
+      "palavras": ["economia", "economista*", "macroeconomia", "microeconomia", "inflacao", "pib", "juros", "cambio", "politica monetaria", "comercio exterior", "desenvolvimento economico", "teoria economica", "mercado de trabalho", "economia brasileira"],
+      "dominios": {
+        "pt": ["bcb.gov.br", "ibge.gov.br", "ipea.gov.br", "gov.br", "fgv.br", "bndes.gov.br", "tesourotransparente.gov.br", "dieese.org.br", "scielo.br"],
+        "geral": ["worldbank.org", "imf.org", "oecd.org", "fred.stlouisfed.org", "econlib.org", "khanacademy.org", "ocw.mit.edu", "wto.org", "investopedia.com"]
+      }
+    },
+    {
+      "id": "historia", "nome": "História e arqueologia", "tecnica": false,
+      "palavras": ["historia", "historico*", "idade media", "brasil colonia", "imperio", "republica", "guerra*", "revolucao", "antiguidade", "civilizacao", "ditadura", "historiografia", "arqueologia", "egito", "roma antiga", "grecia antiga", "segunda guerra", "primeira guerra", "escravidao", "independencia"],
+      "dominios": {
+        "pt": ["arquivonacional.gov.br", "memoria.bn.gov.br", "bn.gov.br", "cpdoc.fgv.br", "ihgb.org.br", "gov.br", "scielo.br", "senado.leg.br", "camara.leg.br", "brasilescola.uol.com.br"],
+        "geral": ["britannica.com", "worldhistory.org", "history.com", "loc.gov", "archives.gov", "unesco.org", "khanacademy.org", "bbc.co.uk"]
+      }
+    },
+    {
+      "id": "geografia", "nome": "Geografia, geologia e cartografia", "tecnica": false,
+      "palavras": ["geografia", "cartografia", "geopolitica", "relevo", "demografia", "urbanizacao", "geologia", "hidrografia", "territorio", "populacao", "globalizacao", "geoprocessamento", "sensoriamento remoto", "meteorologia", "regioes do brasil"],
+      "dominios": {
+        "pt": ["ibge.gov.br", "inpe.br", "mapbiomas.org", "ana.gov.br", "sgb.gov.br", "embrapa.br", "scielo.br", "cienciahoje.org.br", "gov.br"],
+        "geral": ["nationalgeographic.com", "britannica.com", "noaa.gov", "usgs.gov", "nasa.gov", "worldbank.org", "un.org", "khanacademy.org"]
+      }
+    },
+    {
+      "id": "filosofia-sociais", "nome": "Filosofia, sociologia, antropologia e ciência política", "tecnica": false,
+      "palavras": ["filosofia", "filosof*", "sociologia", "antropologia", "ciencia politica", "etica", "epistemologia", "metafisica", "kant", "platao", "aristoteles", "marx", "weber", "durkheim", "democracia", "estado", "politica", "estoicismo", "nietzsche", "existencialismo"],
+      "dominios": {
+        "pt": ["scielo.br", "anpocs.org", "sbsociologia.com.br", "ipea.gov.br", "senado.leg.br", "camara.leg.br", "cienciahoje.org.br"],
+        "geral": ["plato.stanford.edu", "iep.utm.edu", "britannica.com", "philpapers.org", "marxists.org", "gutenberg.org", "ocw.mit.edu"]
+      }
+    },
+    {
+      "id": "letras-portugues", "nome": "Língua portuguesa, literatura e redação", "tecnica": false,
+      "palavras": ["portugues", "gramatica", "redacao", "literatura", "ortografia", "interpretacao de texto", "lingua portuguesa", "linguistica", "semantica", "sintaxe", "morfologia", "producao textual", "escrita", "enem", "romantismo", "modernismo", "machado de assis", "concordancia", "crase", "figuras de linguagem"],
+      "dominios": {
+        "pt": ["academia.org.br", "ciberduvidas.iscte-iul.pt", "portaldalinguaportuguesa.org", "scielo.br", "gov.br", "dominiopublico.gov.br", "michaelis.uol.com.br", "dicio.com.br", "brasilescola.uol.com.br", "infopedia.pt"],
+        "geral": ["gutenberg.org", "britannica.com"]
+      }
+    },
+    {
+      "id": "idiomas", "nome": "Idiomas estrangeiros (inglês, espanhol, francês etc.)", "tecnica": false,
+      "palavras": ["ingles", "espanhol", "frances", "alemao", "italiano", "japones", "mandarim", "idioma*", "gramatica inglesa", "vocabulario", "toefl", "ielts", "fluencia", "conversacao", "english", "spanish", "french", "german", "phrasal verbs"],
+      "dominios": {
+        "pt": [],
+        "geral": ["learnenglish.britishcouncil.org", "britishcouncil.org", "dictionary.cambridge.org", "cambridge.org", "oxfordlearnersdictionaries.com", "bbc.co.uk", "merriam-webster.com", "rae.es", "cvc.cervantes.es", "cervantes.es", "wordreference.com", "learngerman.dw.com", "ets.org", "ielts.org", "fluentu.com"]
+      }
+    },
+    {
+      "id": "artes-musica", "nome": "Artes, música, cinema e cultura", "tecnica": false,
+      "palavras": ["musica", "musical", "teoria musical", "harmonia", "violao", "piano", "guitarra", "artes", "historia da arte", "pintura", "teatro", "danca", "cinema", "fotografia", "escultura", "artes visuais", "cultura", "canto", "bateria", "composicao"],
+      "dominios": {
+        "pt": ["gov.br", "itaucultural.org.br", "funarte.gov.br", "museus.gov.br", "scielo.br", "cifraclub.com.br", "mhn.museus.gov.br"],
+        "geral": ["musictheory.net", "britannica.com", "metmuseum.org", "moma.org", "smarthistory.org", "khanacademy.org", "tate.org.uk", "openculture.com", "imslp.org", "berklee.edu"]
+      }
+    },
+    {
+      "id": "design-comunicacao", "nome": "Design, UX, comunicação, jornalismo e audiovisual", "tecnica": false,
+      "palavras": ["design", "ux", "ui", "usabilidade", "design grafico", "tipografia", "branding", "comunicacao", "jornalismo", "midia*", "redacao publicitaria", "audiovisual", "edicao de video", "social media", "prototipagem", "figma", "photoshop", "ilustracao", "marca", "relacoes publicas", "storytelling"],
+      "dominios": {
+        "pt": ["intercom.org.br", "abi.org.br", "fenaj.org.br", "gov.br", "scielo.br", "aberje.com.br"],
+        "geral": ["nngroup.com", "material.io", "w3.org", "a11yproject.com", "smashingmagazine.com", "interaction-design.org", "developer.apple.com", "figma.com", "helpx.adobe.com", "aiga.org", "ocw.mit.edu"]
+      }
+    },
+    {
+      "id": "administracao-publica", "nome": "Administração pública, políticas públicas e concursos públicos", "tecnica": false,
+      "palavras": ["administracao publica", "servidor publico", "licitacao", "licitacoes", "orcamento publico", "politicas publicas", "gestao publica", "concurso publico", "concursos", "lei de licitacoes", "controle externo", "prefeitura", "tribunal de contas", "contratacoes publicas", "transparencia", "improbidade"],
+      "dominios": {
+        "pt": ["gov.br", "enap.gov.br", "tcu.gov.br", "cgu.gov.br", "planalto.gov.br", "escolavirtual.gov.br", "senado.leg.br", "camara.leg.br", "ipea.gov.br", "tesourotransparente.gov.br", "scielo.br"],
+        "geral": ["oecd.org", "un.org", "worldbank.org"]
+      }
+    },
+    {
+      "id": "seguranca-trabalho", "nome": "Segurança e saúde no trabalho", "tecnica": false,
+      "palavras": ["seguranca do trabalho", "nr", "nrs", "ergonomia", "epi", "cipa", "saude ocupacional", "higiene ocupacional", "acidente de trabalho", "riscos ocupacionais", "brigada", "incendio", "pcmso", "pgr"],
+      "dominios": {
+        "pt": ["gov.br", "fundacentro.gov.br", "previdencia.gov.br", "scielo.br", "cnt.org.br", "planalto.gov.br"],
+        "geral": ["osha.gov", "ilo.org", "who.int", "cdc.gov", "hse.gov.uk"]
+      }
+    },
+    {
+      "id": "agro-veterinaria", "nome": "Agronomia, agropecuária e medicina veterinária", "tecnica": false,
+      "palavras": ["agronomia", "agricultura", "agropecuaria", "veterinaria", "zootecnia", "solo*", "cultivo*", "pecuaria", "plantio", "irrigacao", "florestal", "agronegocio", "animais", "fitopatologia", "adubacao", "bovino*", "suino*", "avicultura"],
+      "dominios": {
+        "pt": ["embrapa.br", "gov.br", "cfmv.gov.br", "scielo.br", "conab.gov.br", "cepea.esalq.usp.br", "agrolink.com.br"],
+        "geral": ["fao.org", "usda.gov", "merckvetmanual.com", "woah.org", "extension.org"]
+      }
+    },
+    {
+      "id": "turismo-gastronomia", "nome": "Turismo, hotelaria, eventos e gastronomia", "tecnica": false,
+      "palavras": ["turismo", "hotelaria", "gastronomia", "culinaria", "cozinha", "eventos", "chef", "viagem", "hospitalidade", "panificacao", "confeitaria", "bartender", "cerimonial", "receitas", "boas praticas de manipulacao"],
+      "dominios": {
+        "pt": ["gov.br", "embratur.com.br", "anvisa.gov.br", "sebrae.com.br", "senac.br", "scielo.br"],
+        "geral": ["unwto.org", "seriouseats.com", "kingarthurbaking.com", "cia.edu"]
+      }
+    },
+    {
+      "id": "servico-social", "nome": "Serviço social e assistência social", "tecnica": false,
+      "palavras": ["servico social", "assistencia social", "suas", "cras", "creas", "politicas sociais", "assistente social", "vulnerabilidade", "protecao social", "questao social", "seguridade social"],
+      "dominios": {
+        "pt": ["cfess.org.br", "gov.br", "ipea.gov.br", "scielo.br", "planalto.gov.br", "senado.leg.br"],
+        "geral": ["ifsw.org", "un.org", "who.int"]
+      }
+    },
+    {
+      "id": "aviacao-transporte", "nome": "Aviação, náutica, trânsito e transporte", "tecnica": false,
+      "palavras": ["aviacao", "piloto*", "aeronautica", "navegacao aerea", "transito", "transporte*", "motorista", "habilitacao", "ctb", "naval", "maritimo", "ferroviari*", "aeroporto*", "comissario de bordo", "aeronave*"],
+      "dominios": {
+        "pt": ["anac.gov.br", "gov.br", "decea.mil.br", "antt.gov.br", "antaq.gov.br", "planalto.gov.br", "scielo.br"],
+        "geral": ["icao.int", "faa.gov", "easa.europa.eu", "skybrary.aero", "imo.org"]
+      }
+    },
+    {
+      "id": "geral", "nome": "Nenhuma das anteriores (assunto geral ou misto)", "tecnica": false,
+      "palavras": [],
+      "dominios": {
+        "pt": ["pt.wikipedia.org", "scielo.br", "gov.br", "brasilescola.uol.com.br"],
+        "geral": ["britannica.com", "khanacademy.org", "ocw.mit.edu", "en.wikipedia.org"]
+      }
+    }
+  ],
+
+  "evitar": ["scribd.com", "docsity.com", "passeidireto.com", "studocu.com", "slideshare.net", "pdfcoffee.com", "docshare.wps.com", "docplayer.com.br", "docplayer.net", "trabalhosfeitos.com", "brainly.com.br", "brainly.com", "coursehero.com", "vdocuments.mx", "vdocuments.site", "yumpu.com", "calameo.com", "issuu.com", "ebah.com.br", "pinterest.com", "quora.com", "academia.edu", "pt.scribd.com", "es.scribd.com", "trabalhosgratuitos.com", "monografias.brasilescola.uol.com.br"]
+}
