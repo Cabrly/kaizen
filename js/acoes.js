@@ -240,10 +240,25 @@ export function iniciarAcoes({ estado, aoAlterar }) {
     function limparRealces() {
 
         quadro
-            .querySelectorAll(".tasks.solto-ativo")
-            .forEach((area) =>
-                area.classList.remove("solto-ativo")
+            .querySelectorAll(".solto-ativo")
+            .forEach((alvo) =>
+                alvo.classList.remove("solto-ativo")
             );
+    }
+
+
+    /*
+        A coluna inteira recebe o card, não só a faixa
+        interna das tarefas: soltar no título, no vazio
+        ou perto do botão "+ Adicionar" também move.
+    */
+    function areaDoAlvo(evento) {
+
+        const coluna = evento.target.closest("[data-coluna]");
+
+        return coluna
+            ? coluna.querySelector("[data-tarefas]")
+            : null;
     }
 
 
@@ -274,7 +289,7 @@ export function iniciarAcoes({ estado, aoAlterar }) {
 
     quadro.addEventListener("dragover", (evento) => {
 
-        const area = evento.target.closest("[data-tarefas]");
+        const area = areaDoAlvo(evento);
 
         if (!area || !idArrastado) {
             return;
@@ -288,12 +303,13 @@ export function iniciarAcoes({ estado, aoAlterar }) {
         limparRealces();
 
         area.classList.add("solto-ativo");
+        area.closest("[data-coluna]").classList.add("solto-ativo");
     });
 
 
     quadro.addEventListener("drop", (evento) => {
 
-        const area = evento.target.closest("[data-tarefas]");
+        const area = areaDoAlvo(evento);
 
         if (!area || !idArrastado) {
             return;

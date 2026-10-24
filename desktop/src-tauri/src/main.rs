@@ -226,6 +226,9 @@ fn main() {
                 .inner_size(1280.0, 820.0)
                 .min_inner_size(900.0, 600.0)
                 .center()
+                /* No Windows o Tauri intercepta o arrastar do WebView2 (pra soltar arquivos)
+                   e o arrastar dos cards do Kanban nunca chega na página. */
+                .disable_drag_drop_handler()
                 .initialization_script(SCRIPT_INICIAL)
                 .on_navigation(move |url| navegacao_permitida(&nav, url))
                 .on_download(move |_, evento| tratar_download(&down, evento))
