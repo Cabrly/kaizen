@@ -10,6 +10,9 @@
 ========================================================= */
 
 
+import { blocosPorDia } from "./intensidade.js";
+
+
 const modal = document.querySelector("#agenda-modal");
 
 const $ = (id) => document.querySelector(`#${id}`);
@@ -65,6 +68,12 @@ function somarMinutos(iso, horario, minutos) {
 }
 
 
+// quanto dura cada sessão: o tempo do dia dividido pelos tópicos do dia
+function minutosPorSessao(plano) {
+    return Math.floor(plano.minutos / blocosPorDia(plano.minutos, plano.intensidade, (plano.dias || []).length || 1, plano.semanas));
+}
+
+
 function montarIcs(plano, sessoes, avisoMinutos) {
 
     const nome = plano.titulo || plano.tema;
@@ -74,10 +83,17 @@ function montarIcs(plano, sessoes, avisoMinutos) {
         "METHOD:PUBLISH", `X-WR-CALNAME:${escapar(`Kaizen: ${nome}`)}`
     ];
 
+    // vários tópicos no mesmo dia (intensidade): cada um começa quando o anterior termina
+    const minutosDe = minutosPorSessao(plano);
+    const noDia = {};
+
     sessoes.forEach((s) => {
 
+        const posicao = (noDia[s.data] = (noDia[s.data] ?? -1) + 1);
+        const comeca = posicao * minutosDe;
+
         const inicio = plano.horario
-            ? [`DTSTART:${dataIcs(s.data)}T${plano.horario.replace(":", "")}00`, `DTEND:${somarMinutos(s.data, plano.horario, plano.minutos)}`]
+            ? [`DTSTART:${somarMinutos(s.data, plano.horario, comeca)}`, `DTEND:${somarMinutos(s.data, plano.horario, comeca + minutosDe)}`]
             : [`DTSTART;VALUE=DATE:${dataIcs(s.data)}`, `DTEND;VALUE=DATE:${dataIcs(somarDias(s.data, 1))}`];
 
         linhas.push(
@@ -86,7 +102,7 @@ function montarIcs(plano, sessoes, avisoMinutos) {
             `DTSTAMP:${agora}`,
             ...inicio,
             `SUMMARY:${escapar(`📚 ${s.topico} · ${nome}`)}`,
-            `DESCRIPTION:${escapar(`Sessão do plano "${nome}" (${plano.minutos} min). Abra o Kaizen pra ver o vídeo, a documentação e as atividades.`)}`,
+            `DESCRIPTION:${escapar(`Sessão do plano "${nome}" (${minutosDe} min). Abra o Kaizen pra ver o vídeo, a documentação e as atividades.`)}`,
             "BEGIN:VALARM", "ACTION:DISPLAY",
             `DESCRIPTION:${escapar(`Hora de estudar: ${s.topico}`)}`,
             plano.horario ? `TRIGGER:-PT${avisoMinutos}M` : "TRIGGER:PT9H",
@@ -136,7 +152,7 @@ async function abrir(planoId) {
         const n = atual.sessoes.length;
         $("agenda-resumo").textContent = n
             ? `${n} ${n === 1 ? "sessão" : "sessões"} de "${plano.titulo || plano.tema}", de hoje em diante, ` +
-              (plano.horario ? `às ${plano.horario}, com ${plano.minutos} min cada.` : "como eventos de dia inteiro (o plano não tem horário).")
+              (plano.horario ? `às ${plano.horario}, com ${minutosPorSessao(plano)} min cada.` : "como eventos de dia inteiro (o plano não tem horário).")
             : "Esse plano não tem mais sessões daqui pra frente.";
         $("agenda-aviso-linha").hidden = !plano.horario;
         $("agenda-baixar").disabled = !n;

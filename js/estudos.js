@@ -11,6 +11,9 @@
 ========================================================= */
 
 
+import { blocosPorDia } from "./intensidade.js";
+
+
 const tela =
     document.querySelector("#tela-estudos");
 
@@ -141,6 +144,15 @@ function iniciarEstudos() {
     document.addEventListener("kaizen:continuar-plano", (evento) => abrirAssistente(evento.detail));
     document.addEventListener("kaizen:recarregar-estudos", () => atualizarTudo());
 
+    // "Próximas aulas" na ficha do pet: abre a aula escolhida, no dia dela
+    document.addEventListener("kaizen:abrir-sessao", ({ detail: { sessaoId, data } }) => {
+        document.querySelector('.nav-tab[data-tela="estudos"]')?.click();
+        estado.abertas.add(sessaoId);
+        selecionarDia(data);
+        setTimeout(() => tela.querySelector(`.est-sessao[data-sessao="${sessaoId}"]`)
+            ?.scrollIntoView({ behavior: "smooth", block: "center" }), 400);
+    });
+
     // entregou ou a correção chegou (js/entregas.js): a atividade ficou feita e ganhou nota
     document.addEventListener("kaizen:entrega", async () => {
         for (const id of estado.abertas) {
@@ -256,6 +268,8 @@ function renderizarPlanos() {
                     ${p.status === "pronto" ? `
                     <button type="button" class="est-icone" data-agenda-plano="${p.id}"
                             title="Pôr as sessões na agenda do celular" aria-label="Pôr ${esc(p.tema)} na agenda">📅</button>
+                    <button type="button" class="est-icone" data-remarcar-plano="${p.id}"
+                            title="Remarcar os dias ou refazer o cronograma" aria-label="Remarcar ${esc(p.tema)}">🗓</button>
                     <button type="button" class="est-icone" data-compartilhar-plano="${p.id}"
                             title="Compartilhar com a turma" aria-label="Compartilhar ${esc(p.tema)}">🔗</button>` : ""}
                     <button type="button" class="est-icone" data-excluir-plano="${p.id}"
@@ -413,6 +427,17 @@ function selecionarDia(iso) {
 
 /* ---------- painel do dia ---------- */
 
+// com vários tópicos por dia (intensidade), mostra "parte 1 de 2" em cada um
+function parteDoDia(doDia, sessao) {
+
+    // a sessão de pendências ("não fiz") também cai no dia, mas não é uma parte do plano
+    const irmas = doDia.filter((o) => o.plano_id === sessao.plano_id && !o.extra);
+
+    return !sessao.extra && irmas.length > 1 ? ` · parte ${irmas.indexOf(sessao) + 1} de ${irmas.length}` : "";
+
+}
+
+
 async function renderizarDia() {
 
     const painel = tela.querySelector("#est-dia");
@@ -436,7 +461,7 @@ async function renderizarDia() {
         <article class="est-sessao" data-sessao="${s.id}" style="--cor:${esc(s.cor)}">
             <button type="button" class="est-sessao-cab" data-abrir-sessao="${s.id}"
                     aria-expanded="${estado.abertas.has(s.id)}">
-                <span class="est-sessao-tema">${esc(s.tema)}${s.horario ? ` · ${esc(s.horario)}` : ""}</span>
+                <span class="est-sessao-tema">${esc(s.tema)}${s.horario ? ` · ${esc(s.horario)}` : ""}${parteDoDia(doDia, s)}</span>
                 <strong>${esc(s.topico)}</strong>
                 <span class="est-sessao-progresso">${s.feitos}/${s.total}</span>
             </button>
@@ -920,6 +945,7 @@ function lerDisponibilidade() {
     return {
         dias: [...d.querySelectorAll('[data-grupo="dias"] .est-chip.ativo')].map((c) => Number(c.dataset.valor)),
         minutos: Number(valor("minutos") || 60),
+        intensidade: valor("intensidade") || "equilibrado",
         semanas: Number(valor("semanas") || 4),
         inicio: d.querySelector("#est-inicio").value || hojeIso(),
         horario: d.querySelector("#est-horario").value || null
@@ -944,6 +970,7 @@ function atualizarResumoPlano() {
 
     // mesma conta do servidor: N-ésimo dia de estudo a partir do início
     const total = disp.dias.length * disp.semanas;
+    const blocos = blocosPorDia(disp.minutos, disp.intensidade, disp.dias.length, disp.semanas);
     let atual = dataDe(disp.inicio);
     let contados = 0;
     let ultimo = atual;
@@ -957,8 +984,9 @@ function atualizarResumoPlano() {
     }
 
 
-    resumo.textContent =
-        `${total} sessões de ${duracao(disp.minutos)} · termina em ${diaCurto(isoDe(ultimo))}`;
+    resumo.textContent = blocos > 1
+        ? `${total} dias de ${duracao(disp.minutos)}, com ${blocos} tópicos por dia (~${duracao(Math.floor(disp.minutos / blocos))} cada) · ${total * blocos} tópicos no total · termina em ${diaCurto(isoDe(ultimo))}`
+        : `${total} sessões de ${duracao(disp.minutos)} · termina em ${diaCurto(isoDe(ultimo))}`;
 
     botao.disabled = false;
 

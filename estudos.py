@@ -23,6 +23,7 @@ planos novos e pros flashcards, pra IA explicar a partir do que ela já sabe.
 """
 from datetime import date, timedelta
 from pathlib import Path
+import copy
 import json
 import queue
 import re
@@ -41,6 +42,24 @@ DB = None                 # o server.py aponta pro kaizen.sqlite3
 PROMPTS = json.loads((Path(__file__).parent / "prompts.json").read_text(encoding="utf-8"))
 MODELO_PADRAO = "qwen3:8b"
 BLOCO = 10                # sessões por chamada à IA
+
+# Intensidade = quantos tópicos entram por dia de estudo. Sem isso, 2 h por dia continuava sendo 1 tópico
+# (a duração só mudava o tamanho do vídeo) e o plano parecia o mesmo de 1 h. Valor = minutos por tópico.
+INTENSIDADES = {"tranquilo": 0, "equilibrado": 50, "intenso": 30}   # 0 = um tópico só por dia
+MAX_TOPICOS = 160         # teto no plano inteiro: cada tópico faz uma busca de vídeo e de documentação
+
+
+def blocos_por_dia(minutos, intensidade, dias_por_semana, semanas):
+    """Quantos tópicos (sessões) cabem num dia de estudo."""
+    por_topico = INTENSIDADES.get(intensidade, 0)
+    if not por_topico:
+        return 1
+    blocos = max(1, min(6, int(minutos / por_topico + 0.4)))
+    return max(1, min(blocos, MAX_TOPICOS // max(1, dias_por_semana * semanas)))
+
+
+def _blocos_do_plano(plano):
+    return blocos_por_dia(plano["minutos"], plano.get("intensidade"), len(json.loads(plano["dias"])), plano["semanas"])
 
 CORES = ["#c90016", "#2f6f4f", "#3b5bdb", "#b8860b", "#7b2cbf", "#0b7285", "#5c5f66"]
 DIAS_SEMANA = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"]
@@ -74,7 +93,8 @@ def init():
                 erro        TEXT,
                 titulo      TEXT,
                 doc_oficial TEXT,
-                criado_em   TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+                criado_em   TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+                intensidade TEXT NOT NULL DEFAULT 'tranquilo'
             );
             CREATE TABLE IF NOT EXISTS sessoes (
                 id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -139,6 +159,9 @@ def init():
         # plano que continua outro (pet reativado): a IA sabe o que já foi estudado
         if "pai_id" not in colunas:
             con.execute("ALTER TABLE planos ADD COLUMN pai_id INTEGER")
+        # os planos de antes foram feitos com 1 tópico por dia: continuam "tranquilo"
+        if "intensidade" not in colunas:
+            con.execute("ALTER TABLE planos ADD COLUMN intensidade TEXT NOT NULL DEFAULT 'tranquilo'")
         # planos que estavam gerando quando o servidor caiu não vão terminar
         con.execute("UPDATE planos SET status = 'erro', erro = 'O servidor reiniciou no meio da geração.' "
                     "WHERE status = 'gerando'")
@@ -203,7 +226,7 @@ def _json_do_texto(texto):
         raise ErroIA(f"JSON inválido da IA: {erro}")
 
 
-def gerar_json(motor, sistema, pedido, esquema, progresso=None, limite_tokens=4096):
+def gerar_json(motor, sistema, pedido, esquema, progresso=None, limite_tokens=4096, servico=None):
     """Pede um JSON à IA. `progresso(texto_parcial)` é chamado enquanto o
     Ollama escreve (streaming) — em PC lento a tela mostra que está andando.
     `limite_tokens` corta modelo que entra em repetição e não para."""
@@ -221,7 +244,7 @@ def gerar_json(motor, sistema, pedido, esquema, progresso=None, limite_tokens=40
         try:
             return _json_do_texto(servidores.conversar(candidato, modelo, mensagens, formato=esquema,
                                                        progresso=progresso, limite_tokens=limite_tokens,
-                                                       temperatura=0.3))
+                                                       temperatura=0.3, servico=servico))
         except servidores.ErroConexao as erro:
             erro_conexao = erro
     nome = (servidores.obter(destino_id) or {}).get("nome", destino_id)
@@ -261,7 +284,7 @@ def perguntas(tema, motor, continua_de=None):
     if anterior:
         pedido += (f"\n{anterior}\nO estudante quer ir além do que já viu: faça as perguntas pensando no "
                    "próximo passo, mais aprofundado, sem perguntar o básico que ele já estudou.")
-    dados = gerar_json(motor, SISTEMA_PERGUNTAS, pedido, ESQUEMA_PERGUNTAS, limite_tokens=1024)
+    dados = gerar_json(motor, SISTEMA_PERGUNTAS, pedido, ESQUEMA_PERGUNTAS, limite_tokens=1024, servico="perguntas")
     saida = []
     for p in dados.get("perguntas", [])[:4]:
         if isinstance(p, dict) and str(p.get("pergunta", "")).strip():
@@ -278,14 +301,31 @@ ESQUEMA_ROTEIRO = PROMPTS["esquema_roteiro"]
 SISTEMA_ROTEIRO = PROMPTS["sistema_roteiro"]
 
 
+def _roteiro_com_areas():
+    """(sistema, esquema) do roteiro com a lista de áreas do areas.json. Sem o arquivo, o campo "area" some."""
+    esquema = copy.deepcopy(ESQUEMA_ROTEIRO)
+    ids = busca.ids_de_areas()
+    if ids:
+        esquema["properties"]["area"]["enum"] = ids
+    else:
+        esquema["properties"].pop("area", None)
+        esquema["required"] = [c for c in esquema["required"] if c != "area"]
+    return SISTEMA_ROTEIRO.replace("{AREAS}", busca.descricao_das_areas()), esquema
+
+
 def _pedido_roteiro(plano, respostas, total, feitas, quantas):
     linhas = [f"Assunto: {plano['tema']}"]
     for r in respostas:
         if r.get("resposta"):
             linhas.append(f"{r['pergunta']} {r['resposta']}")
-    linhas += [f"Duração de cada sessão: {plano['minutos']} minutos",
+    blocos = _blocos_do_plano(plano)
+    linhas += [f"Duração de cada sessão: {plano['minutos'] // blocos} minutos",
                f"Idioma dos materiais (vídeos e documentação): {busca.IDIOMAS[plano['idioma']]['nome']}",
                f"O roteiro completo tem {total} sessões."]
+    if blocos > 1:
+        linhas.append(f"A pessoa estuda {plano['minutos']} minutos por dia, então cada dia tem {blocos} sessões em sequência. "
+                      "As sessões do mesmo dia são tópicos DIFERENTES e complementares (por exemplo, um conceito novo e "
+                      "outro que o aplica na prática), cada uma completa e com atividades próprias.")
     anterior = estudado_antes(plano.get("pai_id")) if plano.get("pai_id") else ""
     if anterior:
         linhas.append(anterior + " Este plano aprofunda: comece de onde ele parou e não repita esses tópicos.")
@@ -333,17 +373,35 @@ def _etapa(plano_id, texto):
         con.execute("UPDATE planos SET etapa = ? WHERE id = ?", (texto, plano_id))
 
 
+# tópicos do plano em que a pessoa já fez alguma coisa: ficam quando o cronograma é refeito
+_SESSOES_COM_PROGRESSO = """
+    SELECT s.id, s.data, s.topico FROM sessoes s
+    WHERE s.plano_id = ? AND s.extra = 0
+      AND EXISTS (SELECT 1 FROM itens i WHERE i.sessao_id = s.id AND i.estado = 'feito')
+    ORDER BY s.data, s.id"""
+
+
 def _gerar_plano(plano_id):
     try:
         with conectar() as con:
             plano = dict(con.execute("SELECT * FROM planos WHERE id = ?", (plano_id,)).fetchone())
         dias = json.loads(plano["dias"])
         respostas = json.loads(plano["respostas"])
-        total = len(dias) * plano["semanas"]
+        blocos = _blocos_do_plano(plano)
+        total = len(dias) * plano["semanas"] * blocos
+
+        # Refazer o cronograma: o que já tem algo feito fica (e a IA não repete); só o resto é montado de novo
+        # e trocado no fim, então um erro no meio não leva embora o cronograma que existia.
+        with conectar() as con:
+            mantidas = [dict(l) for l in con.execute(_SESSOES_COM_PROGRESSO, (plano_id,))]
+            refazendo = bool(con.execute("SELECT 1 FROM sessoes WHERE plano_id = ? AND extra = 0", (plano_id,)).fetchone())
+        if mantidas and len(mantidas) >= total:
+            raise ErroIA("Você já estudou tudo o que o plano previa. Pra continuar, use \"Aprender mais\" no pet.")
 
         # --- roteiro, em blocos ---
-        roteiro, titulo, doc_oficial = [], None, ""
-        vistos = set()
+        roteiro, titulo, doc_oficial, area = [{"topico": m["topico"]} for m in mantidas], plano["titulo"], "", ""
+        sistema_roteiro, esquema_roteiro = _roteiro_com_areas()
+        vistos = {_chave_topico(m["topico"]) for m in mantidas}
         # modelo pequeno repete tópico; a repetida é descartada e o próximo pedido
         # repõe — com um teto, pra nunca ficar em loop
         pedidos, max_pedidos = 0, -(-total // BLOCO) + 3
@@ -361,9 +419,9 @@ def _gerar_plano(plano_id):
                     ultima[0] = n
                     _etapa(plano_id, f"Montando o roteiro: sessão {inicio_bloco + n} de {total}")
 
-            dados = gerar_json(plano["motor"], SISTEMA_ROTEIRO,
-                               _pedido_roteiro(plano, respostas, total, roteiro, quantas), ESQUEMA_ROTEIRO,
-                               progresso=ao_escrever, limite_tokens=350 * quantas + 600)
+            dados = gerar_json(plano["motor"], sistema_roteiro,
+                               _pedido_roteiro(plano, respostas, total, roteiro, quantas), esquema_roteiro,
+                               progresso=ao_escrever, limite_tokens=350 * quantas + 600, servico="roteiro")
             novas = []
             for sessao in dados.get("sessoes", []):
                 chave = _chave_topico(str(sessao.get("topico", "")))
@@ -375,15 +433,24 @@ def _gerar_plano(plano_id):
             roteiro += novas[:quantas]
             titulo = titulo or dados.get("titulo")
             doc_oficial = doc_oficial or dados.get("documentacao_oficial", "")
+            area = area or busca.area_valida(str(dados.get("area", "")))
 
-        if not roteiro:
+        novos = roteiro[len(mantidas):]
+        if not novos:
             raise ErroIA("A IA não conseguiu montar o roteiro.")
 
         # --- materiais ---
         _etapa(plano_id, "Buscando vídeos e documentação…")
         idioma = busca.idioma_valido(plano["idioma"])
+        # a IA não escolheu (ou disse "geral"): as palavras do tema também dizem a área
+        if area in ("", "geral"):
+            area = busca.detectar_area(f"{plano['tema']} {titulo or ''}") or area or "geral"
+        tecnica = busca.area_tecnica(area)
+        # site oficial com sitemap só vale pra tecnologia; fora dela (leis, saúde…) as fontes vêm de areas.json
+        if not tecnica:
+            doc_oficial = ""
         ignorar = [plano["tema"]] + doc_oficial.split(".")[:1]
-        minutos_video = max(8, round(plano["minutos"] * 0.5))
+        minutos_video = max(8, round(plano["minutos"] // blocos * 0.5))
         busca.paginas_oficiais(doc_oficial, idioma)  # baixa o índice uma vez antes do paralelo
         feitos = [0]
         trava = threading.Lock()
@@ -398,22 +465,33 @@ def _gerar_plano(plano_id):
                                        not busca.parece_idioma(v["titulo"], idioma)))
             # sitemap: casa com tópico + termos; busca web: assunto + termos técnicos
             # no idioma dos materiais (o tópico em português puxaria página em português)
+            # fora da tecnologia os termos vêm no idioma dos materiais e a palavra "documentação"
+            # só atrapalha (puxava artigo sobre "documentação" de local de crime)
+            termos = sessao.get("termos_doc") or sessao["topico"]
+            assunto = f"{plano['tema']} {termos}"
             docs = busca.buscar_documentacao(
                 f"{sessao.get('termos_doc', '')} {sessao['topico']}", doc_oficial, ignorar=ignorar, limite=2,
-                idioma=idioma,
-                consulta_web=f"{plano['tema']} {sessao.get('termos_doc', '')} {busca.IDIOMAS[idioma]['documentacao']}")
+                idioma=idioma, area=area,
+                consulta_area=termos if tecnica else assunto,
+                consulta_web=f"{assunto} {busca.IDIOMAS[idioma]['documentacao']}" if tecnica else assunto)
             with trava:
                 feitos[0] += 1
-                _etapa(plano_id, f"Buscando vídeos e documentação: {feitos[0]} de {len(roteiro)} sessões")
+                _etapa(plano_id, f"Buscando vídeos e documentação: {feitos[0]} de {len(novos)} sessões")
             return videos, docs
 
-        achados = busca.em_paralelo(materiais, roteiro, paralelo=4)
+        achados = busca.em_paralelo(materiais, novos, paralelo=4)
 
         # --- grava tudo ---
-        datas = datas_de_estudo(plano["inicio"], dias, len(roteiro))
+        # cada dia de estudo recebe `blocos` tópicos em sequência. Refazendo, recomeça de hoje (ou depois do que já foi estudado)
+        inicio = max(plano["inicio"], date.today().isoformat()) if refazendo else plano["inicio"]
+        depois_de = max((m["data"] for m in mantidas), default=None)
+        datas = [d for d in datas_de_estudo(inicio, dias, -(-len(novos) // blocos), depois_de) for _ in range(blocos)]
         videos_usados = set()
         with conectar() as con:
-            for sessao, data, (videos, docs) in zip(roteiro, datas, achados):
+            # sai o que ainda não tinha nada feito (itens e cartões vão junto, em cascata)
+            con.execute("DELETE FROM sessoes WHERE plano_id = ? AND extra = 0 AND NOT EXISTS "
+                        "(SELECT 1 FROM itens i WHERE i.sessao_id = sessoes.id AND i.estado = 'feito')", (plano_id,))
+            for sessao, data, (videos, docs) in zip(novos, datas, achados):
                 sid = con.execute("INSERT INTO sessoes (plano_id, data, topico, objetivo) VALUES (?, ?, ?, ?)",
                                   (plano_id, data, sessao["topico"].strip(), sessao.get("objetivo", "").strip())).lastrowid
                 video = next((v for v in videos if v["url"] not in videos_usados), None)
@@ -446,6 +524,7 @@ def criar_plano(dados):
     dias = sorted({int(d) for d in dados.get("dias", []) if str(d).isdigit() and 0 <= int(d) <= 6})
     minutos = int(dados.get("minutos") or 60)
     semanas = int(dados.get("semanas") or 4)
+    intensidade = dados.get("intensidade") if dados.get("intensidade") in INTENSIDADES else "equilibrado"
     inicio = str(dados.get("inicio") or date.today().isoformat())
     date.fromisoformat(inicio)  # valida
     if not tema:
@@ -463,11 +542,11 @@ def criar_plano(dados):
         pai = con.execute("SELECT cor FROM planos WHERE id = ?", (pai_id,)).fetchone() if pai_id else None
         cor = pai["cor"] if pai else CORES[con.execute("SELECT COUNT(*) FROM planos").fetchone()[0] % len(CORES)]
         plano_id = con.execute(
-            "INSERT INTO planos (tema, respostas, dias, minutos, horario, inicio, semanas, motor, idioma, cor, etapa, pai_id) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Na fila…', ?)",
+            "INSERT INTO planos (tema, respostas, dias, minutos, horario, inicio, semanas, motor, idioma, cor, etapa, pai_id, intensidade) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Na fila…', ?, ?)",
             (tema, json.dumps(dados.get("respostas", []), ensure_ascii=False), json.dumps(dias), minutos,
              dados.get("horario") or None, inicio, semanas, dados.get("motor") or motor_padrao(),
-             busca.idioma_valido(dados.get("idioma")), cor, pai_id)
+             busca.idioma_valido(dados.get("idioma")), cor, pai_id, intensidade)
         ).lastrowid
     threading.Thread(target=_gerar_plano, args=(plano_id,), daemon=True).start()
     return obter_plano(plano_id)
@@ -558,6 +637,69 @@ def refazer_plano(plano_id):
     if not mudou:
         raise ValueError("Só dá pra tentar de novo um plano que deu erro.")
     threading.Thread(target=_gerar_plano, args=(plano_id,), daemon=True).start()
+    return obter_plano(plano_id)
+
+
+def refazer_cronograma(plano_id, dados=None):
+    """Monta de novo os tópicos que ainda não foram estudados; o que já tem algo feito fica.
+    `dados` pode trocar os minutos por dia e a intensidade."""
+    dados = dados or {}
+    with conectar() as con:
+        plano = con.execute("SELECT * FROM planos WHERE id = ?", (plano_id,)).fetchone()
+        if not plano:
+            return None
+        if plano["status"] != "pronto":
+            raise ValueError("Espere o plano terminar de ser montado.")
+        minutos = int(dados.get("minutos") or plano["minutos"])
+        if not 10 <= minutos <= 480:
+            raise ValueError("Minutos fora do intervalo.")
+        intensidade = dados.get("intensidade") if dados.get("intensidade") in INTENSIDADES else plano["intensidade"]
+        feitas = len(con.execute(_SESSOES_COM_PROGRESSO, (plano_id,)).fetchall())
+        previstas = len(json.loads(plano["dias"])) * plano["semanas"] * _blocos_do_plano(
+            {**dict(plano), "minutos": minutos, "intensidade": intensidade})
+        if feitas >= previstas:
+            raise ValueError("Você já estudou tudo o que esse plano previa. Pra seguir, use \"Aprender mais\" no pet.")
+        con.execute("UPDATE planos SET status = 'gerando', etapa = 'Na fila…', erro = NULL, minutos = ?, intensidade = ? "
+                    "WHERE id = ?", (minutos, intensidade, plano_id))
+    threading.Thread(target=_gerar_plano, args=(plano_id,), daemon=True).start()
+    return obter_plano(plano_id)
+
+
+def mover_sessao(sessao_id, data):
+    """Remarca um tópico pra outra data (adiantar pra hoje, empurrar pra sexta…)."""
+    try:
+        date.fromisoformat(str(data))
+    except ValueError:
+        raise ValueError("Data inválida.") from None
+    with conectar() as con:
+        mudou = con.execute("UPDATE sessoes SET data = ? WHERE id = ? AND extra = 0", (str(data), sessao_id)).rowcount
+    return obter_sessao(sessao_id) if mudou else None
+
+
+def remarcar_dias(plano_id, dias):
+    """Troca os dias da semana do que ainda não foi estudado (ex.: seg e ter -> qui e sex), na mesma ordem.
+    Só mexe no que tem item pendente e é de hoje em diante (ou atrasado sem nada feito)."""
+    dias = sorted({int(d) for d in dias if str(d).isdigit() and 0 <= int(d) <= 6})
+    if not dias:
+        raise ValueError("Escolha pelo menos um dia da semana.")
+    hoje = date.today().isoformat()
+    with conectar() as con:
+        plano = con.execute("SELECT status FROM planos WHERE id = ?", (plano_id,)).fetchone()
+        if not plano:
+            return None
+        if plano["status"] != "pronto":
+            raise ValueError("Espere o plano terminar de ser montado.")
+        moveis = con.execute("""
+            SELECT s.id, s.data FROM sessoes s
+            WHERE s.plano_id = ? AND s.extra = 0
+              AND EXISTS (SELECT 1 FROM itens i WHERE i.sessao_id = s.id AND i.estado = 'pendente')
+              AND (s.data >= ? OR NOT EXISTS (SELECT 1 FROM itens i WHERE i.sessao_id = s.id AND i.estado = 'feito'))
+            ORDER BY s.data, s.id""", (plano_id, hoje)).fetchall()
+        antigas = sorted({s["data"] for s in moveis})
+        novas = dict(zip(antigas, datas_de_estudo(hoje, dias, len(antigas))))
+        for s in moveis:
+            con.execute("UPDATE sessoes SET data = ? WHERE id = ?", (novas[s["data"]], s["id"]))
+        con.execute("UPDATE planos SET dias = ? WHERE id = ?", (json.dumps(dias), plano_id))
     return obter_plano(plano_id)
 
 
@@ -848,13 +990,13 @@ def _gerar_flashcards(sessao_id, forcar):
     cartoes_novos = []
     for _ in range(2):  # modelo pequeno às vezes devolve lista vazia ou cartão cortado: tenta mais uma vez
         try:
-            dados = gerar_json(motor, SISTEMA_FLASHCARDS, pedido, ESQUEMA_FLASHCARDS, limite_tokens=1500)
+            dados = gerar_json(motor, SISTEMA_FLASHCARDS, pedido, ESQUEMA_FLASHCARDS, limite_tokens=1500, servico="flashcards")
         except ErroIA:
             # o motor do plano sumiu (conta removida, PC desligado): vai o padrão de agora
             if motor != sessao["motor"] or motor_padrao() == motor:
                 raise
             motor = motor_padrao()
-            dados = gerar_json(motor, SISTEMA_FLASHCARDS, pedido, ESQUEMA_FLASHCARDS, limite_tokens=1500)
+            dados = gerar_json(motor, SISTEMA_FLASHCARDS, pedido, ESQUEMA_FLASHCARDS, limite_tokens=1500, servico="flashcards")
         cartoes_novos = cartoes_bons(dados.get("cartoes"))
         if len(cartoes_novos) >= 3:
             break
@@ -872,8 +1014,8 @@ def _gerar_flashcards(sessao_id, forcar):
 
 
 def listar_flashcards():
-    """Conteúdos dos últimos dias (e os mais antigos com revisão pra hoje).
-    O que foi estudado e ainda não tem cartões entra na fila aqui mesmo."""
+    """A biblioteca: todo conteúdo que já tem cartões (nada some depois de acertar, dá pra revisar pra prova)
+    mais o estudado nos últimos dias. Só o que foi estudado há pouco e ainda não tem cartões entra na fila aqui mesmo."""
     hoje = date.today().isoformat()
     desde = (date.today() - timedelta(days=JANELA)).isoformat()
     with conectar() as con:
@@ -886,9 +1028,9 @@ def listar_flashcards():
                 (s.data BETWEEN ? AND ? AND EXISTS (
                     SELECT 1 FROM itens i WHERE i.sessao_id = s.id AND (i.estado = 'feito'
                       OR EXISTS (SELECT 1 FROM itens c WHERE c.origem_id = i.id AND c.estado = 'feito'))))
-                OR EXISTS (SELECT 1 FROM flashcards f WHERE f.sessao_id = s.id AND f.revisar_em <= ?))
+                OR EXISTS (SELECT 1 FROM flashcards f WHERE f.sessao_id = s.id AND f.revisar_em <> ?))
             ORDER BY s.data DESC, s.id DESC
-        """, (hoje, desde, hoje, hoje)).fetchall()
+        """, (hoje, desde, hoje, DORMINDO)).fetchall()
 
     conteudos = []
     for linha in linhas:
@@ -903,12 +1045,32 @@ def listar_flashcards():
     return {"conteudos": conteudos, "para_hoje": sum(c["para_hoje"] for c in conteudos)}
 
 
-def cartoes(sessao_id=None):
+def cartoes_das_sessoes(sessao_ids):
+    """{sessao_id: [{id, frente, verso}]} pra ficha do pet mostrar o que ficou guardado de cada conteúdo."""
+    if not sessao_ids:
+        return {}
+    marcas = ",".join("?" * len(sessao_ids))
+    with conectar() as con:
+        linhas = con.execute(f"SELECT id, sessao_id, frente, verso FROM flashcards "
+                             f"WHERE sessao_id IN ({marcas}) AND revisar_em <> ? ORDER BY id",
+                             [*sessao_ids, DORMINDO]).fetchall()
+    saida = {}
+    for l in linhas:
+        saida.setdefault(l["sessao_id"], []).append({"id": l["id"], "frente": l["frente"], "verso": l["verso"]})
+    return saida
+
+
+def cartoes(sessao_id=None, todos=False):
     """Cartões de um conteúdo (os de hoje primeiro) ou, sem conteúdo, todos os de hoje.
+    `todos` = modo prova: todos os cartões guardados, de qualquer data.
     Conteúdo antigo sem cartões (aberto pelo jardim dos pets) entra na fila."""
     hoje = date.today().isoformat()
     with conectar() as con:
-        if sessao_id:
+        if todos and not sessao_id:
+            linhas = con.execute("""
+                SELECT f.*, s.topico FROM flashcards f JOIN sessoes s ON s.id = f.sessao_id
+                WHERE f.revisar_em <> ? ORDER BY s.data DESC, f.id""", (DORMINDO,)).fetchall()
+        elif sessao_id:
             linhas = con.execute("""
                 SELECT f.*, s.topico FROM flashcards f JOIN sessoes s ON s.id = f.sessao_id
                 WHERE f.sessao_id = ? ORDER BY f.revisar_em > ?, f.caixa, f.id""", (sessao_id, hoje)).fetchall()
@@ -961,7 +1123,7 @@ def salvar_pets(dados):
 # =========================================================
 
 COLUNAS_PLANO = ["id", "tema", "respostas", "dias", "minutos", "horario", "inicio", "semanas", "motor", "idioma",
-                 "cor", "status", "etapa", "erro", "titulo", "doc_oficial", "criado_em", "pai_id"]
+                 "cor", "status", "etapa", "erro", "titulo", "doc_oficial", "criado_em", "pai_id", "intensidade"]
 COLUNAS_SESSAO = ["id", "plano_id", "data", "topico", "objetivo", "extra"]
 COLUNAS_ITEM = ["id", "sessao_id", "tipo", "titulo", "url", "descricao", "fonte", "minutos", "estado", "origem_id"]
 COLUNAS_CARTAO = ["id", "sessao_id", "frente", "verso", "caixa", "revisar_em"]
@@ -1005,7 +1167,7 @@ def importar(dados):
                 p.update(status="erro", etapa=None, erro="O backup foi feito no meio da geração.")
             p.setdefault("idioma", "pt")
             con.execute(f"INSERT INTO planos ({', '.join(COLUNAS_PLANO)}) VALUES ({', '.join('?' * len(COLUNAS_PLANO))})",
-                        [p.get(c) for c in COLUNAS_PLANO])
+                        [p.get(c) or "tranquilo" if c == "intensidade" else p.get(c) for c in COLUNAS_PLANO])
         # ordem por id: a cópia de um "não fiz" sempre vem depois do original
         for s in sorted(sessoes, key=lambda x: x["id"]):
             con.execute(f"INSERT INTO sessoes ({', '.join(COLUNAS_SESSAO)}) VALUES ({', '.join('?' * len(COLUNAS_SESSAO))})",
