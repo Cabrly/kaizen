@@ -96,8 +96,11 @@ def _placa_de_video():
     """{nome, memoria, acelera}. Acelera = o Ollama vai usar ela de fato."""
     saida = _rodar(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"])
     if saida.strip():
-        nome, _, mib = saida.strip().splitlines()[0].rpartition(",")
-        return {"nome": nome.strip(), "memoria": int(float(mib)) * 1024 * 1024, "acelera": True}
+        try:
+            nome, _, mib = saida.strip().splitlines()[0].rpartition(",")
+            return {"nome": nome.strip(), "memoria": int(float(mib)) * 1024 * 1024, "acelera": True}
+        except ValueError:
+            pass   # o nvidia-smi respondeu com uma mensagem de erro (sem permissão, driver parado): segue sem placa NVIDIA
 
     if sys.platform == "darwin" and platform.machine() == "arm64":
         chip = _rodar(["sysctl", "-n", "machdep.cpu.brand_string"]).strip() or "Apple Silicon"
