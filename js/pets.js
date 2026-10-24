@@ -364,6 +364,11 @@ function mostrarFicha(petId) {
     const estudadas = dados.sessoes
         .filter((s) => ids.includes(s.plano_id) && !s.extra && foiEstudada(s.id))
         .sort((a, b) => a.data.localeCompare(b.data));
+    // as próximas aulas em lista (inclusive as atrasadas): dá pra abrir qualquer uma ou trazer pra hoje, num "rush"
+    // (pet no jardim = plano encerrado: o que sobrou pendente nele não é "aula atrasada")
+    const proximas = pet.noJardim ? [] : dados.sessoes
+        .filter((s) => ids.includes(s.plano_id) && !s.extra && itensDa(s.id).some((i) => i.estado === "pendente"))
+        .sort((a, b) => a.data.localeCompare(b.data) || a.id - b.id);
     const ultimaData = dados.sessoes.filter((s) => s.plano_id === pet.atual.id).map((s) => s.data).sort().pop();
     const podeEncerrar = !pet.noJardim && pet.atual.status === "pronto" && ultimaData && ultimaData < hoje();
 
@@ -383,10 +388,28 @@ function mostrarFicha(petId) {
         <h3 class="pets-subtitulo">Visual</h3>
         <div class="pets-editor" id="pets-editor">${editorVisual(pet)}</div>
 
+        <h3 class="pets-subtitulo">Próximas aulas</h3>
+        ${proximas.length ? `
+            <ol class="pets-proximas">${proximas.map((s) => {
+                const contaveis = itensDa(s.id).filter((i) => i.estado !== "nao-feito");
+                const feitos = contaveis.filter((i) => i.estado === "feito").length;
+                const quando = s.data === hoje() ? "Hoje" : s.data < hoje() ? `${dataBonita(s.data)} · atrasada` : dataBonita(s.data);
+                return `<li>
+                    <button type="button" class="pets-proxima ${s.data < hoje() ? "atrasada" : ""}" data-abrir-sessao="${s.id}" data-dia="${s.data}"
+                            title="Abrir esta aula">
+                        <span class="pets-proxima-data">${esc(quando)}</span>
+                        <strong>${esc(s.topico)}</strong>
+                        <small>${feitos}/${contaveis.length}</small>
+                    </button>
+                    ${s.data > hoje() ? `<button type="button" class="est-link" data-adiantar="${s.id}" title="Trazer esta aula pra hoje">⏩ pra hoje</button>` : ""}
+                </li>`;
+            }).join("")}</ol>`
+            : `<p class="pets-vazio">Nenhuma aula pendente por enquanto.</p>`}
+
         <h3 class="pets-subtitulo">O que vocês estudaram juntos</h3>
         ${estudadas.length ? `
             <div class="pets-acoes">
-                <button type="button" class="btn-secundario" data-revisar="${estudadas.map((s) => s.id).join(",")}">🃏 Revisar os cartões de ${esc(pet.nome)}</button>
+                <button type="button" class="btn-secundario" data-revisar="${estudadas.map((s) => s.id).join(",")}">🃏 Modo prova: revisar tudo de ${esc(pet.nome)}</button>
             </div>
             <ol class="pets-historico">${estudadas.map((s) => `
                 <li data-historico="${s.id}">
@@ -409,7 +432,32 @@ function mostrarFicha(petId) {
     ficha.dataset.pet = petId;
     delete ficha.dataset.adocao;
 
-    if (estudadas.length) mostrarEntregas(ficha, ids);
+    if (estudadas.length) {
+        mostrarEntregas(ficha, ids);
+        mostrarCartoes(ficha, estudadas.map((s) => s.id));
+    }
+
+}
+
+
+// os cartões guardados de cada conteúdo ficam no histórico (pra reler antes de uma prova)
+async function mostrarCartoes(ficha, sessaoIds) {
+
+    let porSessao;
+    try {
+        porSessao = (await api(`/estudos/cartoes?sessoes=${sessaoIds.join(",")}`)).sessoes;
+    } catch (erro) {
+        return;
+    }
+
+    Object.entries(porSessao).forEach(([sessaoId, cartoes]) => {
+        if (!cartoes.length) return;
+        ficha.querySelector(`[data-historico="${sessaoId}"]`)?.insertAdjacentHTML("beforeend", `
+            <details class="pets-cartoes">
+                <summary>🃏 ${cartoes.length} ${cartoes.length === 1 ? "cartão guardado" : "cartões guardados"}</summary>
+                <ol>${cartoes.map((c) => `<li><strong>${esc(c.frente)}</strong><span>${esc(c.verso)}</span></li>`).join("")}</ol>
+            </details>`);
+    });
 
 }
 
@@ -594,9 +642,29 @@ function aoClicar(evento) {
         return;
     }
 
+    if (alvo.dataset.abrirSessao) {
+        $("pets-modal").close();
+        document.dispatchEvent(new CustomEvent("kaizen:abrir-sessao", {
+            detail: { sessaoId: Number(alvo.dataset.abrirSessao), data: alvo.dataset.dia }
+        }));
+        return;
+    }
+
+    if (alvo.dataset.adiantar) {
+        alvo.disabled = true;
+        api(`/estudos/sessoes/${alvo.dataset.adiantar}`, { method: "PATCH", body: { data: hoje() } })
+            .catch(() => null)
+            .then(async () => {
+                document.dispatchEvent(new CustomEvent("kaizen:recarregar-estudos"));
+                await atualizar();
+                abrir(fichaId);
+            });
+        return;
+    }
+
     if (alvo.dataset.revisar) {
         $("pets-modal").close();
-        document.dispatchEvent(new CustomEvent("kaizen:revisar", { detail: { sessoes: alvo.dataset.revisar.split(",").map(Number) } }));
+        document.dispatchEvent(new CustomEvent("kaizen:revisar", { detail: { sessoes: alvo.dataset.revisar.split(",").map(Number), prova: true } }));
         return;
     }
 

@@ -17,7 +17,8 @@ const GERANDO = 3000;      // ms entre olhadas com a janela aberta e cartões se
 
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
-const estudo = { cartoes: [], posicao: 0, acertos: 0, virado: false, origem: null };
+// prova = revisão pra prova: embaralha e NÃO mexe no calendário (acertar ou errar não muda quando o cartão volta)
+const estudo = { cartoes: [], posicao: 0, acertos: 0, virado: false, origem: null, prova: false };
 
 let relogioLista = null;
 
@@ -95,8 +96,12 @@ async function carregarLista() {
 
     const { conteudos, para_hoje: hoje } = dados;
 
+    const guardados = conteudos.reduce((soma, c) => soma + c.total, 0);
+
     $("fc-revisar-hoje").textContent = hoje ? `Revisar os de hoje (${hoje})` : "Nada pra revisar hoje 🎉";
     $("fc-revisar-hoje").disabled = !hoje;
+    $("fc-revisar-tudo").textContent = `📚 Modo prova: revisar tudo (${guardados})`;
+    $("fc-revisar-tudo").hidden = !guardados;
     $("fc-contador").textContent = String(hoje);
     $("fc-contador").hidden = !hoje;
 
@@ -160,12 +165,26 @@ async function cliqueNaLista(evento) {
 
 /* ---------- revisão ---------- */
 
-function comecar(cartoes) {
+function embaralhar(lista) {
+
+    const copia = [...lista];
+
+    for (let i = copia.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copia[i], copia[j]] = [copia[j], copia[i]];
+    }
+
+    return copia;
+
+}
+
+
+function comecar(cartoes, { prova = false } = {}) {
 
     if (!cartoes.length) return;
 
     clearTimeout(relogioLista);
-    Object.assign(estudo, { cartoes, posicao: 0, acertos: 0, virado: false });
+    Object.assign(estudo, { cartoes: prova ? embaralhar(cartoes) : cartoes, posicao: 0, acertos: 0, virado: false, prova });
 
     $("fc-lista").hidden = true;
     $("fc-estudo").hidden = false;
@@ -218,7 +237,7 @@ async function responder(acertou) {
     estudo.virado = false;  // evita duplo clique contar duas vezes
     if (acertou) estudo.acertos++;
 
-    api(`/cartoes/${cartao.id}`, { method: "PATCH", body: { acertou } }).catch(() => null);
+    if (!estudo.prova) api(`/cartoes/${cartao.id}`, { method: "PATCH", body: { acertou } }).catch(() => null);
 
     estudo.posicao++;
 
@@ -243,9 +262,11 @@ function terminar() {
     $("fc-topico").textContent = "";
 
     $("fc-fim-titulo").textContent = estudo.acertos === total ? "Gabaritou! 🎉" : `${estudo.acertos} de ${total} certos`;
-    $("fc-fim-texto").textContent = erros
-        ? `${plural(erros, "cartão que você errou volta", "cartões que você errou voltam")} pra revisão de hoje. Os certos voltam daqui a alguns dias.`
-        : "Os cartões voltam daqui a alguns dias, cada vez mais espaçados.";
+    $("fc-fim-texto").textContent = estudo.prova
+        ? "Foi só uma revisão pra prova: o calendário dos seus cartões não mudou, e todos continuam guardados aqui."
+        : erros
+            ? `${plural(erros, "cartão que você errou volta", "cartões que você errou voltam")} pra revisão de hoje. Os certos voltam daqui a alguns dias e continuam guardados.`
+            : "Os cartões voltam daqui a alguns dias, cada vez mais espaçados, e continuam guardados.";
 
     $("fc-fim-voltar").focus();
 
@@ -312,6 +333,7 @@ function iniciar() {
 
     $("fc-conteudos").addEventListener("click", cliqueNaLista);
     $("fc-revisar-hoje").addEventListener("click", async () => comecar((await api("/revisao")).cartoes));
+    $("fc-revisar-tudo").addEventListener("click", async () => comecar((await api("/revisao?todos=1")).cartoes, { prova: true }));
     $("fc-cartao").addEventListener("click", virar);
     $("fc-errei").addEventListener("click", () => responder(false));
     $("fc-acertei").addEventListener("click", () => responder(true));
@@ -337,7 +359,7 @@ function iniciar() {
         const todos = listas.flat();
         if (!modal.open) modal.showModal();
         if (todos.length) {
-            comecar(todos);
+            comecar(todos, { prova: evento.detail.prova === true });
         } else {
             $("fc-lista").hidden = false;
             $("fc-estudo").hidden = true;
