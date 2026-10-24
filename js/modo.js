@@ -27,16 +27,34 @@ export function detectarModo() {
         document.documentElement.dataset.modo = "nuvem";
     }
 
+    if (!modo && window.KAIZEN_DESKTOP) {
+        // o app de computador SEMPRE tem servidor (a janela só abre depois que ele responde). Achar que
+        // não tem faria a tela trabalhar com dados vazios do modo nuvem e a sincronia mandar isso pro cofre,
+        // apagando os planos nos outros aparelhos
+        modo = Promise.resolve("servidor");
+        document.documentElement.dataset.modo = "servidor";
+    }
+
     if (!modo) {
 
-        const controle = new AbortController();
-        const relogio = setTimeout(() => controle.abort(), 2500);
+        // /api/ping responde na hora (não pergunta nada pro Ollama nem pra nuvem). Sem server.py (site,
+        // celular), o 404 também chega na hora; só o servidor travado demora, e aí esperamos mais um pouco
+        // em vez de concluir "sem servidor" e trabalhar com dados vazios
+        const perguntar = async (tentativa) => {
+            const controle = new AbortController();
+            const relogio = setTimeout(() => controle.abort(), 10000);
+            try {
+                const resposta = await fetchOriginal("./api/ping", { cache: "no-store", signal: controle.signal });
+                return resposta.ok && (resposta.headers.get("content-type") || "").includes("json") ? "servidor" : "nuvem";
+            } catch (erro) {
+                // demorou (travado): tenta de novo, até 3 vezes; sem rede ou recusou: não tem servidor
+                return erro.name === "AbortError" && tentativa < 3 ? perguntar(tentativa + 1) : "nuvem";
+            } finally {
+                clearTimeout(relogio);
+            }
+        };
 
-        modo = fetchOriginal("./api/ia/status", { cache: "no-store", signal: controle.signal })
-            .then((resposta) =>
-                resposta.ok && (resposta.headers.get("content-type") || "").includes("json") ? "servidor" : "nuvem")
-            .catch(() => "nuvem")
-            .finally(() => clearTimeout(relogio));
+        modo = perguntar(1);
 
         modo.then((m) => document.documentElement.dataset.modo = m);
 

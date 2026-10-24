@@ -173,6 +173,61 @@ function gerando(retrato) {
 }
 
 
+/*
+    O jeito clássico de a sincronia destruir dados: um aparelho que ficou com os dados vazios (cache
+    limpo, modo errado, banco novo) manda isso pro cofre e todos os outros aceitam. Por isso, quando
+    um lado ficaria SEM NENHUM plano (ou tarefa) que o outro tem, a pessoa tem que confirmar.
+    Devolve o que sumiria ("planos de estudo", "tarefas"…) ou "" se nada some.
+*/
+function quePerde(tem, ficara) {
+    const a = contar(tem);
+    const b = contar(ficara);
+    return [a.planos && !b.planos ? "planos de estudo" : "", a.tarefas && !b.tarefas ? "tarefas" : ""]
+        .filter(Boolean).join(" e ");
+}
+
+
+function resumo(retrato) {
+    const c = contar(retrato);
+    return `${c.planos} plano(s) e ${c.tarefas} tarefa(s)`;
+}
+
+
+// marcas que a pessoa já confirmou apagar: não pergunta de novo a cada ciclo
+const decididos = new Set();
+
+
+/* Antes de enviar: este aparelho ficou sem planos (ou tarefas) que a nuvem ainda tem?
+   Devolve true se trouxe os dados da nuvem de volta (a tela recarrega). */
+async function seguraApagarTudo(estado, local, atual, id, chave) {
+
+    const aqui = contar(local);
+    if ((aqui.planos && aqui.tarefas) || decididos.has(atual)) return false;   // nada some, nem precisa olhar
+
+    const r = await pedir("GET", id);
+    if (r.status !== 200) return false;   // o fluxo normal trata o 404 e os erros
+
+    const remoto = await decifrar(chave, r.corpo.dados);
+    const perda = quePerde(remoto, local);
+    if (!perda) return false;
+
+    if (confirm(`Este aparelho ficou sem ${perda}, e a nuvem ainda tem (${resumo(remoto)}).
+
+` +
+                `OK: foi de propósito, então apaga também nos outros aparelhos.
+` +
+                `Cancelar: não foi você? O Kaizen traz tudo de volta da nuvem pra cá.`)) {
+        decididos.add(atual);
+        return false;
+    }
+
+    await adotar(estado.codigo, r.corpo.versao, remoto,
+                 `Os dados voltaram da nuvem: este aparelho tinha ficado sem ${perda}.`);
+    return true;
+
+}
+
+
 
 /* ---------- conversa com o servidor ---------- */
 
@@ -325,6 +380,8 @@ async function ciclo(olharNuvem = false) {
 
         if (atual !== estado.marca) {
 
+            if (await seguraApagarTudo(estado, local, atual, id, chave)) return;
+
             mostrarSituacao("andando", "Enviando…");
 
             const r = await pedir("PUT", id, { base: estado.versao, dados: await cifrar(chave, local) });
@@ -379,15 +436,35 @@ async function chegou(estado, cofre, local, atual, chave) {
         return;
     }
 
-    if (atual !== estado.marca && await perguntarConflito(local, remoto, cofre.atualizado_em) === "aqui") {
+    const manterAqui = async () => {
 
         const { id } = await derivar(estado.codigo);
         const r = await pedir("PUT", id, { base: cofre.versao, dados: await cifrar(chave, local) });
 
         if (r.status === 200) gravarEstado({ ...estado, versao: r.corpo.versao, marca: atual, quando: Date.now() });
         else if (r.status !== 409) throw falhou(r);  // 409: mudou de novo, o próximo ciclo resolve
-        return;
 
+    };
+
+    const mudouAqui = atual !== estado.marca;
+
+    if (mudouAqui && await perguntarConflito(local, remoto, cofre.atualizado_em) === "aqui") {
+        await manterAqui();
+        return;
+    }
+
+    // a nuvem ficou sem planos (ou tarefas) que este aparelho tem: nunca aceita calado.
+    // (se a pessoa acabou de escolher "do outro aparelho" no conflito, já viu os números: não pergunta de novo)
+    const perda = mudouAqui ? "" : quePerde(local, remoto);
+
+    if (perda && !confirm(`A nuvem ficou sem ${perda}, e este aparelho tem (${resumo(local)}).
+
+` +
+                          `OK: aceitar e apagar daqui também.
+` +
+                          `Cancelar: manter os daqui e mandar pra nuvem.`)) {
+        await manterAqui();
+        return;
     }
 
     if (editando()) {  // não recarrega no meio de uma edição; tenta de novo logo, sem baixar de novo
