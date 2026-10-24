@@ -1,5 +1,21 @@
 [
     {
+        "versao": "1.8.0",
+        "data": "2026-10-24",
+        "itens": [
+            "Estudo mais intenso: escolha Tranquilo, Equilibrado ou Intenso e, com mais tempo por dia, o plano traz vários tópicos por dia em vez de um só.",
+            "Botão 🗓 em cada plano: remarque os dias da semana (ex.: seg e ter viram qui e sex) ou peça pra IA refazer o cronograma do que falta, sem perder o que você já estudou.",
+            "Na ficha do pet, a lista de próximas aulas: abra qualquer uma ou traga pra hoje, pra fazer um rush.",
+            "Os flashcards não somem mais depois de acertar. Ficam guardados (na lista e na ficha do pet) e o modo prova repassa tudo sem mexer no calendário de revisão.",
+            "Documentação mais certeira em 30 áreas, como direito, saúde, engenharia e contabilidade: a busca começa pelas fontes oficiais de cada área, como Planalto, STF e SciELO.",
+            "Os vídeos do plano são escolhidos pelo assunto do título, pelas visualizações e, no computador, pelas curtidas.",
+            "O OpenRouter fica à vista em Onde a IA roda, com um aviso ao abrir o assistente, e cada IA mostra quantos usos ainda restam hoje.",
+            "A correção de atividades por IA gratuita avisa que a nota é aproximada, e os modelos grátis do OpenRouter agora podem corrigir.",
+            "Cópias automáticas do banco (botão no rodapé) e proteção pra a sincronia não apagar seus planos sem perguntar.",
+            "Kanban: dá pra soltar o card em qualquer ponto da coluna, inclusive no app de computador, e o quadro novo começa sem tarefas de exemplo."
+        ]
+    },
+    {
         "versao": "1.7.2",
         "data": "2026-10-22",
         "itens": [
