@@ -25,6 +25,7 @@ import os
 import re
 import secrets
 import sqlite3
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -121,7 +122,107 @@ def init():
                 chave TEXT PRIMARY KEY,
                 valor TEXT
             );
+            CREATE TABLE IF NOT EXISTS uso_tokens (
+                id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                quando   TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+                servico  TEXT NOT NULL,
+                destino  TEXT NOT NULL,
+                modelo   TEXT,
+                entrada  INTEGER NOT NULL,
+                saida    INTEGER NOT NULL,
+                estimado INTEGER NOT NULL DEFAULT 0
+            );
         """)
+
+
+# ---------- Consumo de tokens por serviço ----------
+
+_medido = threading.local()   # os provedores deixam aqui o (entrada, saída) que o serviço informou
+
+
+def _anotar_uso(entrada, saida):
+    if entrada is not None or saida is not None:
+        _medido.uso = (int(entrada or 0), int(saida or 0))
+
+
+def _registrar_uso(servico, destino_id, modelo, mensagens, texto):
+    """Grava os tokens de uma chamada. Sem número do provedor (agentes, Worker), estima ~4 caracteres por token."""
+    uso = getattr(_medido, "uso", None)
+    estimado = uso is None
+    if estimado:
+        uso = (sum(len(m.get("content") or "") for m in mensagens) // 4, len(texto or "") // 4)
+    try:
+        with conectar() as con:
+            con.execute("INSERT INTO uso_tokens (servico, destino, modelo, entrada, saida, estimado) VALUES (?, ?, ?, ?, ?, ?)",
+                        (servico or "outro", str(destino_id), modelo, uso[0], uso[1], int(estimado)))
+    except sqlite3.Error:
+        pass   # medir nunca pode derrubar uma resposta
+
+
+def uso_tokens(dias=30):
+    """Tokens por serviço (e por destino) nos últimos `dias` dias, do que mais gastou pro que menos."""
+    with conectar() as con:
+        linhas = con.execute(
+            "SELECT servico, destino, modelo, COUNT(*) AS chamadas, SUM(entrada) AS entrada, SUM(saida) AS saida, "
+            "SUM(estimado) AS estimadas FROM uso_tokens WHERE quando >= datetime('now', 'localtime', ?) "
+            "GROUP BY servico, destino, modelo ORDER BY SUM(entrada + saida) DESC", (f"-{int(dias)} days",))
+        return [{**dict(l), "total": l["entrada"] + l["saida"],
+                 "media": round((l["entrada"] + l["saida"]) / l["chamadas"])} for l in linhas]
+
+
+# ---------- Usos de hoje ("quanto ainda dá pra usar") ----------
+# Em pedidos à IA (um uso = uma pergunta do assistente, um bloco do roteiro, um conjunto de cartões, uma correção
+# ou uma mensagem do chat), não em tokens.
+
+_cota_cache = {"kaizen": (0, None), "openrouter": (0, None)}   # (quando perguntou, resposta)
+
+
+def _perguntar_cota_kaizen():
+    """O que o Worker diz que ainda sobra hoje na IA grátis. None = não deu pra saber (sem internet, ou Worker antigo)."""
+    try:
+        d = _http(f"{URL_KAIZEN}/v1/ia/cota?usuario={_id_aparelho()}", timeout=5)
+    except ErroConexao:
+        return None
+    return {k: d[k] for k in ("limite", "usadas", "restantes", "motivo") if k in d}
+
+
+def _openrouter_e_gratis():
+    """True = conta sem créditos (50 pedidos por dia nos modelos grátis); False = com créditos (1000). None = não sei."""
+    try:
+        d = _http("https://openrouter.ai/api/v1/key", cabecalhos=_cabecalhos("openrouter", chave("openrouter")), timeout=5)
+    except ErroConexao:
+        return None
+    return bool((d.get("data") or {}).get("is_free_tier", True))
+
+
+def _lembrado(nome, validade, buscar):
+    quando, valor = _cota_cache[nome]
+    if time.time() - quando > validade:
+        valor = buscar()
+        _cota_cache[nome] = (time.time(), valor)
+    return valor
+
+
+def cotas_do_dia():
+    """{destino: {usadas, limite?, restantes?, motivo?}}. IA grátis do Kaizen: o limite de verdade vem do Worker.
+    OpenRouter: 50 por dia no plano grátis (1000 depois de comprar créditos), contando os pedidos feitos por aqui.
+    Os outros: só quantos pedidos foram feitos hoje."""
+    try:
+        with conectar() as con:
+            linhas = con.execute("SELECT destino, COUNT(*) FROM uso_tokens "
+                                 "WHERE date(quando) = date('now', 'localtime') GROUP BY destino").fetchall()
+        cotas = {destino: {"usadas": n} for destino, n in linhas}
+
+        kaizen = _lembrado("kaizen", 15, _perguntar_cota_kaizen)
+        if kaizen:
+            cotas["kaizen"] = kaizen
+        if conectado("openrouter"):
+            gratis = _lembrado("openrouter", 600, _openrouter_e_gratis)
+            if gratis is not None:
+                cotas.setdefault("openrouter", {"usadas": 0})["limite"] = 50 if gratis else 1000
+        return cotas
+    except Exception:
+        return {}   # a cota é informação extra: nunca derruba a lista de IAs
 
 
 def _config(chave, valor=..., apagar=False):
@@ -442,13 +543,22 @@ def remover(destino_id):
 #   Conversar (um caminho só pra Ollama, OpenAI e Gemini)
 # =========================================================
 
-def conversar(destino_id, modelo, mensagens, formato=None, progresso=None, limite_tokens=None, temperatura=None):
+def conversar(destino_id, modelo, mensagens, formato=None, progresso=None, limite_tokens=None, temperatura=None,
+              servico=None):
     """Manda [{role, content}] e devolve o texto da resposta.
 
     formato: JSON schema (força saída JSON) ou None.
     progresso(texto_parcial): chamado durante o streaming do Ollama.
+    servico: quem pediu (chat, roteiro, flashcards…), pra contar os tokens em uso_tokens.
     Levanta ErroConexao se não der pra falar com o destino.
     """
+    _medido.uso, _medido.servico = None, servico
+    texto = _conversar(destino_id, modelo, mensagens, formato, progresso, limite_tokens, temperatura)
+    _registrar_uso(servico, destino_id, modelo, mensagens, texto)
+    return texto
+
+
+def _conversar(destino_id, modelo, mensagens, formato, progresso, limite_tokens, temperatura):
     destino = obter(destino_id)
     if not destino:
         raise ErroConexao(f"Destino \"{destino_id}\" não está configurado.")
@@ -490,6 +600,7 @@ def conversar(destino_id, modelo, mensagens, formato=None, progresso=None, limit
                 if progresso:
                     progresso(texto)
                 if pedaco.get("done"):
+                    _anotar_uso(pedaco.get("prompt_eval_count"), pedaco.get("eval_count"))
                     break
     except urllib.error.HTTPError as erro:
         raise ErroConexao(f"Ollama respondeu {erro.code}: {erro.read()[:200].decode(errors='replace')}")
@@ -524,9 +635,13 @@ def _conversar_nuvem(provedor, modelo, mensagens, formato):
 
     if provedor == "kaizen":
         # o Worker escolhe o modelo; o schema já foi no prompt acima
-        corpo = {"mensagens": mensagens, "json": bool(formato), "usuario": _id_aparelho()}
+        corpo = {"mensagens": mensagens, "json": bool(formato), "usuario": _id_aparelho(),
+                 "servico": getattr(_medido, "servico", None)}
         try:
-            return (_http(f"{URL_KAIZEN}/v1/ia", corpo, timeout=300).get("resposta") or "").strip()
+            dados = _http(f"{URL_KAIZEN}/v1/ia", corpo, timeout=300)
+            uso = dados.get("uso") or {}
+            _anotar_uso(uso.get("entrada"), uso.get("saida"))
+            return (dados.get("resposta") or "").strip()
         except ErroConexao as erro:
             # as mensagens do Worker já explicam o que fazer: sem o "429:" na frente
             raise ErroConexao(re.sub(r"^\d{3}: ", "", str(erro)), status=erro.status)
@@ -544,6 +659,8 @@ def _conversar_nuvem(provedor, modelo, mensagens, formato):
         dados = _http("https://api.anthropic.com/v1/messages", corpo, cabecalhos, timeout=300)
         if dados.get("stop_reason") == "refusal":
             raise ErroConexao("O Claude recusou esse pedido. Tente reformular ou use outro modelo.")
+        uso = dados.get("usage") or {}
+        _anotar_uso(uso.get("input_tokens"), uso.get("output_tokens"))
         # só os blocos de texto (o raciocínio vem em blocos "thinking", vazios por padrão)
         return "".join(b.get("text", "") for b in dados.get("content", []) if b.get("type") == "text").strip()
 
@@ -554,6 +671,8 @@ def _conversar_nuvem(provedor, modelo, mensagens, formato):
         if formato and provedor != "openrouter":
             corpo["response_format"] = {"type": "json_object"}
         dados = _http(f"{base}/chat/completions", corpo, _cabecalhos(provedor, chave_api), timeout=300)
+        uso = dados.get("usage") or {}
+        _anotar_uso(uso.get("prompt_tokens"), uso.get("completion_tokens"))
         return _sem_raciocinio(dados["choices"][0]["message"]["content"] or "")
 
     return _conversar_gemini(modelo, chave_api, mensagens, formato)
@@ -571,6 +690,9 @@ def _chamar_gemini(modelo, chave_api, mensagens, formato):
         corpo["generationConfig"] = {"responseMimeType": "application/json"}
     dados = _http(f"https://generativelanguage.googleapis.com/v1beta/models/{urllib.parse.quote(modelo)}:generateContent",
                   corpo, _cabecalhos("gemini", chave_api), timeout=300)
+    uso = dados.get("usageMetadata") or {}
+    # o raciocínio interno do Gemini é cobrado como saída, mas vem em campo à parte
+    _anotar_uso(uso.get("promptTokenCount"), (uso.get("candidatesTokenCount") or 0) + (uso.get("thoughtsTokenCount") or 0))
     try:
         return "".join(p.get("text", "") for p in dados["candidates"][0]["content"]["parts"])
     except (KeyError, IndexError):

@@ -333,7 +333,80 @@ export function modeloSugerido(provedor, modelos) {
     mensagens: [{ role: "system" | "user" | "assistant", content }]
     formato: JSON schema (pede JSON e mostra o schema) ou null.
 */
-export async function conversar(provedor, modelo, mensagens, formato = null) {
+/* ---------- usos de hoje ----------
+   Em pedidos à IA (uma pergunta do assistente, um bloco do roteiro, um conjunto de cartões, uma correção ou uma
+   mensagem do chat), não em tokens. A IA grátis do Kaizen tem o limite de verdade no Worker; o OpenRouter tem
+   50 por dia no plano grátis (1000 depois de comprar créditos). */
+
+const CHAVE_USO = "kaizen.nuvem.uso.v1";   // { dia, n: { provedor: pedidos } }
+
+const diaLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
+function lerUso() {
+    try {
+        const uso = JSON.parse(localStorage.getItem(CHAVE_USO) || "null");
+        if (uso?.dia === diaLocal()) return uso;
+    } catch (erro) {
+        /* corrompido: recomeça */
+    }
+    return { dia: diaLocal(), n: {} };
+}
+
+function contarUso(provedor) {
+    try {
+        const uso = lerUso();
+        uso.n[provedor] = (uso.n[provedor] || 0) + 1;
+        localStorage.setItem(CHAVE_USO, JSON.stringify(uso));
+    } catch (erro) {
+        /* sem armazenamento: só não conta */
+    }
+}
+
+const lembrado = { kaizen: { quando: 0 }, openrouter: { quando: 0 } };
+
+async function lembrar(nome, validade, buscar) {
+    if (Date.now() - lembrado[nome].quando > validade) {
+        lembrado[nome] = { quando: Date.now(), valor: await buscar().catch(() => null) };
+    }
+    return lembrado[nome].valor;
+}
+
+export async function cotasDoDia() {
+
+    const cotas = Object.fromEntries(Object.entries(lerUso().n).map(([provedor, n]) => [provedor, { usadas: n }]));
+
+    const kaizen = await lembrar("kaizen", 15000, async () => {
+        const d = await pedir(`${servidor()}/v1/ia/cota?usuario=${idDoAparelho()}`, { tempo: 5000 });
+        return { limite: d.limite, usadas: d.usadas, restantes: d.restantes, motivo: d.motivo };
+    });
+    if (kaizen) cotas.kaizen = kaizen;   // offline ou Worker antigo: fica sem
+
+    const conta = lerConfig().contas.openrouter;
+    if (conta) {
+        const gratis = await lembrar("openrouter", 600000, async () => {
+            const d = await pedir("https://openrouter.ai/api/v1/key", { cabecalhos: autorizacao(conta), tempo: 5000 });
+            return d?.data?.is_free_tier !== false;
+        });
+        if (gratis !== null && gratis !== undefined) (cotas.openrouter ||= { usadas: 0 }).limite = gratis ? 50 : 1000;
+    }
+
+    return cotas;
+
+}
+
+
+export async function conversar(provedor, modelo, mensagens, formato = null, servico = null) {
+
+    const resposta = await conversarSemContar(provedor, modelo, mensagens, formato, servico);
+
+    contarUso(provedor);   // só conta o que deu certo
+
+    return resposta;
+
+}
+
+
+async function conversarSemContar(provedor, modelo, mensagens, formato = null, servico = null) {
 
     const conta = provedor === "kaizen" ? {} : lerConfig().contas[provedor];
 
@@ -390,7 +463,7 @@ export async function conversar(provedor, modelo, mensagens, formato = null) {
         // o Worker escolhe o modelo; o schema já foi no prompt acima
         try {
             const dados = await pedir(`${servidor()}/v1/ia`, {
-                corpo: { mensagens, json: Boolean(formato), usuario: idDoAparelho() },
+                corpo: { mensagens, json: Boolean(formato), usuario: idDoAparelho(), servico },
                 tempo: 300000
             });
             return (dados.resposta || "").trim();

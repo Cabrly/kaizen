@@ -38,6 +38,9 @@
 
    POST /v1/ia  { mensagens: [{ role, content }], json, usuario }  → { resposta, modelo }
    GET  /v1/ia                                                    → { modelos, ativa }
+   GET  /v1/ia/cota?usuario=<id do aparelho>                      → { limite, usadas, restantes, motivo }
+        só consulta (não gasta nada): quantos usos da IA grátis ainda sobram hoje pra essa pessoa;
+        "motivo" diz quem limita quando não sobra nenhum (cota-usuario | cota-ip | cota-dia)
 
    Quem escolhe o modelo é o Worker (o pedido não pede um "pro" caro). Só
    aceita o app como origem (ou nenhuma, que é o server.py do PC). Limites:
@@ -250,6 +253,21 @@ export class Estatisticas extends DurableObject {
         }
         this.somar({ "ia:pedidos": 1, [`ia:ip:${ip}`]: 1, [`ia:ip:u:${usuario}`]: 1 });
         return null;
+    }
+
+    // só consulta, não conta: quantos usos ainda sobram hoje pra essa pessoa (o menor entre o limite dela,
+    // o da rede dela e o geral do dia)
+    consultarIA(ip, usuario, { cotaDia, porIp, porUsuario }) {
+        const dia = hojeBr();
+        const total = this.valorDe(dia, "ia:pedidos");
+        const doUsuario = this.valorDe(dia, `ia:ip:u:${usuario}`);
+        const doIp = this.valorDe(dia, `ia:ip:${ip}`);
+        const restantes = Math.max(0, Math.min(porUsuario - doUsuario, porIp - doIp, cotaDia - total));
+        const motivo = restantes > 0 ? null
+            : total >= cotaDia ? "cota-dia"
+            : doUsuario >= porUsuario ? "cota-usuario"
+            : "cota-ip";
+        return { limite: porUsuario, usadas: doUsuario, restantes, motivo };
     }
 
     // o Google falhou: o pedido não gasta a cota de ninguém
@@ -468,6 +486,33 @@ async function chamarGemini(chave, modelo, mensagens, comoJson) {
 }
 
 
+// os limites diários da IA grátis (a consulta de cota e a reserva do pedido usam os mesmos números)
+function limitesDaIA(env) {
+    return {
+        cotaDia: Number(env.IA_COTA_DIA) || 120,
+        porIp: Number(env.IA_POR_IP) || 20,
+        porUsuario: Number(env.IA_POR_USUARIO) || 10
+    };
+}
+
+
+// GET /v1/ia/cota?usuario=<id>: quantos usos ainda sobram hoje. Não conta nada.
+async function cotaDaIA(pedido, env, ip, url) {
+
+    const origem = pedido.headers.get("Origin");
+    if (origem && !ORIGENS_IA.test(origem)) return json(403, { erro: "A IA do Kaizen só atende o próprio app." });
+
+    const id = url.searchParams.get("usuario") || "";
+    if (!/^[A-Za-z0-9_-]{16,64}$/.test(id)) return json(400, { erro: "Falta o id do aparelho." });
+
+    const contador = env.ESTATISTICAS.get(env.ESTATISTICAS.idFromName("geral"));
+    const [quem, usuario] = await Promise.all([hashDoDia(ip), hashDoDia(id)]);
+
+    return json(200, await contador.consultarIA(quem, usuario, limitesDaIA(env)));
+
+}
+
+
 async function ia(pedido, env, ip) {
 
     const origem = pedido.headers.get("Origin");
@@ -501,11 +546,7 @@ async function ia(pedido, env, ip) {
     // o id do aparelho é o limite de cada pessoa; o do IP pega quem troca de id pra burlar
     const contador = env.ESTATISTICAS.get(env.ESTATISTICAS.idFromName("geral"));
     const [quem, usuario] = await Promise.all([hashDoDia(ip), hashDoDia(corpo.usuario)]);
-    const recusa = await contador.reservarIA(quem, usuario, {
-        cotaDia: Number(env.IA_COTA_DIA) || 120,
-        porIp: Number(env.IA_POR_IP) || 20,
-        porUsuario: Number(env.IA_POR_USUARIO) || 10
-    });
+    const recusa = await contador.reservarIA(quem, usuario, limitesDaIA(env));
 
     if (recusa === "cota-dia") {
         return json(429, { erro: "A IA grátis do Kaizen já atendeu todo mundo que dava hoje. Volta amanhã, ou conecte uma chave sua em \"Onde a IA roda\".", motivo: recusa });
@@ -568,6 +609,17 @@ export default {
         const [, versaoApi, recurso, id] = url.pathname.split("/");
 
         if (url.pathname === "/") return json(200, { app: "kaizen-sync", ok: true });
+
+        if (versaoApi === "v1" && recurso === "ia" && id === "cota" && pedido.method === "GET") {
+            const ip = pedido.headers.get("CF-Connecting-IP") || "sem-ip";
+            if ((bloqueados.get(ip) || 0) > Date.now() || !(await dentroDoLimite(env.LIMITE_GERAL, ip))) return MUITAS_TENTATIVAS();
+            try {
+                return await cotaDaIA(pedido, env, ip, url);
+            } catch (erro) {
+                console.error(erro);
+                return json(500, { erro: "Não consegui consultar a cota agora." });
+            }
+        }
 
         if (versaoApi === "v1" && recurso === "ia" && !id) {
             const ip = pedido.headers.get("CF-Connecting-IP") || "sem-ip";

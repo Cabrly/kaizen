@@ -40,7 +40,7 @@ ESQUEMA = estudos.PROMPTS["esquema_correcao"]
 # aleatória, então nem tentam: a entrega fica guardada esperando uma IA melhor.
 FORTES = re.compile(r"claude|sonnet|opus|haiku|gpt-?4|gpt-?5|chatgpt|(^|[/:\-])o[1-9]\b|gemini-(1\.5-pro|[2-9])|"
                     r"deepseek|grok|kimi|glm-?4|mistral-(large|medium)|command-r-plus|llama-?3\.[13]-?(70|405)b|"
-                    r"llama-?4|qwen.*(max|plus)|gpt-oss", re.IGNORECASE)
+                    r"llama-?4|qwen.*(max|plus)|gpt-oss|minimax|^openrouter/free", re.IGNORECASE)
 TAMANHO = re.compile(r"(\d+(?:\.\d+)?)b\b", re.IGNORECASE)
 MINIMO_B = 14                # bilhões de parâmetros pra um modelo sem nome conhecido corrigir
 
@@ -272,7 +272,7 @@ def _corrigir(entrega_id):
         con.execute("UPDATE entregas SET situacao = 'corrigindo' WHERE id = ?", (entrega_id,))
         pedido = _pedido(con, entrega)
 
-    dados = estudos.gerar_json(entrega["motor"], SISTEMA, pedido, ESQUEMA, limite_tokens=3000)
+    dados = estudos.gerar_json(entrega["motor"], SISTEMA, pedido, ESQUEMA, limite_tokens=3000, servico="correcao")
     correcao = limpar_correcao(dados)
     with estudos.conectar() as con:
         con.execute("UPDATE entregas SET situacao = 'corrigida', nota = ?, correcao = ?, erro = NULL WHERE id = ?",

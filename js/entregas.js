@@ -113,6 +113,10 @@ async function carregar(itemId = itemAtual) {
 }
 
 
+// IA gratuita (OpenRouter :free, a grátis do Kaizen): corrige, mas a nota varia de uma vez pra outra
+const CORRECAO_APROXIMADA = /:free$|^nuvem@kaizen:|openrouter\/free/i;
+
+
 function cartao(e) {
 
     const c = e.correcao;
@@ -137,6 +141,10 @@ function cartao(e) {
                     <small>${c ? `corrigida por ${esc(e.corretor || "IA")}` : situacao}</small>
                 </div>
             </header>
+            ${c && CORRECAO_APROXIMADA.test(e.motor || "") ? `
+                <p class="entrega-aviso">⚠️ Correção feita por uma IA gratuita: a nota é aproximada e pode mudar se você
+                    corrigir de novo. Pra uma nota mais confiável, conecte o Claude, o Gemini ou um modelo pago em
+                    <b>Onde a IA roda</b>.</p>` : ""}
             ${c ? `
                 <p class="entrega-resumo">${esc(c.resumo)}</p>
                 ${lista("✓ O que ficou bom", c.acertos, "entrega-acertos")}

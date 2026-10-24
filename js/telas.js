@@ -81,6 +81,9 @@ function ativarTela(nome) {
 
     lembrarTela(nome);
 
+
+    document.dispatchEvent(new CustomEvent("kaizen:tela", { detail: nome }));
+
 }
 
 

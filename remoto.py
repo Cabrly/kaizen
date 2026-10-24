@@ -77,7 +77,7 @@ def conversar(rotulo, mensagens, formato=None):
         raise ValueError(f"Modelo \"{rotulo}\" não existe neste PC. Atualize a lista no celular.")
     if not isinstance(mensagens, list) or not mensagens:
         raise ValueError("Nenhuma mensagem enviada.")
-    return servidores.conversar(destino["id"], modelo, mensagens, formato)
+    return servidores.conversar(destino["id"], modelo, mensagens, formato, servico="celular")
 
 
 # =========================================================

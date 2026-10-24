@@ -131,7 +131,10 @@ function iniciarServidores() {
 
 
     // contas na nuvem: botão abre o campo da chave; salvar testa e conecta
-    painel.querySelector("#srv-nuvem").addEventListener("click", (evento) => {
+    // (o OpenRouter fica à vista em #srv-openrouter; as outras contas, em "Outras opções")
+    const areasNuvem = painel.querySelectorAll("#srv-nuvem, #srv-openrouter");
+
+    areasNuvem.forEach((area) => area.addEventListener("click", (evento) => {
 
         const abrir = evento.target.closest("[data-abrir-nuvem]");
 
@@ -143,10 +146,10 @@ function iniciarServidores() {
             if (!caixa.hidden) caixa.querySelector("input").focus();
         }
 
-    });
+    }));
 
 
-    painel.querySelector("#srv-nuvem").addEventListener("submit", async (evento) => {
+    areasNuvem.forEach((area) => area.addEventListener("submit", async (evento) => {
 
         evento.preventDefault();
 
@@ -179,7 +182,7 @@ function iniciarServidores() {
 
         }
 
-    });
+    }));
 
 
     // status atualizado sempre que a aba do assistente é aberta
@@ -248,11 +251,9 @@ async function entrarOpenRouter(botao) {
         const { url } = await api("/openrouter/entrar", { method: "POST", body: { volta } });
         location.href = url;   // no programa, abre no navegador do sistema
         if (window.KAIZEN_DESKTOP) {
-            painel.querySelector("#srv-mais").open = true;
             erro.textContent = "Termine o login no navegador que abriu e volte pra cá.";
         }
     } catch (falha) {
-        painel.querySelector("#srv-mais").open = true;   // o erro aparece lá dentro
         erro.textContent = falha.message;
     } finally {
         botao.disabled = false;
@@ -443,11 +444,50 @@ async function renderizarCelular(s) {
 }
 
 
+let cotas = {};   // usos de hoje por IA, do que a última listagem trouxe
+
+
+/*
+    Quantos usos da IA ainda sobram hoje, em pedidos (não em tokens). A IA grátis do Kaizen tem o limite de
+    verdade no servidor dela; o OpenRouter, o do plano grátis (50 por dia, 1000 com créditos) contando só o que
+    passou por aqui; as outras só mostram quantas vezes foram usadas.
+*/
+function usoDeHoje(id) {
+
+    const c = cotas[id];
+
+    if (!c) return "";
+
+    let texto;
+
+    if (typeof c.restantes === "number") {
+        texto = c.restantes > 0 ? `Hoje: restam ${c.restantes} de ${c.limite} usos`
+            : c.motivo === "cota-dia" ? "Hoje: a cota geral da IA grátis acabou, volta amanhã"
+            : c.motivo === "cota-ip" ? "Hoje: o limite da sua rede acabou, volta amanhã"
+            : `Hoje: os ${c.limite} usos acabaram, volta amanhã`;
+    } else if (c.limite) {
+        texto = `Hoje: ${c.usadas} de ${c.limite} usos (pelo Kaizen)`;
+    } else if (c.usadas) {
+        texto = `Hoje: ${c.usadas} ${c.usadas === 1 ? "uso" : "usos"}`;
+    } else {
+        return "";
+    }
+
+    const acabando = typeof c.restantes === "number" ? c.restantes <= 2 : Boolean(c.limite) && c.usadas >= c.limite * 0.9;
+
+    return `<small class="srv-uso ${acabando ? "srv-uso-acabando" : ""}"
+        title="Um uso é uma pergunta do assistente, um bloco do roteiro, um conjunto de cartões, uma correção ou uma mensagem do chat. Zera à meia-noite.">${esc(texto)}</small>`;
+
+}
+
+
 async function carregar() {
 
     try {
 
-        const { servidores, nuvem, modo } = await api("");
+        const { servidores, nuvem, modo, cotas: cotasHoje } = await api("");
+
+        cotas = cotasHoje || {};
 
         // sem servidor (celular, site estático) a IA é só na nuvem:
         // nada de cadastrar Ollama
@@ -509,6 +549,7 @@ function renderizar(servidores, soNuvem = false) {
                         <strong>${esc(s.nome)}</strong>
                         <small>${esc(endereco)}</small>
                         <small>${situacao}</small>
+                        ${usoDeHoje(s.id)}
                     </span>
                     ${s.preferido ? '<span class="srv-em-uso">em uso</span>' : ""}
                 </button>
@@ -556,10 +597,11 @@ const PASSOS_PC = `
 
 function renderizarNuvem(nuvem) {
 
-    // só as que ainda não foram conectadas; as conectadas já estão na lista
-    painel.querySelector("#srv-nuvem").innerHTML = nuvem.filter((n) => !n.conectado)
-        .sort((a, b) => (b.id === "openrouter") - (a.id === "openrouter"))   // o grátis primeiro
-        .map((n) => `
+    // só as que ainda não foram conectadas; as conectadas já estão na lista.
+    // O OpenRouter (o caminho grátis) fica à vista; o resto, em "Outras opções"
+    const faltam = nuvem.filter((n) => !n.conectado);
+
+    const cartao = (n) => `
         ${n.id === "openrouter" ? ENTRAR_OPENROUTER : ""}
         <button type="button" class="srv-nuvem-botao" data-abrir-nuvem="${esc(n.id)}">${n.id === "openrouter"
             ? "Prefiro colar uma chave do OpenRouter" : `☁ Conectar ${esc(n.nome)}`}</button>
@@ -576,6 +618,9 @@ function renderizarNuvem(nuvem) {
                    aria-label="Chave do ${esc(n.nome)}">
             ${n.id === "pc" ? "" : `<a href="${esc(n.onde_pegar)}" target="_blank" rel="noopener noreferrer">Onde pegar a chave →</a>`}
             <button type="submit" class="btn-secundario">Salvar</button>
-        </form>`).join("");
+        </form>`;
+
+    painel.querySelector("#srv-openrouter").innerHTML = faltam.filter((n) => n.id === "openrouter").map(cartao).join("");
+    painel.querySelector("#srv-nuvem").innerHTML = faltam.filter((n) => n.id !== "openrouter").map(cartao).join("");
 
 }

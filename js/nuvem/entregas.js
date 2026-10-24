@@ -21,7 +21,7 @@ const PARA_IA = 200_000;
 const GITHUB_ARQUIVOS = 15;
 const GITHUB_TOTAL = 120_000;
 
-const FORTES = /claude|sonnet|opus|haiku|gpt-?4|gpt-?5|chatgpt|(^|[/:\-])o[1-9]\b|gemini-(1\.5-pro|[2-9])|deepseek|grok|kimi|glm-?4|mistral-(large|medium)|command-r-plus|llama-?3\.[13]-?(70|405)b|llama-?4|qwen.*(max|plus)|gpt-oss/i;
+const FORTES = /claude|sonnet|opus|haiku|gpt-?4|gpt-?5|chatgpt|(^|[/:\-])o[1-9]\b|gemini-(1\.5-pro|[2-9])|deepseek|grok|kimi|glm-?4|mistral-(large|medium)|command-r-plus|llama-?3\.[13]-?(70|405)b|llama-?4|qwen.*(max|plus)|gpt-oss|minimax|^openrouter\/free/i;
 const TAMANHO = /(\d+(?:\.\d+)?)b\b/i;
 const MINIMO_B = 14;
 
@@ -289,7 +289,7 @@ async function corrigir(id) {
     } else {
         const { sistema_correcao, esquema_correcao } = await deps.prompts();
         const texto = await pedido(deps.ler(), e);
-        correcao = limparCorrecao(await deps.gerarJson(e.motor, sistema_correcao, texto, esquema_correcao));
+        correcao = limparCorrecao(await deps.gerarJson(e.motor, sistema_correcao, texto, esquema_correcao, "correcao"));
     }
     atualizar(id, { situacao: "corrigida", nota: correcao.nota, correcao, erro: null });
 
