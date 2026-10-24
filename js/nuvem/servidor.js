@@ -13,9 +13,12 @@
 
 
 import { PROVEDORES, ErroIA, lerConfig, salvarConfig, contasConectadas,
-         listarModelos, modeloSugerido, conversar } from "./ia.js";
+         listarModelos, modeloSugerido, conversar, cotasDoDia } from "./ia.js";
 
-import { IDIOMAS, buscarVideos, linkDocumentacao } from "./busca.js";
+import { INTENSIDADES, blocosPorDia } from "../intensidade.js";
+
+import { IDIOMAS, buscarVideos, linkDocumentacao, carregarAreas, idsDeAreas, descricaoDasAreas,
+         areaValida, areaTecnica, detectarArea } from "./busca.js";
 
 import { ligarEntregas, listar as listarEntregas, obter as obterEntrega, criar as criarEntrega, corrigirDeNovo,
          excluir as excluirEntrega, sobreCorretor, resumoDosItens, linhaDoPerfil, dosPlanos,
@@ -173,14 +176,14 @@ function jsonDoTexto(texto) {
 }
 
 
-async function gerarJson(motor, sistema, pedido, esquema) {
+async function gerarJson(motor, sistema, pedido, esquema, servico = null) {
 
     const { provedor, modelo } = separarMotor(motor);
 
     if (!provedor) throw new ErroIA("Escolha uma IA conectada (OpenRouter, Claude, ChatGPT…).");
 
     const texto = await conversar(provedor, modelo,
-        [{ role: "system", content: sistema }, { role: "user", content: pedido }], esquema);
+        [{ role: "system", content: sistema }, { role: "user", content: pedido }], esquema, servico);
 
     return jsonDoTexto(texto);
 
@@ -334,7 +337,7 @@ async function perguntas(tema, motor, continuaDe = null) {
         ? `Assunto: ${tema}\n${anterior}\nO estudante quer ir além do que já viu: faça as perguntas pensando no ` +
           "próximo passo, mais aprofundado, sem perguntar o básico que ele já estudou."
         : `Assunto: ${tema}`;
-    const dados = await gerarJson(motor || (await motores()).padrao, sistema_perguntas, pedido, esquema_perguntas);
+    const dados = await gerarJson(motor || (await motores()).padrao, sistema_perguntas, pedido, esquema_perguntas, "perguntas");
 
     const lista = (dados.perguntas || [])
         .filter((p) => p && String(p.pergunta || "").trim())
@@ -351,6 +354,10 @@ async function perguntas(tema, motor, continuaDe = null) {
 }
 
 
+// quantos tópicos entram por dia de estudo (planos de antes não têm o campo: seguem com 1)
+const blocosDoPlano = (plano) => blocosPorDia(plano.minutos, plano.intensidade, plano.dias.length, plano.semanas);
+
+
 function pedidoRoteiro(plano, total, feitas, quantas) {
 
     const linhas = [`Assunto: ${plano.tema}`];
@@ -359,9 +366,17 @@ function pedidoRoteiro(plano, total, feitas, quantas) {
         if (r.resposta) linhas.push(`${r.pergunta} ${r.resposta}`);
     });
 
-    linhas.push(`Duração de cada sessão: ${plano.minutos} minutos`);
+    const blocos = blocosDoPlano(plano);
+
+    linhas.push(`Duração de cada sessão: ${Math.floor(plano.minutos / blocos)} minutos`);
     linhas.push(`Idioma dos materiais (vídeos e documentação): ${IDIOMAS[plano.idioma].nome}`);
     linhas.push(`O roteiro completo tem ${total} sessões.`);
+
+    if (blocos > 1) {
+        linhas.push(`A pessoa estuda ${plano.minutos} minutos por dia, então cada dia tem ${blocos} sessões em sequência. ` +
+                    "As sessões do mesmo dia são tópicos DIFERENTES e complementares (por exemplo, um conceito novo e " +
+                    "outro que o aplica na prática), cada uma completa e com atividades próprias.");
+    }
 
     const anterior = plano.pai_id ? estudadoAntes(completar(ler()), plano.pai_id) : "";
     if (anterior) linhas.push(`${anterior} Este plano aprofunda: comece de onde ele parou e não repita esses tópicos.`);
@@ -408,21 +423,55 @@ async function emParalelo(lista, funcao, limite = 3) {
 }
 
 
+/* Põe no roteiro a lista de áreas do areas.json. Sem o arquivo, o campo "area" some. */
+function roteiroComAreas(sistema, esquema, areas) {
+
+    const ids = idsDeAreas(areas);
+    const copia = structuredClone(esquema);
+
+    if (ids.length && copia.properties.area) {
+        copia.properties.area.enum = ids;
+    } else {
+        delete copia.properties.area;
+        copia.required = copia.required.filter((campo) => campo !== "area");
+    }
+
+    return { sistema_roteiro: sistema.replace("{AREAS}", descricaoDasAreas(areas)), esquema_roteiro: copia };
+
+}
+
+
 async function gerarPlano(id) {
 
     try {
 
-        const { sistema_roteiro, esquema_roteiro } = await carregarPrompts();
+        const areas = await carregarAreas();
+        const prompts = await carregarPrompts();
+        const { sistema_roteiro, esquema_roteiro } = roteiroComAreas(prompts.sistema_roteiro, prompts.esquema_roteiro, areas);
         const plano = ler().planos.find((p) => p.id === id);
-        const total = plano.dias.length * plano.semanas;
+        const blocos = blocosDoPlano(plano);
+        const total = plano.dias.length * plano.semanas * blocos;
 
-        let roteiro = [];
-        let titulo = null;
+        // Refazer o cronograma: o que já tem algo feito fica (e a IA não repete); só o resto é montado de novo
+        // e trocado no fim, então um erro no meio não leva embora o cronograma que existia.
+        const antes = ler();
+        const mantidas = antes.sessoes
+            .filter((s) => s.plano_id === id && !s.extra && antes.itens.some((i) => i.sessao_id === s.id && i.estado === "feito"))
+            .sort((a, b) => a.data.localeCompare(b.data) || a.id - b.id);
+        const refazendo = antes.sessoes.some((s) => s.plano_id === id && !s.extra);
+
+        if (mantidas.length && mantidas.length >= total) {
+            throw new ErroIA("Você já estudou tudo o que o plano previa. Pra continuar, use \"Aprender mais\" no pet.");
+        }
+
+        let roteiro = mantidas.map((s) => ({ topico: s.topico }));
+        let titulo = plano.titulo || null;
         let docOficial = "";
+        let area = "";
 
         // modelo pequeno repete tópico; a repetida é descartada e o próximo
         // pedido repõe — com um teto, pra nunca ficar em loop
-        const vistos = new Set();
+        const vistos = new Set(mantidas.map((s) => chaveTopico(s.topico)));
         const maxPedidos = Math.ceil(total / BLOCO) + 3;
         let pedidos = 0;
 
@@ -437,7 +486,7 @@ async function gerarPlano(id) {
             atualizarPlano(id, { etapa: `Montando o roteiro: sessões ${roteiro.length + 1}–${roteiro.length + quantas} de ${total}` });
 
             const dados = await gerarJson(plano.motor, sistema_roteiro,
-                                          pedidoRoteiro(plano, total, roteiro, quantas), esquema_roteiro);
+                                          pedidoRoteiro(plano, total, roteiro, quantas), esquema_roteiro, "roteiro");
 
             const novas = (dados.sessoes || []).filter((s) => {
                 const chave = chaveTopico(String(s.topico || ""));
@@ -450,26 +499,36 @@ async function gerarPlano(id) {
             roteiro = roteiro.concat(novas.slice(0, quantas));
             titulo = titulo || dados.titulo;
             docOficial = docOficial || dados.documentacao_oficial || "";
+            area = area || areaValida(areas, String(dados.area || ""));
 
         }
 
 
-        if (!roteiro.length) throw new ErroIA("A IA não conseguiu montar o roteiro.");
+        const novos = roteiro.slice(mantidas.length);
+
+        if (!novos.length) throw new ErroIA("A IA não conseguiu montar o roteiro.");
+
+
+        // a IA não escolheu (ou disse "geral"): as palavras do tema também dizem a área
+        if (!area || area === "geral") area = detectarArea(areas, `${plano.tema} ${titulo || ""}`) || area || "geral";
+
+        // site oficial com sitemap só vale pra tecnologia; fora dela as fontes vêm de areas.json
+        if (!areaTecnica(areas, area)) docOficial = "";
 
 
         // --- materiais ---
-        const minutosVideo = Math.max(8, Math.round(plano.minutos * 0.5));
+        const minutosVideo = Math.max(8, Math.round(Math.floor(plano.minutos / blocos) * 0.5));
         let feitos = 0;
 
         atualizarPlano(id, { etapa: "Buscando vídeos…" });
 
-        const achados = await emParalelo(roteiro, async (sessao) => {
+        const achados = await emParalelo(novos, async (sessao) => {
 
             const consulta = sessao.busca_video || `${sessao.topico} ${plano.tema} ${IDIOMAS[plano.idioma].aula}`;
             const videos = await buscarVideos(consulta, { idioma: plano.idioma, minutosMax: minutosVideo });
 
             feitos += 1;
-            atualizarPlano(id, { etapa: `Buscando vídeos: ${feitos} de ${roteiro.length} sessões` });
+            atualizarPlano(id, { etapa: `Buscando vídeos: ${feitos} de ${novos.length} sessões` });
 
             return videos;
 
@@ -477,11 +536,23 @@ async function gerarPlano(id) {
 
 
         // --- grava tudo ---
-        const datas = datasDeEstudo(plano.inicio, plano.dias, roteiro.length);
+        // cada dia de estudo recebe `blocos` tópicos em sequência. Refazendo, recomeça de hoje (ou depois do que já foi estudado)
+        const inicio = refazendo && plano.inicio < hojeIso() ? hojeIso() : plano.inicio;
+        const depoisDe = mantidas.reduce((maior, s) => (s.data > maior ? s.data : maior), "") || null;
+        const datas = datasDeEstudo(inicio, plano.dias, Math.ceil(novos.length / blocos), depoisDe)
+            .flatMap((data) => Array(blocos).fill(data));
         const usados = new Set();
-        const dados = ler();
+        const dados = completar(ler());
 
-        roteiro.forEach((sessao, i) => {
+        // sai o que ainda não tinha nada feito (itens e cartões junto)
+        const saem = new Set(dados.sessoes
+            .filter((s) => s.plano_id === id && !s.extra && !dados.itens.some((i) => i.sessao_id === s.id && i.estado === "feito"))
+            .map((s) => s.id));
+        dados.sessoes = dados.sessoes.filter((s) => !saem.has(s.id));
+        dados.itens = dados.itens.filter((i) => !saem.has(i.sessao_id));
+        dados.flashcards = dados.flashcards.filter((f) => !saem.has(f.sessao_id));
+
+        novos.forEach((sessao, i) => {
 
             const sessaoId = novoId(dados, "sessao");
 
@@ -495,7 +566,7 @@ async function gerarPlano(id) {
 
             const doc = linkDocumentacao({
                 tema: plano.tema, topico: sessao.topico.trim(), termos: sessao.termos_doc,
-                dominio: docOficial, idioma: plano.idioma
+                dominio: docOficial, idioma: plano.idioma, area, areas
             });
 
             const materiais = (video ? [video] : []).concat(doc);
@@ -540,6 +611,7 @@ function criarPlano(corpo) {
     const dias = [...new Set((corpo.dias || []).map(Number).filter((d) => d >= 0 && d <= 6))].sort();
     const minutos = Number(corpo.minutos) || 60;
     const semanas = Number(corpo.semanas) || 4;
+    const intensidade = corpo.intensidade in INTENSIDADES ? corpo.intensidade : "equilibrado";
     const inicio = corpo.inicio || hojeIso();
 
     if (!tema) throw new RangeError("Diga o que você quer estudar.");
@@ -551,7 +623,7 @@ function criarPlano(corpo) {
     const pai = dados.planos.find((p) => p.id === Number(corpo.pai_id));
 
     dados.planos.push({
-        id, tema, respostas: corpo.respostas || [], dias, minutos, horario: corpo.horario || null, inicio, semanas,
+        id, tema, respostas: corpo.respostas || [], dias, minutos, horario: corpo.horario || null, inicio, semanas, intensidade,
         motor: corpo.motor, idioma: IDIOMAS[corpo.idioma] ? corpo.idioma : "pt",
         cor: pai ? pai.cor : CORES[dados.planos.length % CORES.length], status: "gerando", etapa: "Na fila…",
         erro: null, titulo: null, doc_oficial: null, criado_em: agora(), pai_id: pai ? pai.id : null
@@ -575,6 +647,86 @@ function refazerPlano(id) {
 
     atualizarPlano(id, { status: "gerando", etapa: "Na fila…", erro: null });
     gerarPlano(id);
+
+    return obterPlano(id);
+
+}
+
+
+/* Monta de novo os tópicos que ainda não foram estudados; o que já tem algo feito fica.
+   `corpo` pode trocar os minutos por dia e a intensidade. */
+function refazerCronograma(id, corpo = {}) {
+
+    const dados = ler();
+    const plano = dados.planos.find((p) => p.id === id);
+
+    if (!plano) return null;
+    if (plano.status !== "pronto") throw new RangeError("Espere o plano terminar de ser montado.");
+
+    const minutos = Number(corpo.minutos) || plano.minutos;
+    if (minutos < 10 || minutos > 480) throw new RangeError("Minutos fora do intervalo.");
+
+    const intensidade = corpo.intensidade in INTENSIDADES ? corpo.intensidade : (plano.intensidade || "tranquilo");
+    const feitas = dados.sessoes.filter((s) => s.plano_id === id && !s.extra &&
+        dados.itens.some((i) => i.sessao_id === s.id && i.estado === "feito")).length;
+    const previstas = plano.dias.length * plano.semanas * blocosPorDia(minutos, intensidade, plano.dias.length, plano.semanas);
+
+    if (feitas >= previstas) throw new RangeError("Você já estudou tudo o que esse plano previa. Pra seguir, use \"Aprender mais\" no pet.");
+
+    atualizarPlano(id, { status: "gerando", etapa: "Na fila…", erro: null, minutos, intensidade });
+    gerarPlano(id);
+
+    return obterPlano(id);
+
+}
+
+
+/* Remarca um tópico pra outra data (adiantar pra hoje, empurrar pra sexta…). */
+function moverSessao(id, data) {
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(data)) || Number.isNaN(Date.parse(data))) throw new RangeError("Data inválida.");
+
+    const dados = ler();
+    const sessao = dados.sessoes.find((s) => s.id === id && !s.extra);
+
+    if (!sessao) return null;
+
+    sessao.data = data;
+    gravar(dados);
+
+    return obterSessao(id);
+
+}
+
+
+/* Troca os dias da semana do que ainda não foi estudado (ex.: seg e ter -> qui e sex), na mesma ordem.
+   Só mexe no que tem item pendente e é de hoje em diante (ou atrasado sem nada feito). */
+function remarcarDias(id, diasNovos) {
+
+    const dias = [...new Set((diasNovos || []).map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort();
+
+    if (!dias.length) throw new RangeError("Escolha pelo menos um dia da semana.");
+
+    const dados = ler();
+    const plano = dados.planos.find((p) => p.id === id);
+
+    if (!plano) return null;
+    if (plano.status !== "pronto") throw new RangeError("Espere o plano terminar de ser montado.");
+
+    const hoje = hojeIso();
+    const itensDe = (sessaoId) => dados.itens.filter((i) => i.sessao_id === sessaoId);
+
+    const moveis = dados.sessoes
+        .filter((s) => s.plano_id === id && !s.extra && itensDe(s.id).some((i) => i.estado === "pendente") &&
+                       (s.data >= hoje || !itensDe(s.id).some((i) => i.estado === "feito")));
+
+    const antigas = [...new Set(moveis.map((s) => s.data))].sort();
+    const novas = datasDeEstudo(hoje, dias, antigas.length);
+    const mapa = new Map(antigas.map((data, i) => [data, novas[i]]));
+
+    moveis.forEach((s) => { s.data = mapa.get(s.data); });
+    plano.dias = dias;
+    gravar(dados);
 
     return obterPlano(id);
 
@@ -807,6 +959,7 @@ function adiarPendentes(sessaoId) {
 async function listaDestinos() {
     return {
         modo: "nuvem",
+        cotas: await cotasDoDia().catch(() => ({})),   // é informação extra: nunca derruba a lista
         servidores: await destinosComStatus(false),
         nuvem: Object.entries(PROVEDORES).filter(([, p]) => !p.embutido).map(([id, p]) => ({
             id, nome: p.nome, onde_pegar: p.ondePegar, pede_url: Boolean(p.pedeUrl), pede_chave: Boolean(p.pedeChave),
@@ -970,7 +1123,7 @@ async function chat(corpo) {
     const sistema = historico ? `${sistema_chat}\n\nHistórico de estudos do usuário:\n${historico}` : sistema_chat;
 
     const resposta = await conversar(p, corpo.modelo || (await statusChat()).modelos[0],
-                                     [{ role: "system", content: sistema }, ...mensagens]);
+                                     [{ role: "system", content: sistema }, ...mensagens], null, "chat");
 
     return { resposta, modelo: corpo.modelo };
 
@@ -1210,13 +1363,13 @@ async function gerarFlashcards(sessaoId, forcar) {
         for (let tentativa = 0; tentativa < 2 && novos.length < 3; tentativa++) {
             let resposta;
             try {
-                resposta = await gerarJson(motor, sistema_flashcards, pedido, esquema_flashcards);
+                resposta = await gerarJson(motor, sistema_flashcards, pedido, esquema_flashcards, "flashcards");
             } catch (erro) {
                 // a conta do plano foi removida: vai a IA preferida de agora
                 const padrao = (await motores()).padrao;
                 if (motor !== plano.motor || !padrao || padrao === motor) throw erro;
                 motor = padrao;
-                resposta = await gerarJson(motor, sistema_flashcards, pedido, esquema_flashcards);
+                resposta = await gerarJson(motor, sistema_flashcards, pedido, esquema_flashcards, "flashcards");
             }
             novos = cartoesBons(resposta.cartoes);
         }
@@ -1261,8 +1414,9 @@ function listarFlashcards() {
 
     const conteudos = dados.sessoes
         .filter((s) => !s.extra)
+        // a biblioteca: todo conteúdo com cartões fica (dá pra revisar pra prova) + o estudado há pouco
         .filter((s) => (s.data >= desde && s.data <= hoje && foiEstudada(dados, s.id)) ||
-                       dados.flashcards.some((f) => f.sessao_id === s.id && f.revisar_em <= hoje))
+                       dados.flashcards.some((f) => f.sessao_id === s.id && f.revisar_em !== DORMINDO))
         .sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id)
         .map((s) => {
 
@@ -1289,7 +1443,23 @@ function listarFlashcards() {
 }
 
 
-function cartoes(sessaoId = null) {
+/* {sessao_id: [{id, frente, verso}]} pra ficha do pet mostrar o que ficou guardado de cada conteúdo */
+function cartoesDasSessoes(ids) {
+
+    const saida = {};
+
+    completar(ler()).flashcards
+        .filter((f) => ids.includes(f.sessao_id) && f.revisar_em !== DORMINDO)
+        .sort((a, b) => a.id - b.id)
+        .forEach((f) => (saida[f.sessao_id] ||= []).push({ id: f.id, frente: f.frente, verso: f.verso }));
+
+    return saida;
+
+}
+
+
+/* `todos` = modo prova: todos os cartões guardados, de qualquer data */
+function cartoes(sessaoId = null, todos = false) {
 
     const dados = completar(ler());
     const hoje = hojeIso();
@@ -1297,6 +1467,12 @@ function cartoes(sessaoId = null) {
     const data = (id) => dados.sessoes.find((s) => s.id === id)?.data || "";
 
     if (sessaoId && !dados.flashcards.some((f) => f.sessao_id === sessaoId)) pedirFlashcards(sessaoId);
+
+    if (todos && !sessaoId) {
+        return dados.flashcards.filter((f) => f.revisar_em !== DORMINDO)
+            .sort((a, b) => data(b.sessao_id).localeCompare(data(a.sessao_id)) || a.id - b.id)
+            .map((f) => ({ ...f, topico: topico(f.sessao_id) }));
+    }
 
     const lista = sessaoId
         ? dados.flashcards.filter((f) => f.sessao_id === sessaoId)
@@ -1377,6 +1553,9 @@ export async function rotear(url, opcoes = {}) {
             if (metodo === "GET" && recurso === "sessoes") return json(200, { sessao: obterSessao(id) });
             if (metodo === "POST" && recurso === "perguntas") return json(200, { perguntas: await perguntas(String(corpo.tema || "").trim(), corpo.motor, corpo.continua_de) });
             if (metodo === "POST" && recurso === "planos" && acao === "refazer") return json(200, { plano: refazerPlano(id) });
+            if (metodo === "POST" && recurso === "planos" && acao === "refazer-cronograma") return json(200, { plano: refazerCronograma(id, corpo) });
+            if (metodo === "POST" && recurso === "planos" && acao === "dias") return json(200, { plano: remarcarDias(id, corpo.dias) });
+            if (metodo === "PATCH" && recurso === "sessoes") return json(200, { sessao: moverSessao(id, corpo.data) });
             if (metodo === "POST" && recurso === "planos" && !ident) return json(201, { plano: criarPlano(corpo) });
             if (metodo === "POST" && recurso === "importar-plano") return json(201, { plano: await importarPlano(corpo) });
             if (metodo === "POST" && recurso === "sessoes" && acao === "adiar") return json(200, { sessao: adiarPendentes(id) });
@@ -1387,7 +1566,11 @@ export async function rotear(url, opcoes = {}) {
             if (metodo === "POST" && recurso === "perfil") return json(200, salvarSobre(corpo.sobre));
             if (metodo === "GET" && recurso === "flashcards" && !ident) return json(200, listarFlashcards());
             if (metodo === "GET" && recurso === "flashcards") return json(200, { cartoes: cartoes(id) });
-            if (metodo === "GET" && recurso === "revisao") return json(200, { cartoes: cartoes() });
+            if (metodo === "GET" && recurso === "revisao") return json(200, { cartoes: cartoes(null, url.searchParams.get("todos") === "1") });
+            if (metodo === "GET" && recurso === "cartoes" && url.searchParams.has("sessoes")) {
+                const ids = url.searchParams.get("sessoes").split(",").map(Number).filter(Number.isInteger);
+                return json(200, { sessoes: cartoesDasSessoes(ids) });
+            }
             if (metodo === "POST" && recurso === "flashcards" && acao === "refazer") { pedirFlashcards(id, true); return json(202, { ok: true }); }
             if (metodo === "GET" && recurso === "pets") return json(200, { dados: completar(ler()).pets });
             if (metodo === "POST" && recurso === "pets") return json(200, { dados: salvarPets(corpo.dados) });

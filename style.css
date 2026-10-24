@@ -852,6 +852,11 @@ footer {
 }
 
 
+.column.solto-ativo {
+    border-color: #c90016;
+}
+
+
 /* ---------- MENU ••• DO CARD ---------- */
 
 .menu {
@@ -6888,4 +6893,221 @@ html.menos-movimento .tut-balao {
 html.alto-contraste .tut-veu {
     background: rgba(0, 0, 0, 0.75);
     backdrop-filter: none;
+}
+
+
+/* =========================================================
+   CÓPIAS AUTOMÁTICAS (js/backup.js)
+========================================================= */
+
+.copias {
+    width: min(520px, calc(100vw - 32px));
+}
+
+.copias-lista {
+    list-style: none;
+
+    max-height: 50vh;
+    margin: 12px 0;
+    padding: 0;
+
+    overflow-y: auto;
+}
+
+.copias-lista li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    padding: 10px 0;
+
+    border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.copias-lista li span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.copias-lista small {
+    font-size: 12px;
+
+    color: #777;
+}
+
+.copias-vazia {
+    justify-content: center !important;
+
+    color: #777;
+}
+
+
+/* ---------- OpenRouter à vista no painel da IA ---------- */
+
+#srv-openrouter:not(:empty) {
+    margin: 10px 0;
+    padding: 12px;
+
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+
+    background: rgba(255, 255, 255, 0.05);
+}
+
+
+/* ---------- Janelinha que incentiva conectar o OpenRouter ---------- */
+
+.incentivo-modal {
+    max-width: 440px;
+}
+
+.incentivo-nunca {
+    display: block;
+    margin: 14px auto 0;
+
+    font-size: 12px;
+}
+
+
+/* ---------- Aviso de correção feita por IA gratuita ---------- */
+
+.entrega-aviso {
+    margin: 8px 0;
+    padding: 8px 10px;
+
+    font-size: 12px;
+    line-height: 1.4;
+
+    color: #7a4b00;
+    background: #fff4dc;
+
+    border: 1px solid #f0cf8a;
+    border-radius: 6px;
+}
+
+
+/* ---------- Cartões guardados no histórico do pet e modo prova ---------- */
+
+.pets-cartoes {
+    margin-top: 6px;
+    font-size: 13px;
+}
+
+.pets-cartoes > summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.pets-cartoes ol {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 8px 0 2px;
+    padding-left: 20px;
+}
+
+.pets-cartoes li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pets-cartoes li span {
+    opacity: 0.8;
+}
+
+
+/* ---------- Próximas aulas na ficha do pet ---------- */
+
+.pets-proximas {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 280px;
+    margin: 0 0 14px;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.pets-proximas li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pets-proxima {
+    display: grid;
+    flex: 1;
+    grid-template-columns: 150px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+
+    font-family: inherit;
+    font-size: 13px;
+    text-align: left;
+
+    color: inherit;
+    background: transparent;
+
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    border-radius: 6px;
+
+    cursor: pointer;
+}
+
+.pets-proxima:hover {
+    border-color: #c90016;
+}
+
+.pets-proxima.atrasada .pets-proxima-data {
+    color: #c90016;
+}
+
+.pets-proxima-data {
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+@media (max-width: 560px) {
+    .pets-proxima {
+        grid-template-columns: 1fr auto;
+    }
+
+    .pets-proxima-data {
+        grid-column: 1 / -1;
+    }
+}
+
+
+/* ---------- Janela de remarcar o cronograma ---------- */
+
+.rem-bloco {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 14px 0;
+    padding-top: 12px;
+
+    border-top: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+.rem-subtitulo {
+    margin: 0;
+    font-size: 15px;
+}
+
+
+/* ---------- Usos de hoje em cada IA ---------- */
+
+.srv-uso {
+    font-weight: 700;
+}
+
+.srv-uso-acabando {
+    color: #c90016;
 }

@@ -839,6 +839,57 @@
 
     </dialog>
 
+    <dialog class="modal comp-modal" id="remarcar-modal" aria-labelledby="remarcar-titulo">
+
+        <h2 class="modal-titulo" id="remarcar-titulo">Remarcar o cronograma</h2>
+
+        <p class="sinc-texto" id="remarcar-plano"></p>
+
+        <section class="rem-bloco">
+            <h3 class="rem-subtitulo">Mudar os dias da semana</h3>
+            <p class="sinc-texto">Os tópicos que ainda faltam vão para os novos dias, na mesma ordem
+                (ex.: tudo que era seg e ter passa pra qui e sex). O que você já estudou não muda.</p>
+            <div class="est-chips" id="remarcar-dias">
+                <button type="button" class="est-chip" data-valor="0">Seg</button>
+                <button type="button" class="est-chip" data-valor="1">Ter</button>
+                <button type="button" class="est-chip" data-valor="2">Qua</button>
+                <button type="button" class="est-chip" data-valor="3">Qui</button>
+                <button type="button" class="est-chip" data-valor="4">Sex</button>
+                <button type="button" class="est-chip" data-valor="5">Sáb</button>
+                <button type="button" class="est-chip" data-valor="6">Dom</button>
+            </div>
+            <button type="button" class="btn-secundario" id="remarcar-aplicar-dias">Remarcar os dias</button>
+        </section>
+
+        <section class="rem-bloco">
+            <h3 class="rem-subtitulo">Não gostou? Refazer o cronograma</h3>
+            <p class="sinc-texto">A IA monta de novo só os tópicos que você ainda não estudou, a partir de hoje.
+                O que você já fez fica guardado. Se der erro no meio, o cronograma atual continua.</p>
+            <span class="est-rotulo">Tempo por dia</span>
+            <div class="est-chips" id="remarcar-minutos">
+                <button type="button" class="est-chip" data-valor="30">30 min</button>
+                <button type="button" class="est-chip" data-valor="45">45 min</button>
+                <button type="button" class="est-chip" data-valor="60">1h</button>
+                <button type="button" class="est-chip" data-valor="90">1h30</button>
+                <button type="button" class="est-chip" data-valor="120">2h</button>
+            </div>
+            <span class="est-rotulo">Conteúdo por dia</span>
+            <div class="est-chips" id="remarcar-intensidade">
+                <button type="button" class="est-chip" data-valor="tranquilo">Tranquilo</button>
+                <button type="button" class="est-chip" data-valor="equilibrado">Equilibrado</button>
+                <button type="button" class="est-chip" data-valor="intenso">Intenso</button>
+            </div>
+            <button type="button" class="btn-secundario" id="remarcar-refazer">↻ Refazer o que falta</button>
+        </section>
+
+        <p class="est-erro" id="remarcar-erro" role="alert"></p>
+
+        <div class="form-acoes">
+            <button type="button" class="btn-secundario" data-fechar>Fechar</button>
+        </div>
+
+    </dialog>
+
     <dialog class="modal comp-modal" id="imp-modal" aria-labelledby="imp-titulo">
 
         <form id="imp-form">
@@ -963,6 +1014,25 @@
     </dialog>
 
 
+    <dialog class="modal incentivo-modal" id="incentivo-ia" aria-labelledby="incentivo-titulo">
+
+        <h2 class="modal-titulo" id="incentivo-titulo">Deixe a IA do Kaizen mais esperta</h2>
+
+        <p class="sinc-texto">
+            Conectar o <b>OpenRouter</b> leva um clique, é grátis e não pede cartão. Com ele você ganha
+            modelos melhores pro chat, pros planos e pra correção das atividades.
+        </p>
+
+        <div class="form-acoes">
+            <button type="button" class="btn-primario" id="incentivo-entrar">Entrar com o OpenRouter (grátis)</button>
+            <button type="button" class="btn-secundario" data-fechar>Agora não</button>
+        </div>
+
+        <button type="button" class="est-link incentivo-nunca" id="incentivo-nunca">Não mostrar mais</button>
+
+    </dialog>
+
+
     <dialog class="modal fc-modal" id="fc-modal" aria-labelledby="fc-titulo">
 
         <div id="fc-lista">
@@ -970,11 +1040,14 @@
             <h2 class="modal-titulo" id="fc-titulo">Flashcards</h2>
 
             <p class="sinc-texto">
-                Cartões do que você estudou nos últimos dias. Eles ficam prontos sozinhos quando você
-                marca ✓ numa sessão. O que você acerta volta cada vez mais tarde; o que erra, volta logo.
+                Os cartões ficam prontos sozinhos quando você marca ✓ numa sessão, e ficam guardados aqui
+                (e na ficha do pet). O que você acerta volta cada vez mais tarde; o que erra, volta logo.
+                Pra estudar pra uma prova, use o modo prova: ele repassa tudo sem mexer no calendário.
             </p>
 
             <button type="button" class="btn-primario sinc-largo" id="fc-revisar-hoje">Revisar os de hoje</button>
+
+            <button type="button" class="btn-secundario sinc-largo" id="fc-revisar-tudo">📚 Modo prova: revisar tudo</button>
 
             <ul class="fc-conteudos" id="fc-conteudos"></ul>
 
@@ -1161,6 +1234,15 @@
                 </div>
             </div>
 
+            <div class="est-pergunta" data-grupo="intensidade">
+                <span class="est-rotulo">Quanto conteúdo por dia?</span>
+                <div class="est-chips">
+                    <button type="button" class="est-chip" data-valor="tranquilo">Tranquilo: 1 tópico</button>
+                    <button type="button" class="est-chip ativo" data-valor="equilibrado">Equilibrado: 1 a cada ~50 min</button>
+                    <button type="button" class="est-chip" data-valor="intenso">Intenso: 1 a cada ~30 min</button>
+                </div>
+            </div>
+
             <div class="est-pergunta" data-grupo="semanas">
                 <span class="est-rotulo">Por quantas semanas?</span>
                 <div class="est-chips">
@@ -1274,6 +1356,11 @@
 
                     <div class="srv-lista" id="srv-lista" aria-live="polite"></div>
 
+                    <!-- o OpenRouter (grátis, entra com um clique) fica à vista, não em "Outras opções" -->
+                    <div class="srv-nuvem" id="srv-openrouter"></div>
+
+                    <p class="est-erro" id="srv-erro" role="alert"></p>
+
                     <details class="srv-mais" id="srv-mais">
 
                         <summary class="srv-titulo">Outras opções: chave de API, outro computador ou celular</summary>
@@ -1304,8 +1391,6 @@
                                 <summary>Usar a IA deste PC no celular</summary>
                                 <div id="srv-celular-corpo" aria-live="polite"></div>
                             </details>
-
-                            <p class="est-erro" id="srv-erro" role="alert"></p>
 
                         </div>
 
@@ -1378,6 +1463,10 @@
                     title="Carrega um backup feito aqui ou em outro aparelho">
                 Restaurar backup
             </button>
+            <button type="button" class="btn-secundario" id="backup-copias" hidden
+                    title="O Kaizen guarda cópias dos seus dados neste computador: dá pra voltar a uma delas">
+                Cópias automáticas
+            </button>
             <input type="file" id="backup-arquivo" accept="application/json,.json" hidden>
             <button type="button" class="btn-secundario" id="sinc-abrir"
                     title="Usa as mesmas tarefas e planos no PC e no celular">
@@ -1414,7 +1503,7 @@
 
     <script
         type="module"
-        src="./js/modo.js?v=demo1"
+        src="./js/modo.js?v=modo2"
     ></script>
 
     <script
@@ -1429,12 +1518,12 @@
 
     <script
         type="module"
-        src="./js/backup.js?v=backup1"
+        src="./js/backup.js?v=copias1"
     ></script>
 
     <script
         type="module"
-        src="./js/sincronia.js?v=sinc5"
+        src="./js/sincronia.js?v=sinc6"
     ></script>
 
     <script
@@ -1444,7 +1533,7 @@
 
     <script
         type="module"
-        src="./js/agenda.js?v=2"
+        src="./js/agenda.js?v=3"
     ></script>
 
     <script
@@ -1465,6 +1554,16 @@
     <script
         type="module"
         src="./js/apoio.js?v=apoio1"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/incentivo-ia.js?v=2"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/remarcar.js?v=1"
     ></script>
 
     <script
@@ -1504,27 +1603,27 @@
 
     <script
         type="module"
-        src="./js/servidores.js?v=painel1"
+        src="./js/servidores.js?v=painel3"
     ></script>
 
     <script
         type="module"
-        src="./js/estudos.js?v=entregas2"
+        src="./js/estudos.js?v=intensa1"
     ></script>
 
     <script
         type="module"
-        src="./js/entregas.js?v=2"
+        src="./js/entregas.js?v=3"
     ></script>
 
     <script
         type="module"
-        src="./js/flashcards.js?v=2"
+        src="./js/flashcards.js?v=3"
     ></script>
 
     <script
         type="module"
-        src="./js/pets.js?v=7"
+        src="./js/pets.js?v=8"
     ></script>
 
 

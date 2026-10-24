@@ -14,6 +14,7 @@ import urllib.parse
 import urllib.request
 
 import busca
+import copias
 import entregas
 import estudos
 import ia_local
@@ -35,7 +36,8 @@ OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 
 # O navegador só baixa daqui o próprio app (o mesmo que o desktop/empacotar_servidor.py leva).
 # O resto da pasta (o banco com as chaves de API, sync/.env, o código, o .git) nunca sai.
-ARQUIVOS_PUBLICOS = {"index.html", "style.css", "sw.js", "manifest.webmanifest", "dados.json", "prompts.json", "novidades.json"}
+ARQUIVOS_PUBLICOS = {"index.html", "style.css", "sw.js", "manifest.webmanifest", "dados.json", "prompts.json", "novidades.json",
+                     "areas.json"}
 PASTAS_PUBLICAS = ("js/", "icones/")
 CORPO_MAXIMO = 100_000_000   # backup com todas as entregas cabe folgado
 
@@ -46,6 +48,9 @@ HOSTS_EXTRAS = {h.strip().lower() for h in os.environ.get("KAIZEN_HOSTS", "").sp
 SO_LOCAL = HOST in HOSTS_LOCAIS
 
 busca.CACHE_DB = DB
+busca.ARQUIVO_AREAS = ROOT / "areas.json"
+copias.DB = DB
+copias.PASTA = DADOS / "copias"
 estudos.DB = DB
 servidores.DB = DB
 servidores.URL_LOCAL = OLLAMA_URL
@@ -129,7 +134,7 @@ def ollama_chat(modelo, mensagens):
 
     for i, destino in enumerate(tentativas):
         try:
-            return servidores.conversar(destino, modelo, personalidade + mensagens)
+            return servidores.conversar(destino, modelo, personalidade + mensagens, servico="chat")
         except servidores.ErroConexao:
             if i == len(tentativas) - 1:
                 raise
@@ -212,10 +217,17 @@ class Handler(SimpleHTTPRequestHandler):
             return self.responder(200, {"tarefas": listar()})
         if self.path == "/api/guardados":
             return self.responder(200, guardados())
+        if self.path.split("?")[0] == "/api/uso-tokens":
+            dias = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("dias", ["30"])[0]
+            return self.responder(200, {"dias": int(dias) if dias.isdigit() else 30,
+                                        "servicos": servidores.uso_tokens(int(dias) if dias.isdigit() else 30)})
         if self.path == "/api/ia/local":
             return self.responder(200, ia_local.situacao())
         if self.path == "/api/ia/local/progresso":
             return self.responder(200, ia_local.progresso())
+        if self.path == "/api/ping":
+            # o js/modo.js pergunta isso pra saber que tem servidor: tem que responder na hora
+            return self.responder(200, {"ok": True})
         if self.path == "/api/ia/status":
             servidor = servidores.obter(servidores.preferido())
             if servidor["id"] == "kaizen":
@@ -295,6 +307,8 @@ class Handler(SimpleHTTPRequestHandler):
         partes = url.path.strip("/").split("/")
         if partes[:3] == ["api", "ia", "servidores"]:
             return self.rota_servidores(metodo, partes[3:])
+        if partes[:2] == ["api", "copias"]:
+            return self.rota_copias(metodo, partes[2:])
         if partes[:2] == ["api", "backup"]:
             return self.rota_backup(metodo, sincronia="sincronia=1" in url.query, leve="leve=1" in url.query)
         if partes[:2] == ["api", "remoto"]:
@@ -333,6 +347,15 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.responder(201, {"plano": estudos.criar_plano(corpo)}) or True
             if metodo == "POST" and recurso == "planos" and ident and acao == "refazer":
                 return self.responder(200, {"plano": estudos.refazer_plano(ident)}) or True
+            if metodo == "POST" and recurso == "planos" and ident and acao == "refazer-cronograma":
+                plano = estudos.refazer_cronograma(ident, corpo)
+                return self.responder(200 if plano else 404, {"plano": plano}) or True
+            if metodo == "POST" and recurso == "planos" and ident and acao == "dias":
+                plano = estudos.remarcar_dias(ident, corpo.get("dias") or [])
+                return self.responder(200 if plano else 404, {"plano": plano}) or True
+            if metodo == "PATCH" and recurso == "sessoes" and ident:
+                sessao = estudos.mover_sessao(ident, corpo.get("data"))
+                return self.responder(200 if sessao else 404, {"sessao": sessao}) or True
             if metodo == "POST" and recurso == "importar-plano":
                 return self.responder(201, {"plano": estudos.importar_plano(corpo)}) or True
             if metodo == "POST" and recurso == "sessoes" and ident and acao == "adiar":
@@ -341,6 +364,7 @@ class Handler(SimpleHTTPRequestHandler):
                 sessao = estudos.marcar_item(ident, corpo.get("estado"))
                 return self.responder(200 if sessao else 404, {"sessao": sessao}) or True
             if metodo == "DELETE" and recurso == "planos" and ident:
+                copias.salvar("antes-de-excluir-plano", espera=60)
                 estudos.excluir_plano(ident)
                 return self.responder(200, {"ok": True}) or True
 
@@ -355,7 +379,10 @@ class Handler(SimpleHTTPRequestHandler):
             if metodo == "GET" and recurso == "flashcards":
                 return self.responder(200, {"cartoes": estudos.cartoes(ident)}) or True
             if metodo == "GET" and recurso == "revisao":
-                return self.responder(200, {"cartoes": estudos.cartoes()}) or True
+                return self.responder(200, {"cartoes": estudos.cartoes(todos="todos=1" in url.query)}) or True
+            if metodo == "GET" and recurso == "cartoes" and "sessoes=" in url.query:
+                ids = [int(i) for i in urllib.parse.parse_qs(url.query)["sessoes"][0].split(",") if i.isdigit()]
+                return self.responder(200, {"sessoes": estudos.cartoes_das_sessoes(ids)}) or True
             if metodo == "POST" and recurso == "flashcards" and ident and acao == "refazer":
                 estudos.pedir_flashcards(ident, forcar=True)
                 return self.responder(202, {"ok": True}) or True
@@ -408,7 +435,8 @@ class Handler(SimpleHTTPRequestHandler):
                 nuvem = [{"id": prov, "nome": info["nome"], "onde_pegar": info["onde_pegar"],
                           "pede_url": bool(info.get("pede_url")), "conectado": servidores.conectado(prov)}
                          for prov, info in servidores.NUVEM.items()]
-                self.responder(200, {"servidores": servidores.listar_com_status(usar_cache=False), "nuvem": nuvem})
+                self.responder(200, {"servidores": servidores.listar_com_status(usar_cache=False), "nuvem": nuvem,
+                                     "cotas": servidores.cotas_do_dia()})
             elif metodo == "POST" and ident == "nuvem" and len(partes) == 2:
                 corpo = self.ler_json()
                 servidores.conectar_nuvem(partes[1], corpo.get("chave"), corpo.get("url"))
@@ -461,6 +489,19 @@ class Handler(SimpleHTTPRequestHandler):
             self.responder(400, {"erro": str(erro)})
         return True
 
+    def rota_copias(self, metodo, resto):
+        """GET lista as cópias automáticas; POST /api/copias/<nome>/restaurar volta a uma delas."""
+        try:
+            if metodo == "GET" and not resto:
+                return self.responder(200, {"copias": copias.listar()}) or True
+            if metodo == "POST" and len(resto) == 2 and resto[1] == "restaurar":
+                copias.restaurar(urllib.parse.unquote(resto[0]))
+                return self.responder(200, {"ok": True}) or True
+            self.responder(404, {"erro": "Rota não encontrada"})
+        except (ValueError, sqlite3.Error) as erro:
+            self.responder(400, {"erro": f"Não consegui voltar a essa cópia: {erro}"})
+        return True
+
     def rota_backup(self, metodo, sincronia=False, leve=False):
         """GET baixa tudo (kanban + estudos); POST restaura, substituindo.
         Mesmo formato do modo nuvem, então serve pra levar do celular pro PC.
@@ -483,6 +524,9 @@ class Handler(SimpleHTTPRequestHandler):
                 dados = self.ler_json()
                 if dados.get("app") != "kaizen":
                     raise ValueError("Esse arquivo não é um backup do Kaizen.")
+                # restaurar (e a sincronia aplicando o que veio de outro aparelho) troca tudo de uma vez:
+                # antes, uma cópia do que está aqui, pra poder voltar
+                copias.salvar("antes-de-restaurar", espera=20)
                 kanban = dados.get("kanban")
                 if isinstance(kanban, dict) and isinstance(kanban.get("tarefas"), list):
                     with sqlite3.connect(DB) as con:
@@ -536,6 +580,7 @@ if __name__ == "__main__":
     init_db()
     estudos.init()
     servidores.init()
+    copias.vigiar()
     if servidores.preferido() == "local":   # a IA daqui é a escolhida: deixa o Ollama ligado
         threading.Thread(target=ia_local.ligar, daemon=True).start()
     print(f"Kaizen disponível em http://{HOST}:{PORT}")
