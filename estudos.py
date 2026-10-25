@@ -472,6 +472,7 @@ def _gerar_plano(plano_id):
             docs = busca.buscar_documentacao(
                 f"{sessao.get('termos_doc', '')} {sessao['topico']}", doc_oficial, ignorar=ignorar, limite=2,
                 idioma=idioma, area=area,
+                texto_base=f"{termos} {sessao['topico']}", contexto=plano["tema"], consulta_api=termos,
                 consulta_area=termos if tecnica else assunto,
                 consulta_web=f"{assunto} {busca.IDIOMAS[idioma]['documentacao']}" if tecnica else assunto)
             with trava:
@@ -663,6 +664,37 @@ def refazer_cronograma(plano_id, dados=None):
                     "WHERE id = ?", (minutos, intensidade, plano_id))
     threading.Thread(target=_gerar_plano, args=(plano_id,), daemon=True).start()
     return obter_plano(plano_id)
+
+
+def completar_documentacao(maximo=6):
+    """Troca os links "Buscar…" (guardados quando os buscadores estavam bloqueados) pela documentação de verdade,
+    agora que talvez tenham liberado. Devolve quantos foram trocados."""
+    with conectar() as con:
+        pendentes = con.execute(
+            "SELECT i.id, i.url, p.idioma FROM itens i JOIN sessoes s ON s.id = i.sessao_id "
+            "JOIN planos p ON p.id = s.plano_id WHERE i.tipo = 'doc' AND i.fonte = ? ORDER BY i.id LIMIT ?",
+            (busca.FONTE_PENDENTE, maximo)).fetchall()
+    trocados = 0
+    for item in pendentes:
+        novo = busca.refazer_busca_pendente(item["url"], item["idioma"])
+        if novo:
+            with conectar() as con:
+                con.execute("UPDATE itens SET titulo = ?, url = ?, fonte = ? WHERE id = ? AND fonte = ?",
+                            (novo["titulo"][:200], novo["url"], novo["fonte"], item["id"], busca.FONTE_PENDENTE))
+            trocados += 1
+    return trocados
+
+
+def vigiar_documentacao(intervalo=600):
+    """De tempos em tempos, tenta trocar os links "Buscar…" por documentação de verdade (thread do servidor)."""
+    def laco():
+        while True:
+            time.sleep(intervalo)
+            try:
+                completar_documentacao()
+            except Exception:
+                pass   # nunca derruba o servidor
+    threading.Thread(target=laco, daemon=True).start()
 
 
 def mover_sessao(sessao_id, data):

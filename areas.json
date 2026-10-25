@@ -1,9 +1,9 @@
 {
-  "_leia": "Fontes de autoridade por área do conhecimento. A IA escolhe o id da área no roteiro (ou o código adivinha pelas palavras do tema) e a busca de documentação procura primeiro nesses sites. 'pt' vale só quando os materiais são em português; 'geral' vale pra qualquer idioma. Os sites vêm em ordem de prioridade (os 6 primeiros entram na 1ª busca). 'palavras' só é usada quando a IA não escolhe a área: termo* casa o começo da palavra. 'tecnica' = termos de busca em inglês e a palavra 'documentação' na busca livre.",
+  "_leia": "Fontes de autoridade por área do conhecimento. A IA escolhe o id da área no roteiro (ou o código adivinha pelas palavras do tema) e a busca de documentação procura primeiro nesses sites. 'pt' vale só quando os materiais são em português; 'geral' vale pra qualquer idioma. Os sites vêm em ordem de prioridade (os 6 primeiros entram na 1ª busca). 'palavras' só é usada quando a IA não escolhe a área: termo* casa o começo da palavra. 'tecnica' = termos de busca em inglês e a palavra 'documentação' na busca livre. 'apis' = fontes abertas e sem bloqueio que completam a busca (wikipedia, openalex). 'documentos' = leis e textos-base com endereço conferido, que entram sem precisar de busca; 'chaves' casam com o tema (frase de 2+ palavras pesa mais, termo* casa o começo da palavra).",
 
   "areas": [
     {
-      "id": "programacao", "nome": "Programação e desenvolvimento de software", "tecnica": true,
+      "id": "programacao", "nome": "Programação e desenvolvimento de software", "tecnica": true, "apis": [],
       "palavras": ["programacao*", "programar", "software", "desenvolvimento web", "desenvolvedor*", "javascript", "typescript", "python", "java", "react", "angular", "vue", "node", "html", "css", "sql", "banco de dados", "api", "backend", "frontend", "algoritmo*", "logica de programacao", "c++", "c#", "php", "git", "flutter", "android", "ios", "kotlin", "golang", "rust", "docker", "kubernetes", "devops", "web"],
       "dominios": {
         "pt": [],
@@ -11,7 +11,7 @@
       }
     },
     {
-      "id": "dados-ia", "nome": "Ciência de dados, estatística aplicada e inteligência artificial", "tecnica": true,
+      "id": "dados-ia", "nome": "Ciência de dados, estatística aplicada e inteligência artificial", "tecnica": true, "apis": [],
       "palavras": ["ciencia de dados", "machine learning", "aprendizado de maquina", "inteligencia artificial", "deep learning", "redes neurais", "analise de dados", "big data", "nlp", "visao computacional", "power bi", "excel", "pandas", "data science", "mineracao de dados", "business intelligence"],
       "dominios": {
         "pt": [],
@@ -19,7 +19,7 @@
       }
     },
     {
-      "id": "redes-seguranca", "nome": "Redes, infraestrutura, sistemas operacionais e segurança da informação", "tecnica": true,
+      "id": "redes-seguranca", "nome": "Redes, infraestrutura, sistemas operacionais e segurança da informação", "tecnica": true, "apis": [],
       "palavras": ["redes de computadores", "seguranca da informacao", "ciberseguranca", "seguranca digital", "hacking", "pentest", "firewall", "linux", "servidor*", "tcp/ip", "infraestrutura", "cloud", "nuvem", "aws", "azure", "criptografia", "cisco", "sistemas operacionais", "suporte tecnico", "ti"],
       "dominios": {
         "pt": ["cert.br", "nic.br", "anpd.gov.br", "serpro.gov.br"],
@@ -27,15 +27,48 @@
       }
     },
     {
-      "id": "direito", "nome": "Direito, legislação e carreiras jurídicas", "tecnica": false,
+      "id": "direito", "nome": "Direito, legislação e carreiras jurídicas", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["direito*", "juridic*", "lei", "leis", "penal", "civil", "constitucional", "tributario", "trabalhista", "processo penal", "processo civil", "oab", "advocacia", "advogado*", "lgpd", "contratos", "magistratura", "jurisprudencia", "codigo", "legislacao", "crime*", "tribunal", "stf", "stj", "concurso juridico", "eca", "consumidor"],
+      "documentos": [
+        {"titulo": "Constituição Federal de 1988", "url": "https://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm", "chaves": ["constituicao*", "constitucional", "direitos fundamentais", "direitos e garantias", "controle de constitucionalidade", "poder legislativo", "poder executivo", "poder judiciario", "separacao dos poderes"]},
+        {"titulo": "Código Penal (Decreto-Lei 2.848/1940)", "url": "https://www.planalto.gov.br/ccivil_03/decreto-lei/del2848compilado.htm", "chaves": ["codigo penal", "direito penal", "penal", "homicidio", "furto", "roubo", "estelionato", "dolo", "culpa", "crimes contra", "feminicidio", "latrocinio", "extorsao", "receptacao", "lesao corporal", "tipicidade", "ilicitude", "culpabilidade"]},
+        {"titulo": "Código de Processo Penal (Decreto-Lei 3.689/1941)", "url": "https://www.planalto.gov.br/ccivil_03/decreto-lei/del3689compilado.htm", "chaves": ["codigo de processo penal", "processo penal", "inquerito policial", "prisao preventiva", "prisao em flagrante", "acao penal", "habeas corpus", "audiencia de custodia", "tribunal do juri", "provas no processo"]},
+        {"titulo": "Código Civil (Lei 10.406/2002)", "url": "https://www.planalto.gov.br/ccivil_03/leis/2002/l10406compilada.htm", "chaves": ["codigo civil", "direito civil", "responsabilidade civil", "negocio juridico", "obrigacoes", "contratos", "posse", "propriedade", "direito de familia", "sucessoes", "heranca", "casamento", "pessoa natural", "pessoa juridica", "prescricao", "decadencia"]},
+        {"titulo": "Código de Processo Civil (Lei 13.105/2015)", "url": "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/lei/l13105.htm", "chaves": ["codigo de processo civil", "processo civil", "cpc", "peticao inicial", "contestacao", "tutela provisoria", "cumprimento de sentenca", "execucao civil", "recursos civeis", "litisconsorcio"]},
+        {"titulo": "CLT — Consolidação das Leis do Trabalho (Decreto-Lei 5.452/1943)", "url": "https://www.planalto.gov.br/ccivil_03/decreto-lei/del5452.htm", "chaves": ["clt", "consolidacao das leis do trabalho", "direito do trabalho", "trabalhista", "contrato de trabalho", "jornada de trabalho", "horas extras", "rescisao", "ferias", "fgts", "empregado", "empregador"]},
+        {"titulo": "Código de Defesa do Consumidor (Lei 8.078/1990)", "url": "https://www.planalto.gov.br/ccivil_03/leis/l8078compilado.htm", "chaves": ["codigo de defesa do consumidor", "direito do consumidor", "consumidor", "cdc", "relacao de consumo", "vicio do produto", "publicidade enganosa", "fornecedor"]},
+        {"titulo": "Estatuto da Criança e do Adolescente (Lei 8.069/1990)", "url": "https://www.planalto.gov.br/ccivil_03/leis/l8069.htm", "chaves": ["eca", "estatuto da crianca", "crianca e adolescente", "ato infracional", "medidas socioeducativas", "conselho tutelar", "adocao"]},
+        {"titulo": "Lei Geral de Proteção de Dados — LGPD (Lei 13.709/2018)", "url": "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm", "chaves": ["lgpd", "lei geral de protecao de dados", "protecao de dados", "dados pessoais", "controlador", "anpd"]},
+        {"titulo": "Marco Civil da Internet (Lei 12.965/2014)", "url": "https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2014/lei/l12965.htm", "chaves": ["marco civil da internet", "marco civil", "neutralidade da rede", "provedor de aplicacao"]},
+        {"titulo": "Nova Lei de Licitações e Contratos (Lei 14.133/2021)", "url": "https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2021/lei/l14133.htm", "chaves": ["licitacao", "licitacoes", "lei de licitacoes", "14.133", "pregao", "dispensa de licitacao", "contratacao direta"]},
+        {"titulo": "Código Tributário Nacional (Lei 5.172/1966)", "url": "https://www.planalto.gov.br/ccivil_03/leis/l5172compilado.htm", "chaves": ["codigo tributario nacional", "ctn", "direito tributario", "tributo*", "imposto*", "obrigacao tributaria", "credito tributario", "lancamento tributario"]},
+        {"titulo": "Lei de Improbidade Administrativa (Lei 8.429/1992)", "url": "https://www.planalto.gov.br/ccivil_03/leis/l8429.htm", "chaves": ["improbidade administrativa", "improbidade", "8.429"]},
+        {"titulo": "Lei Maria da Penha (Lei 11.340/2006)", "url": "https://www.planalto.gov.br/ccivil_03/_ato2004-2006/2006/lei/l11340.htm", "chaves": ["maria da penha", "violencia domestica", "11.340"]},
+        {"titulo": "Lei de Execução Penal (Lei 7.210/1984)", "url": "https://www.planalto.gov.br/ccivil_03/leis/l7210.htm", "chaves": ["lei de execucao penal", "execucao penal", "progressao de regime", "7.210"]},
+        {"titulo": "Lei dos Crimes Hediondos (Lei 8.072/1990)", "url": "https://www.planalto.gov.br/ccivil_03/leis/l8072.htm", "chaves": ["crimes hediondos", "hediondo*", "8.072"]},
+        {"titulo": "Lei de Drogas (Lei 11.343/2006)", "url": "https://www.planalto.gov.br/ccivil_03/_ato2004-2006/2006/lei/l11343.htm", "chaves": ["lei de drogas", "trafico de drogas", "11.343"]},
+        {"titulo": "LINDB — Lei de Introdução às Normas do Direito Brasileiro", "url": "https://www.planalto.gov.br/ccivil_03/decreto-lei/del4657compilado.htm", "chaves": ["lindb", "lei de introducao as normas", "4.657", "conflito de leis no tempo"]},
+        {"titulo": "Lei do Inquilinato (Lei 8.245/1991)", "url": "https://www.planalto.gov.br/ccivil_03/leis/l8245.htm", "chaves": ["inquilinato", "locacao", "8.245"]},
+        {"titulo": "Lei de Falências e Recuperação Judicial (Lei 11.101/2005)", "url": "https://www.planalto.gov.br/ccivil_03/_ato2004-2006/2005/lei/l11101.htm", "chaves": ["falencia", "recuperacao judicial", "lei de falencias", "11.101"]},
+        {"titulo": "Lei das Sociedades por Ações (Lei 6.404/1976)", "url": "https://www.planalto.gov.br/ccivil_03/leis/l6404consol.htm", "chaves": ["sociedades anonimas", "lei das sa", "6.404", "sociedade por acoes"]},
+        {"titulo": "Código de Trânsito Brasileiro (Lei 9.503/1997)", "url": "https://www.planalto.gov.br/ccivil_03/leis/l9503compilado.htm", "chaves": ["codigo de transito", "ctb", "9.503", "direito de transito"]},
+        {"titulo": "Código Eleitoral (Lei 4.737/1965)", "url": "https://www.planalto.gov.br/ccivil_03/leis/l4737compilado.htm", "chaves": ["codigo eleitoral", "direito eleitoral", "4.737"]},
+        {"titulo": "Lei de Acesso à Informação (Lei 12.527/2011)", "url": "https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2011/lei/l12527.htm", "chaves": ["lei de acesso a informacao", "acesso a informacao", "12.527"]},
+        {"titulo": "Lei Anticorrupção (Lei 12.846/2013)", "url": "https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2013/lei/l12846.htm", "chaves": ["lei anticorrupcao", "12.846", "responsabilizacao de pessoas juridicas"]},
+        {"titulo": "Processo Administrativo Federal (Lei 9.784/1999)", "url": "https://www.planalto.gov.br/ccivil_03/leis/l9784.htm", "chaves": ["processo administrativo", "lei 9.784", "9.784"]},
+        {"titulo": "Estatuto da Advocacia e da OAB (Lei 8.906/1994)", "url": "https://www.planalto.gov.br/ccivil_03/leis/l8906.htm", "chaves": ["estatuto da advocacia", "oab", "8.906", "etica profissional"]},
+        {"titulo": "Juizados Especiais (Lei 9.099/1995)", "url": "https://www.planalto.gov.br/ccivil_03/leis/l9099.htm", "chaves": ["juizados especiais", "9.099"]},
+        {"titulo": "Mandado de Segurança (Lei 12.016/2009)", "url": "https://www.planalto.gov.br/ccivil_03/_ato2007-2010/2009/lei/l12016.htm", "chaves": ["mandado de seguranca", "12.016"]},
+        {"titulo": "Estatuto da Pessoa Idosa (Lei 10.741/2003)", "url": "https://www.planalto.gov.br/ccivil_03/leis/2003/l10.741.htm", "chaves": ["estatuto do idoso", "estatuto da pessoa idosa", "pessoa idosa", "10.741"]},
+        {"titulo": "Estatuto da Pessoa com Deficiência (Lei 13.146/2015)", "url": "https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/lei/l13146.htm", "chaves": ["pessoa com deficiencia", "estatuto da pessoa com deficiencia", "13.146"]}
+      ],
       "dominios": {
         "pt": ["planalto.gov.br", "stf.jus.br", "stj.jus.br", "senado.leg.br", "camara.leg.br", "cnj.jus.br", "tst.jus.br", "tse.jus.br", "mpf.mp.br", "oab.org.br", "gov.br", "conjur.com.br", "migalhas.com.br", "jusbrasil.com.br", "tjsp.jus.br", "trf1.jus.br"],
         "geral": ["law.cornell.edu", "un.org", "icj-cij.org", "echr.coe.int", "oyez.org", "plato.stanford.edu"]
       }
     },
     {
-      "id": "saude", "nome": "Medicina, enfermagem, farmácia, fisioterapia, odontologia e outras ciências da saúde", "tecnica": false,
+      "id": "saude", "nome": "Medicina, enfermagem, farmácia, fisioterapia, odontologia e outras ciências da saúde", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["medicina", "medic*", "enfermagem", "farmacia", "farmaco*", "fisioterapia", "odontologia", "anatomia", "fisiologia", "patologia", "saude", "clinic*", "sus", "biomedicina", "fonoaudiologia", "terapia ocupacional", "urgencia", "emergencia", "uti", "cirurgia", "doenca*", "diagnostico", "semiologia", "imunologia", "epidemiologia", "vacina*"],
       "dominios": {
         "pt": ["scielo.br", "saude.gov.br", "bvsms.saude.gov.br", "gov.br", "anvisa.gov.br", "fiocruz.br", "inca.gov.br", "conitec.gov.br", "cofen.gov.br", "portal.cfm.org.br", "cff.org.br", "coffito.gov.br", "cfo.org.br", "bvsalud.org", "msdmanuals.com", "sbp.com.br", "paho.org"],
@@ -43,7 +76,7 @@
       }
     },
     {
-      "id": "psicologia", "nome": "Psicologia, psicanálise e psiquiatria", "tecnica": false,
+      "id": "psicologia", "nome": "Psicologia, psicanálise e psiquiatria", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["psicologia", "psicolog*", "psicanalise", "terapia", "comportamento", "cognitivo", "tcc", "psicopatologia", "neuropsicologia", "psiquiatria", "freud", "jung", "piaget", "vygotsky", "transtorno*", "saude mental", "desenvolvimento humano"],
       "dominios": {
         "pt": ["pepsic.bvsalud.org", "scielo.br", "cfp.org.br", "bvsalud.org", "saude.gov.br", "crpsp.org.br", "ufrgs.br"],
@@ -51,7 +84,7 @@
       }
     },
     {
-      "id": "nutricao-esporte", "nome": "Nutrição, educação física e esportes", "tecnica": false,
+      "id": "nutricao-esporte", "nome": "Nutrição, educação física e esportes", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["nutricao", "nutri*", "dieta", "alimentacao", "treino*", "musculacao", "educacao fisica", "esporte*", "fisiologia do exercicio", "atleta*", "emagrecimento", "suplementa*", "futebol", "corrida", "crossfit"],
       "dominios": {
         "pt": ["scielo.br", "gov.br", "cfn.org.br", "confef.org.br", "saude.gov.br", "bvsms.saude.gov.br", "sbd.org.br"],
@@ -59,7 +92,7 @@
       }
     },
     {
-      "id": "educacao", "nome": "Educação, pedagogia e docência", "tecnica": false,
+      "id": "educacao", "nome": "Educação, pedagogia e docência", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["pedagogia", "educacao", "ensino", "professor*", "docencia", "didatica", "bncc", "alfabetizacao", "licenciatura", "psicopedagogia", "educacao infantil", "metodologia de ensino", "aprendizagem", "inclusao", "currículo", "curriculo"],
       "dominios": {
         "pt": ["gov.br", "basenacionalcomum.mec.gov.br", "inep.gov.br", "scielo.br", "novaescola.org.br", "undime.org.br", "capes.gov.br", "fnde.gov.br", "todospelaeducacao.org.br"],
@@ -67,7 +100,7 @@
       }
     },
     {
-      "id": "matematica", "nome": "Matemática", "tecnica": false,
+      "id": "matematica", "nome": "Matemática", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["matematica", "calculo", "algebra", "geometria", "trigonometria", "estatistica", "probabilidade", "aritmetica", "equacao", "equacoes", "matriz*", "derivada*", "integral", "logaritmo*", "analise real", "funcoes", "combinatoria", "matematico*"],
       "dominios": {
         "pt": ["obmep.org.br", "impa.br", "sbm.org.br", "matematica.obmep.org.br", "portaldosaber.obmep.org.br", "ime.usp.br"],
@@ -75,7 +108,7 @@
       }
     },
     {
-      "id": "fisica-quimica", "nome": "Física, química e astronomia", "tecnica": false,
+      "id": "fisica-quimica", "nome": "Física, química e astronomia", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["fisica", "quimica", "termodinamica", "eletromagnetismo", "optica", "quantica", "organica", "inorganica", "estequiometria", "astronomia", "cinematica", "dinamica", "ondulatoria", "mecanica classica", "mecanica quantica", "reacoes", "atomo*", "cosmologia", "relatividade"],
       "dominios": {
         "pt": ["sbfisica.org.br", "sbq.org.br", "if.ufrgs.br", "cienciahoje.org.br", "scielo.br", "cbpf.br"],
@@ -83,7 +116,7 @@
       }
     },
     {
-      "id": "biologia-ambiente", "nome": "Biologia, ecologia, meio ambiente e biotecnologia", "tecnica": false,
+      "id": "biologia-ambiente", "nome": "Biologia, ecologia, meio ambiente e biotecnologia", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["biologia", "ecologia", "genetica", "evolucao", "botanica", "zoologia", "microbiologia", "meio ambiente", "ambiental", "sustentabilidade", "citologia", "bioquimica", "biotecnologia", "clima", "climatica", "mudancas climaticas", "ecossistema*", "biodiversidade", "bioma*"],
       "dominios": {
         "pt": ["scielo.br", "embrapa.br", "icmbio.gov.br", "ibama.gov.br", "gov.br", "inpa.gov.br", "butantan.gov.br", "fiocruz.br", "cienciahoje.org.br", "mapbiomas.org"],
@@ -91,7 +124,7 @@
       }
     },
     {
-      "id": "engenharia", "nome": "Engenharias, eletrônica e automação", "tecnica": false,
+      "id": "engenharia", "nome": "Engenharias, eletrônica e automação", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["engenharia", "engenheiro*", "eletrica", "eletronica", "circuito*", "estruturas", "resistencia dos materiais", "automacao", "mecatronica", "materiais", "hidraulica", "cad", "mecanica dos fluidos", "controle", "robotica", "arduino", "energia solar", "instalacoes eletricas", "producao industrial"],
       "dominios": {
         "pt": ["inmetro.gov.br", "abnt.org.br", "confea.org.br", "aneel.gov.br", "ipt.br", "scielo.br", "gov.br", "cienciahoje.org.br"],
@@ -99,7 +132,7 @@
       }
     },
     {
-      "id": "arquitetura-construcao", "nome": "Arquitetura, urbanismo e construção civil", "tecnica": false,
+      "id": "arquitetura-construcao", "nome": "Arquitetura, urbanismo e construção civil", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["arquitetura", "arquiteto*", "urbanismo", "construcao civil", "obra*", "paisagismo", "interiores", "projeto arquitetonico", "alvenaria", "topografia", "fundacoes", "concreto", "orcamento de obras", "patologia das construcoes"],
       "dominios": {
         "pt": ["caubr.gov.br", "iab.org.br", "abnt.org.br", "gov.br", "scielo.br", "archdaily.com.br", "inmetro.gov.br"],
@@ -107,7 +140,7 @@
       }
     },
     {
-      "id": "administracao", "nome": "Administração, gestão, empreendedorismo, marketing, RH e logística", "tecnica": false,
+      "id": "administracao", "nome": "Administração, gestão, empreendedorismo, marketing, RH e logística", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["administracao", "gestao", "empreendedorismo", "negocios", "marketing", "vendas", "recursos humanos", "rh", "lideranca", "estrategia", "logistica", "gerenciamento de projetos", "startup*", "plano de negocios", "empresa*", "qualidade", "gestao de processos", "empreender", "publicidade", "comercial", "atendimento", "cadeia de suprimentos", "supply chain"],
       "dominios": {
         "pt": ["sebrae.com.br", "endeavor.org.br", "fgv.br", "ibgc.org.br", "pmi.org", "abrh.org.br", "anpad.org.br", "scielo.br", "gov.br"],
@@ -115,7 +148,7 @@
       }
     },
     {
-      "id": "contabil-financas", "nome": "Contabilidade, finanças, investimentos e tributação", "tecnica": false,
+      "id": "contabil-financas", "nome": "Contabilidade, finanças, investimentos e tributação", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["contabilidade", "contabil*", "financas", "financeiro", "investimento*", "bolsa de valores", "tributos", "imposto*", "fiscal", "auditoria", "custos", "balanco", "mercado financeiro", "renda fixa", "acoes", "orcamento", "tesouraria", "cpa", "tributaria", "controladoria", "fluxo de caixa", "educacao financeira", "financeir*", "dinheiro", "poupanca"],
       "dominios": {
         "pt": ["cfc.org.br", "cpc.org.br", "gov.br", "bcb.gov.br", "cvm.gov.br", "b3.com.br", "tesourodireto.com.br", "tesourotransparente.gov.br", "investidor.gov.br", "anbima.com.br", "susep.gov.br", "ibracon.com.br"],
@@ -123,7 +156,7 @@
       }
     },
     {
-      "id": "economia", "nome": "Economia e políticas econômicas", "tecnica": false,
+      "id": "economia", "nome": "Economia e políticas econômicas", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["economia", "economista*", "macroeconomia", "microeconomia", "inflacao", "pib", "juros", "cambio", "politica monetaria", "comercio exterior", "desenvolvimento economico", "teoria economica", "mercado de trabalho", "economia brasileira"],
       "dominios": {
         "pt": ["bcb.gov.br", "ibge.gov.br", "ipea.gov.br", "gov.br", "fgv.br", "bndes.gov.br", "tesourotransparente.gov.br", "dieese.org.br", "scielo.br"],
@@ -131,7 +164,7 @@
       }
     },
     {
-      "id": "historia", "nome": "História e arqueologia", "tecnica": false,
+      "id": "historia", "nome": "História e arqueologia", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["historia", "historico*", "idade media", "brasil colonia", "imperio", "republica", "guerra*", "revolucao", "antiguidade", "civilizacao", "ditadura", "historiografia", "arqueologia", "egito", "roma antiga", "grecia antiga", "segunda guerra", "primeira guerra", "escravidao", "independencia"],
       "dominios": {
         "pt": ["arquivonacional.gov.br", "memoria.bn.gov.br", "bn.gov.br", "cpdoc.fgv.br", "ihgb.org.br", "gov.br", "scielo.br", "senado.leg.br", "camara.leg.br", "brasilescola.uol.com.br"],
@@ -139,7 +172,7 @@
       }
     },
     {
-      "id": "geografia", "nome": "Geografia, geologia e cartografia", "tecnica": false,
+      "id": "geografia", "nome": "Geografia, geologia e cartografia", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["geografia", "cartografia", "geopolitica", "relevo", "demografia", "urbanizacao", "geologia", "hidrografia", "territorio", "populacao", "globalizacao", "geoprocessamento", "sensoriamento remoto", "meteorologia", "regioes do brasil"],
       "dominios": {
         "pt": ["ibge.gov.br", "inpe.br", "mapbiomas.org", "ana.gov.br", "sgb.gov.br", "embrapa.br", "scielo.br", "cienciahoje.org.br", "gov.br"],
@@ -147,7 +180,7 @@
       }
     },
     {
-      "id": "filosofia-sociais", "nome": "Filosofia, sociologia, antropologia e ciência política", "tecnica": false,
+      "id": "filosofia-sociais", "nome": "Filosofia, sociologia, antropologia e ciência política", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["filosofia", "filosof*", "sociologia", "antropologia", "ciencia politica", "etica", "epistemologia", "metafisica", "kant", "platao", "aristoteles", "marx", "weber", "durkheim", "democracia", "estado", "politica", "estoicismo", "nietzsche", "existencialismo"],
       "dominios": {
         "pt": ["scielo.br", "anpocs.org", "sbsociologia.com.br", "ipea.gov.br", "senado.leg.br", "camara.leg.br", "cienciahoje.org.br"],
@@ -155,7 +188,7 @@
       }
     },
     {
-      "id": "letras-portugues", "nome": "Língua portuguesa, literatura e redação", "tecnica": false,
+      "id": "letras-portugues", "nome": "Língua portuguesa, literatura e redação", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["portugues", "gramatica", "redacao", "literatura", "ortografia", "interpretacao de texto", "lingua portuguesa", "linguistica", "semantica", "sintaxe", "morfologia", "producao textual", "escrita", "enem", "romantismo", "modernismo", "machado de assis", "concordancia", "crase", "figuras de linguagem"],
       "dominios": {
         "pt": ["academia.org.br", "ciberduvidas.iscte-iul.pt", "portaldalinguaportuguesa.org", "scielo.br", "gov.br", "dominiopublico.gov.br", "michaelis.uol.com.br", "dicio.com.br", "brasilescola.uol.com.br", "infopedia.pt"],
@@ -163,7 +196,7 @@
       }
     },
     {
-      "id": "idiomas", "nome": "Idiomas estrangeiros (inglês, espanhol, francês etc.)", "tecnica": false,
+      "id": "idiomas", "nome": "Idiomas estrangeiros (inglês, espanhol, francês etc.)", "tecnica": false, "apis": ["wikipedia"],
       "palavras": ["ingles", "espanhol", "frances", "alemao", "italiano", "japones", "mandarim", "idioma*", "gramatica inglesa", "vocabulario", "toefl", "ielts", "fluencia", "conversacao", "english", "spanish", "french", "german", "phrasal verbs"],
       "dominios": {
         "pt": [],
@@ -171,7 +204,7 @@
       }
     },
     {
-      "id": "artes-musica", "nome": "Artes, música, cinema e cultura", "tecnica": false,
+      "id": "artes-musica", "nome": "Artes, música, cinema e cultura", "tecnica": false, "apis": ["wikipedia"],
       "palavras": ["musica", "musical", "teoria musical", "harmonia", "violao", "piano", "guitarra", "artes", "historia da arte", "pintura", "teatro", "danca", "cinema", "fotografia", "escultura", "artes visuais", "cultura", "canto", "bateria", "composicao"],
       "dominios": {
         "pt": ["gov.br", "itaucultural.org.br", "funarte.gov.br", "museus.gov.br", "scielo.br", "cifraclub.com.br", "mhn.museus.gov.br"],
@@ -179,7 +212,7 @@
       }
     },
     {
-      "id": "design-comunicacao", "nome": "Design, UX, comunicação, jornalismo e audiovisual", "tecnica": false,
+      "id": "design-comunicacao", "nome": "Design, UX, comunicação, jornalismo e audiovisual", "tecnica": false, "apis": ["wikipedia"],
       "palavras": ["design", "ux", "ui", "usabilidade", "design grafico", "tipografia", "branding", "comunicacao", "jornalismo", "midia*", "redacao publicitaria", "audiovisual", "edicao de video", "social media", "prototipagem", "figma", "photoshop", "ilustracao", "marca", "relacoes publicas", "storytelling"],
       "dominios": {
         "pt": ["intercom.org.br", "abi.org.br", "fenaj.org.br", "gov.br", "scielo.br", "aberje.com.br"],
@@ -187,7 +220,7 @@
       }
     },
     {
-      "id": "administracao-publica", "nome": "Administração pública, políticas públicas e concursos públicos", "tecnica": false,
+      "id": "administracao-publica", "nome": "Administração pública, políticas públicas e concursos públicos", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["administracao publica", "servidor publico", "licitacao", "licitacoes", "orcamento publico", "politicas publicas", "gestao publica", "concurso publico", "concursos", "lei de licitacoes", "controle externo", "prefeitura", "tribunal de contas", "contratacoes publicas", "transparencia", "improbidade"],
       "dominios": {
         "pt": ["gov.br", "enap.gov.br", "tcu.gov.br", "cgu.gov.br", "planalto.gov.br", "escolavirtual.gov.br", "senado.leg.br", "camara.leg.br", "ipea.gov.br", "tesourotransparente.gov.br", "scielo.br"],
@@ -195,7 +228,7 @@
       }
     },
     {
-      "id": "seguranca-trabalho", "nome": "Segurança e saúde no trabalho", "tecnica": false,
+      "id": "seguranca-trabalho", "nome": "Segurança e saúde no trabalho", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["seguranca do trabalho", "nr", "nrs", "ergonomia", "epi", "cipa", "saude ocupacional", "higiene ocupacional", "acidente de trabalho", "riscos ocupacionais", "brigada", "incendio", "pcmso", "pgr"],
       "dominios": {
         "pt": ["gov.br", "fundacentro.gov.br", "previdencia.gov.br", "scielo.br", "cnt.org.br", "planalto.gov.br"],
@@ -203,7 +236,7 @@
       }
     },
     {
-      "id": "agro-veterinaria", "nome": "Agronomia, agropecuária e medicina veterinária", "tecnica": false,
+      "id": "agro-veterinaria", "nome": "Agronomia, agropecuária e medicina veterinária", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["agronomia", "agricultura", "agropecuaria", "veterinaria", "zootecnia", "solo*", "cultivo*", "pecuaria", "plantio", "irrigacao", "florestal", "agronegocio", "animais", "fitopatologia", "adubacao", "bovino*", "suino*", "avicultura"],
       "dominios": {
         "pt": ["embrapa.br", "gov.br", "cfmv.gov.br", "scielo.br", "conab.gov.br", "cepea.esalq.usp.br", "agrolink.com.br"],
@@ -211,7 +244,7 @@
       }
     },
     {
-      "id": "turismo-gastronomia", "nome": "Turismo, hotelaria, eventos e gastronomia", "tecnica": false,
+      "id": "turismo-gastronomia", "nome": "Turismo, hotelaria, eventos e gastronomia", "tecnica": false, "apis": ["wikipedia"],
       "palavras": ["turismo", "hotelaria", "gastronomia", "culinaria", "cozinha", "eventos", "chef", "viagem", "hospitalidade", "panificacao", "confeitaria", "bartender", "cerimonial", "receitas", "boas praticas de manipulacao"],
       "dominios": {
         "pt": ["gov.br", "embratur.com.br", "anvisa.gov.br", "sebrae.com.br", "senac.br", "scielo.br"],
@@ -219,7 +252,7 @@
       }
     },
     {
-      "id": "servico-social", "nome": "Serviço social e assistência social", "tecnica": false,
+      "id": "servico-social", "nome": "Serviço social e assistência social", "tecnica": false, "apis": ["wikipedia", "openalex"],
       "palavras": ["servico social", "assistencia social", "suas", "cras", "creas", "politicas sociais", "assistente social", "vulnerabilidade", "protecao social", "questao social", "seguridade social"],
       "dominios": {
         "pt": ["cfess.org.br", "gov.br", "ipea.gov.br", "scielo.br", "planalto.gov.br", "senado.leg.br"],
@@ -227,7 +260,7 @@
       }
     },
     {
-      "id": "aviacao-transporte", "nome": "Aviação, náutica, trânsito e transporte", "tecnica": false,
+      "id": "aviacao-transporte", "nome": "Aviação, náutica, trânsito e transporte", "tecnica": false, "apis": ["wikipedia"],
       "palavras": ["aviacao", "piloto*", "aeronautica", "navegacao aerea", "transito", "transporte*", "motorista", "habilitacao", "ctb", "naval", "maritimo", "ferroviari*", "aeroporto*", "comissario de bordo", "aeronave*"],
       "dominios": {
         "pt": ["anac.gov.br", "gov.br", "decea.mil.br", "antt.gov.br", "antaq.gov.br", "planalto.gov.br", "scielo.br"],
@@ -235,7 +268,7 @@
       }
     },
     {
-      "id": "geral", "nome": "Nenhuma das anteriores (assunto geral ou misto)", "tecnica": false,
+      "id": "geral", "nome": "Nenhuma das anteriores (assunto geral ou misto)", "tecnica": false, "apis": ["wikipedia"],
       "palavras": [],
       "dominios": {
         "pt": ["pt.wikipedia.org", "scielo.br", "gov.br", "brasilescola.uol.com.br"],

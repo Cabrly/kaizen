@@ -581,6 +581,7 @@ if __name__ == "__main__":
     estudos.init()
     servidores.init()
     copias.vigiar()
+    estudos.vigiar_documentacao()   # troca os links "Buscar…" por documentação de verdade quando os buscadores liberam
     if servidores.preferido() == "local":   # a IA daqui é a escolhida: deixa o Ollama ligado
         threading.Thread(target=ia_local.ligar, daemon=True).start()
     print(f"Kaizen disponível em http://{HOST}:{PORT}")

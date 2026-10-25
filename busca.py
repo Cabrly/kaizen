@@ -702,12 +702,140 @@ def _docs_de_autoridade(termos, dominios, idioma, limite):
     return _variados(candidatos, limite)
 
 
+def _pontos_das_chaves(chaves, texto):
+    """Quantas palavras-chave aparecem no texto (frase de 2+ palavras vale mais; termo* casa o começo da palavra)."""
+    limpo = _sem_acento(texto or "")
+    limpo = " " + re.sub(r"[^a-z0-9.]+", " ", re.sub(r"(?<!\d)\.|\.(?!\d)", " ", limpo)) + " "
+    pontos = 0
+    for chave in chaves:
+        chave = _sem_acento(chave)
+        achou = f" {chave[:-1]}" in limpo if chave.endswith("*") else f" {chave} " in limpo
+        if achou:
+            pontos += 1 + chave.count(" ")
+    return pontos
+
+
+def documentos_base(area, texto, idioma="pt", limite=1, contexto=""):
+    """Leis e textos-base da área com endereço conferido (areas.json: Código Penal, CLT, LGPD…), os que mais
+    combinam com o tema. Não usa busca, então nunca é bloqueado. `contexto` (o assunto do plano) só entra se o
+    tópico sozinho não casou com nada: senão "Direito Penal" puxaria o Código Penal até pra processo penal."""
+    if idioma != "pt":
+        return []
+    docs = (_carregar_areas()["areas"].get(area) or {}).get("documentos") or []
+    for base in (texto, f"{texto} {contexto}"):
+        pontuados = sorted(((_pontos_das_chaves(d.get("chaves", []), base), i) for i, d in enumerate(docs)), key=lambda x: (-x[0], x[1]))
+        achados = [docs[i] for pontos, i in pontuados if pontos > 0][:limite]
+        if achados:
+            return [{"tipo": "doc", "titulo": d["titulo"], "url": d["url"], "fonte": _host(d["url"])} for d in achados]
+    return []
+
+
+# ---------- Fontes abertas por API (sem chave, sem scraping, não bloqueiam) ----------
+
+def _radical(palavra):
+    return palavra[:5]    # "derivada" e "derivadas" contam como a mesma palavra
+
+
+def _wikipedia(consulta, idioma):
+    lang = idioma_valido(idioma)
+    base = f"https://{lang}.wikipedia.org/w/api.php?"
+
+    def chamar(**parametros):
+        return json.loads(_baixar(base + urllib.parse.urlencode({"format": "json", **parametros}), timeout=8, idioma=idioma))
+
+    def cobertura(titulo, alvo):
+        """Que parte das palavras do assunto o título tem ("Lei de Hubble" cobre metade de "lei de ohm")."""
+        return len(alvo & {_radical(t) for t in _tokens(titulo)}) / len(alvo) if alvo else 0
+
+    # 1) pelo título: "sinais vitais aferição" não é título de nada, mas "sinais vitais" é; encurta de trás pra frente
+    palavras = consulta.split()
+    achados = []
+    for n in range(len(palavras), max(1, min(2, len(palavras))) - 1, -1):
+        alvo = {_radical(t) for t in _tokens(" ".join(palavras[:n]))}
+        achados = [t for t in chamar(action="opensearch", search=" ".join(palavras[:n]), limit=4, namespace=0)[1]
+                   if cobertura(t, alvo) > 0.5]
+        if achados:
+            break
+
+    # 2) senão, a busca de texto, que devolve de tudo ("Síndrome compartimental" pra "sinais vitais")
+    if not achados:
+        alvo = {_radical(t) for t in _tokens(consulta)}
+        itens = [i["title"] for i in chamar(action="query", list="search", srsearch=consulta, srlimit=5)["query"]["search"]]
+        achados = sorted((t for t in itens if cobertura(t, alvo) > 0.5), key=lambda t: -cobertura(t, alvo))[:3]
+
+    return [{"titulo": titulo, "fonte": "Wikipédia",
+             "url": f"https://{lang}.wikipedia.org/wiki/" + urllib.parse.quote(titulo.replace(" ", "_"))} for titulo in achados[:3]]
+
+
+def _openalex(consulta, idioma):
+    """Artigos científicos de acesso aberto no idioma dos materiais (SciELO, revistas brasileiras…)."""
+    url = "https://api.openalex.org/works?" + urllib.parse.urlencode({
+        "search": consulta, "filter": f"language:{idioma_valido(idioma)},open_access.is_oa:true,type:article",
+        "per-page": 4, "select": "title,doi,best_oa_location"})
+    saida = []
+    for r in json.loads(_baixar(url, timeout=10, idioma=idioma)).get("results", []):
+        local = r.get("best_oa_location") or {}
+        link = local.get("landing_page_url") or r.get("doi") or ""
+        if r.get("title") and link.startswith(("http://", "https://")):
+            saida.append({"titulo": _limpar(r["title"]), "url": link,
+                          "fonte": (local.get("source") or {}).get("display_name") or "OpenAlex"})
+    return saida
+
+
+_FONTES_API = {"wikipedia": Fonte("wikipedia", _wikipedia, 0.2, descanso=30),
+               "openalex": Fonte("openalex", _openalex, 0.3, descanso=30)}
+
+
+def _docs_por_api(area, consulta, idioma, consulta_wikipedia=None):
+    """Um de cada API da área, em rodízio (visão geral da Wikipédia e, onde faz sentido, um artigo aberto).
+    A Wikipédia é procurada só pelo assunto do tópico (sem o nome da área na frente); os artigos, com o contexto."""
+    listas = []
+    for nome in (_carregar_areas()["areas"].get(area) or {}).get("apis") or []:
+        fonte = _FONTES_API.get(nome)
+        if fonte:
+            q = (consulta_wikipedia or consulta) if nome == "wikipedia" else consulta
+            listas.append(_cache(f"api:{nome}:{idioma}:{q.lower()}",
+                                 lambda fonte=fonte, q=q: _primeira_que_responde([fonte], q, idioma)))
+    return [{"tipo": "doc", **lista[i]} for i in range(max((len(l) for l in listas), default=0)) for lista in listas if i < len(lista)]
+
+
+# ---------- Quando todos os buscadores estão bloqueados ----------
+
+FONTE_PENDENTE = "busca nas fontes da área"   # marca o link "Buscar…" que ainda será trocado por um resultado de verdade
+
+
+def _link_de_busca(consulta, area, idioma):
+    """Pelo menos um link: a busca já restrita aos sites de autoridade da área, pra abrir quando a pessoa for estudar."""
+    dominios = dominios_da_area(area, idioma)[:6]
+    q = f"{consulta} ({' OR '.join('site:' + d for d in dominios)})" if dominios else consulta
+    return {"tipo": "doc", "titulo": f"Buscar nas fontes oficiais: {consulta[:70]}",
+            "url": "https://duckduckgo.com/?q=" + urllib.parse.quote(q), "fonte": FONTE_PENDENTE}
+
+
+def refazer_busca_pendente(url, idioma="pt"):
+    """Tenta de novo a busca que está dentro de um link "Buscar…" guardado quando os buscadores estavam bloqueados.
+    Devolve {titulo, url, fonte} ou None se ainda não deu."""
+    idioma = idioma_valido(idioma)
+    q = urllib.parse.parse_qs(urllib.parse.urlparse(url).query).get("q", [""])[0]
+    consulta, _, resto = q.partition(" (site:")
+    dominios = re.findall(r"site:([^\s)]+)", "site:" + resto) if resto else []
+    if not consulta.strip():
+        return None
+    achados = _docs_de_autoridade(consulta, dominios, idioma, 1) if dominios else buscar_web(consulta, idioma)[:1]
+    if not achados:
+        return None
+    return {"titulo": achados[0]["titulo"], "url": achados[0]["url"], "fonte": _host(achados[0]["url"])}
+
+
 def buscar_documentacao(termos, dominio_oficial="", ignorar=(), limite=2, idioma="pt", consulta_web=None,
-                        area="", consulta_area=None):
+                        area="", consulta_area=None, texto_base="", contexto="", consulta_api=None):
     """Docs pra uma sessão, da fonte mais confiável pra menos:
     1. site oficial do assunto (menu/sitemap), quando a IA indicou um;
-    2. sites de autoridade da área (areas.json: Planalto e STF no direito, SciELO na saúde…);
-    3. busca web livre, com os sites de apostila e resumo (scribd, docsity…) no fim da fila.
+    2. texto-base conferido da área (a lei, a diretriz…), sem busca;
+    3. sites de autoridade da área (areas.json: Planalto e STF no direito, SciELO na saúde…), por busca;
+    4. fontes abertas por API (Wikipédia, OpenAlex), que não bloqueiam;
+    5. busca web livre, com os sites de apostila e resumo (scribd, docsity…) no fim da fila;
+    6. se nada deu, um link "Buscar…" já restrito às fontes da área (trocado depois, em segundo plano).
     `consulta_area` e `consulta_web` devem estar no idioma dos materiais."""
     idioma = idioma_valido(idioma)
     escolhidas = escolher_paginas(paginas_oficiais(dominio_oficial, idioma), termos, ignorar, limite, idioma)
@@ -718,21 +846,31 @@ def buscar_documentacao(termos, dominio_oficial="", ignorar=(), limite=2, idioma
     def doc(r):
         return {"tipo": "doc", "titulo": r["titulo"], "url": r["url"], "fonte": _host(r["url"])}
 
-    dominios = dominios_da_area(area, idioma)
-    docs = [doc(r) for r in _docs_de_autoridade(consulta_area or termos, dominios, idioma, limite)] if dominios else []
-    if len(docs) >= limite:
-        return docs
+    docs = []
 
-    fora = ("youtube.com", "facebook.com", "instagram.com", "tiktok.com", "x.com", "twitter.com")
-    evitar = _carregar_areas()["evitar"]
-    livres = [r for r in buscar_web(consulta_web or termos, idioma)
-              if not any(_host(r["url"]).endswith(f) for f in fora) and _idioma_aceito(r["url"], idioma)]
-    # os sites da área primeiro e os de resumo/apostila por último (ordenação estável)
-    livres.sort(key=lambda r: (_do_dominio(r["url"], evitar), not _do_dominio(r["url"], dominios)))
-    usadas = {d["url"] for d in docs}
-    for r in _variados(livres, limite):
-        if r["url"] not in usadas and len(docs) < limite:
-            docs.append(doc(r))
+    def juntar(novos):
+        for d in novos:
+            if len(docs) < limite and d["url"] not in {x["url"] for x in docs}:
+                docs.append(d)
+
+    dominios = dominios_da_area(area, idioma)
+    consulta = consulta_area or termos
+
+    juntar(documentos_base(area, texto_base, idioma, 1, contexto))
+    if len(docs) < limite and dominios:
+        juntar([doc(r) for r in _docs_de_autoridade(consulta, dominios, idioma, limite - len(docs))])
+    if len(docs) < limite:
+        juntar(_docs_por_api(area, consulta, idioma, consulta_api))
+    if len(docs) < limite:
+        fora = ("youtube.com", "facebook.com", "instagram.com", "tiktok.com", "x.com", "twitter.com")
+        evitar = _carregar_areas()["evitar"]
+        livres = [r for r in buscar_web(consulta_web or termos, idioma)
+                  if not any(_host(r["url"]).endswith(f) for f in fora) and _idioma_aceito(r["url"], idioma)]
+        # os sites da área primeiro e os de resumo/apostila por último (ordenação estável)
+        livres.sort(key=lambda r: (_do_dominio(r["url"], evitar), not _do_dominio(r["url"], dominios)))
+        juntar([doc(r) for r in _variados(livres, limite)])
+    if not docs:
+        docs.append(_link_de_busca(consulta, area, idioma))
     return docs
 
 
