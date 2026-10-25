@@ -17,7 +17,7 @@ import { PROVEDORES, ErroIA, lerConfig, salvarConfig, contasConectadas,
 
 import { INTENSIDADES, blocosPorDia } from "../intensidade.js";
 
-import { IDIOMAS, buscarVideos, linkDocumentacao, carregarAreas, idsDeAreas, descricaoDasAreas,
+import { IDIOMAS, buscarVideos, linkDocumentacao, documentacaoDaArea, carregarAreas, idsDeAreas, descricaoDasAreas,
          areaValida, areaTecnica, detectarArea } from "./busca.js";
 
 import { ligarEntregas, listar as listarEntregas, obter as obterEntrega, criar as criarEntrega, corrigirDeNovo,
@@ -527,10 +527,16 @@ async function gerarPlano(id) {
             const consulta = sessao.busca_video || `${sessao.topico} ${plano.tema} ${IDIOMAS[plano.idioma].aula}`;
             const videos = await buscarVideos(consulta, { idioma: plano.idioma, minutosMax: minutosVideo });
 
-            feitos += 1;
-            atualizarPlano(id, { etapa: `Buscando vídeos: ${feitos} de ${novos.length} sessões` });
+            // texto-base da área, Wikipédia e artigos abertos, e o link de busca nas fontes oficiais por último
+            const docs = await documentacaoDaArea({
+                tema: plano.tema, topico: sessao.topico.trim(), termos: sessao.termos_doc,
+                dominio: docOficial, idioma: plano.idioma, area, areas
+            }).catch(() => []);
 
-            return videos;
+            feitos += 1;
+            atualizarPlano(id, { etapa: `Buscando vídeos e documentação: ${feitos} de ${novos.length} sessões` });
+
+            return { videos, docs };
 
         });
 
@@ -561,15 +567,16 @@ async function gerarPlano(id) {
                 topico: sessao.topico.trim(), objetivo: String(sessao.objetivo || "").trim(), extra: 0
             });
 
-            const video = achados[i].find((v) => !usados.has(v.url));
+            const video = achados[i].videos.find((v) => !usados.has(v.url));
             if (video) usados.add(video.url);
 
-            const doc = linkDocumentacao({
+            // se a busca de documentação falhou por completo, ainda sobra o link de busca
+            const docs = achados[i].docs.length ? achados[i].docs : [linkDocumentacao({
                 tema: plano.tema, topico: sessao.topico.trim(), termos: sessao.termos_doc,
                 dominio: docOficial, idioma: plano.idioma, area, areas
-            });
+            })];
 
-            const materiais = (video ? [video] : []).concat(doc);
+            const materiais = (video ? [video] : []).concat(docs);
 
             materiais.forEach((m) => dados.itens.push({
                 id: novoId(dados, "item"), sessao_id: sessaoId, tipo: m.tipo, titulo: m.titulo.slice(0, 200),

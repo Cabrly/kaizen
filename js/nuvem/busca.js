@@ -373,3 +373,163 @@ export function dominiosDaArea(areas, area, idioma = "pt") {
     return [...new Set([...(dominios[idioma] || []), ...(dominios.geral || [])])];
 
 }
+
+
+
+/* ---------- documentos-base e fontes abertas (o mesmo do busca.py) ---------- */
+
+/* Quantas palavras-chave aparecem no texto (frase de 2+ palavras vale mais; termo* casa o começo da palavra). */
+function pontosDasChaves(chaves, texto) {
+
+    // o ponto só conta dentro de número (14.133); fora disso é pontuação
+    const limpo = ` ${semAcento(texto)
+        .replace(/\./g, (m, i, s) => (/\d/.test(s[i - 1] || "") && /\d/.test(s[i + 1] || "") ? "." : " "))
+        .replace(/[^a-z0-9.]+/g, " ")} `;
+
+    let pontos = 0;
+
+    for (const original of chaves || []) {
+        const chave = semAcento(original);
+        const achou = chave.endsWith("*") ? limpo.includes(` ${chave.slice(0, -1)}`) : limpo.includes(` ${chave} `);
+        if (achou) pontos += 1 + (chave.match(/ /g) || []).length;
+    }
+
+    return pontos;
+
+}
+
+
+/*
+    Leis e textos-base da área com endereço conferido (areas.json: Código Penal, CLT, LGPD…), os que mais combinam
+    com o tema. Sem busca. O `contexto` (o assunto do plano) só entra se o tópico sozinho não casou com nada: senão
+    "Direito Penal" puxaria o Código Penal até pra processo penal.
+*/
+export function documentosBase(areas, area, texto, idioma = "pt", limite = 1, contexto = "") {
+
+    if (idioma !== "pt") return [];
+
+    const docs = areas?.areas?.[area]?.documentos || [];
+
+    for (const base of [texto, `${texto} ${contexto}`]) {
+
+        const achados = docs
+            .map((d, i) => ({ d, i, pontos: pontosDasChaves(d.chaves, base) }))
+            .filter((x) => x.pontos > 0)
+            .sort((a, b) => b.pontos - a.pontos || a.i - b.i)
+            .slice(0, limite)
+            .map((x) => x.d);
+
+        if (achados.length) {
+            return achados.map((d) => ({ tipo: "doc", titulo: d.titulo, url: d.url, fonte: new URL(d.url).host.replace(/^www\./, "") }));
+        }
+
+    }
+
+    return [];
+
+}
+
+
+const radicaisDe = (texto) => new Set([...tokensDe(texto)].map((t) => t.slice(0, 5)));   // "derivada" = "derivadas"
+
+
+async function wikipedia(consulta, idioma) {
+
+    const base = `https://${idioma}.wikipedia.org/w/api.php?origin=*&format=json&`;
+
+    // que parte das palavras do assunto o título tem ("Lei de Hubble" cobre metade de "lei de ohm")
+    const cobertura = (titulo, alvo) => {
+        const doTitulo = radicaisDe(titulo);
+        return alvo.size ? [...alvo].filter((r) => doTitulo.has(r)).length / alvo.size : 0;
+    };
+
+    // 1) pelo título: "sinais vitais aferição" não é título de nada, mas "sinais vitais" é; encurta de trás pra frente
+    const palavras = consulta.split(/\s+/).filter(Boolean);
+    let achados = [];
+
+    for (let n = palavras.length; n >= Math.max(1, Math.min(2, palavras.length)); n--) {
+        const trecho = palavras.slice(0, n).join(" ");
+        const alvo = radicaisDe(trecho);
+        const d = await baixarJson(`${base}action=opensearch&limit=4&namespace=0&search=${encodeURIComponent(trecho)}`);
+        achados = (d[1] || []).filter((t) => cobertura(t, alvo) > 0.5);
+        if (achados.length) break;
+    }
+
+    // 2) senão, a busca de texto, que devolve de tudo ("Síndrome compartimental" pra "sinais vitais")
+    if (!achados.length) {
+        const alvo = radicaisDe(consulta);
+        const d = await baixarJson(`${base}action=query&list=search&srlimit=5&srsearch=${encodeURIComponent(consulta)}`);
+        achados = (d.query?.search || []).map((i) => i.title).filter((t) => cobertura(t, alvo) > 0.5)
+            .sort((a, b) => cobertura(b, alvo) - cobertura(a, alvo));
+    }
+
+    return achados.slice(0, 3).map((titulo) => ({
+        tipo: "doc", titulo, fonte: "Wikipédia",
+        url: `https://${idioma}.wikipedia.org/wiki/${encodeURIComponent(titulo.replace(/ /g, "_"))}`
+    }));
+
+}
+
+
+/* Artigos científicos de acesso aberto no idioma dos materiais (SciELO, revistas brasileiras…). */
+async function openalex(consulta, idioma) {
+
+    const parametros = new URLSearchParams({
+        search: consulta, filter: `language:${idioma},open_access.is_oa:true,type:article`,
+        "per-page": "4", select: "title,doi,best_oa_location"
+    });
+
+    const dados = await baixarJson(`https://api.openalex.org/works?${parametros}`, 10000);
+
+    return (dados.results || [])
+        .map((r) => {
+            const local = r.best_oa_location || {};
+            return { tipo: "doc", titulo: r.title, url: local.landing_page_url || r.doi || "", fonte: local.source?.display_name || "OpenAlex" };
+        })
+        .filter((x) => x.titulo && /^https?:\/\//.test(x.url));
+
+}
+
+
+/*
+    Documentação de um tópico, da fonte mais confiável pra menos: site oficial (tecnologia) ou, nas outras áreas,
+    o texto-base da área, depois Wikipédia e artigos abertos (um de cada, em rodízio), até 2 no total. O link de
+    busca nas fontes da área vem sempre por último. Nunca lança erro.
+*/
+export async function documentacaoDaArea({ tema, topico, termos, dominio, idioma = "pt", area = "", areas = null }) {
+
+    const link = linkDocumentacao({ tema, topico, termos, dominio, idioma, area, areas });
+
+    if (dominio) return [link];
+
+    const docs = documentosBase(areas, area, `${termos || ""} ${topico}`, idioma, 1, tema);
+    const apis = areas?.areas?.[area]?.apis || [];
+
+    const listas = await Promise.all(apis.map(async (nome) => {
+
+        const consulta = nome === "wikipedia" ? (termos || topico) : `${tema} ${termos || topico}`;
+        const chave = `api:${nome}:${idioma}:${consulta.toLowerCase()}`;
+        let lista = lerCache()[chave];
+
+        if (!lista) {
+            try {
+                lista = await (nome === "wikipedia" ? wikipedia : openalex)(consulta, idioma);
+                if (lista.length) guardarCache(chave, lista);
+            } catch (erro) {
+                lista = [];   // fora do ar ou sem rede: fica só com o link de busca
+            }
+        }
+
+        return lista;
+
+    }));
+
+    for (let i = 0; i < 3; i++) {
+        for (const lista of listas) {
+            if (lista[i] && docs.length < 2 && !docs.some((d) => d.url === lista[i].url)) docs.push(lista[i]);
+        }
+    }
+
+    return [...docs, link];
+
+}
