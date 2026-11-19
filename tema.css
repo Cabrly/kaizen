@@ -1106,3 +1106,53 @@ html[data-cor="laranja"][data-tema="escuro"] {
 .gal-busca input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; border: 1.5px solid var(--linha); background: var(--papel); color: var(--tinta); font: inherit; }
 .gal-contagem { flex: none; font-size: 13px; color: var(--suave); }
 .gal-nada { padding: 20px 4px; color: var(--suave); }
+
+
+/* ---------- cenário "mar" da Jornada (js/trilha.js) ---------- */
+.trilha-rolagem.floresta.mar { background-color: #072238; border-color: #14415f; }
+.mar .trilha-fio { stroke: rgba(220, 238, 255, .5); }
+.mar .trilha-fio.feito { stroke: #ffd166; }
+.mar .trilha-no .pulso { fill: #9fe3ff; }
+.onda { animation: onda linear infinite; }
+@keyframes onda { to { transform: translateX(var(--comp)); } }
+.reflexo { animation: reflexo 3.6s ease-in-out infinite alternate; }
+@keyframes reflexo { from { opacity: .25; transform: scaleX(.85); } to { opacity: .6; transform: scaleX(1.1); } }
+.reflexo { transform-box: fill-box; transform-origin: 50% 50%; }
+.navio-longe { animation: navio 110s linear infinite; }
+@keyframes navio { from { transform: translate(-80px, var(--y, 0px)); } to { transform: translate(var(--curso), var(--y, 0px)); } }
+.gaivota { animation: gaivota 3.4s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes gaivota { from { transform: translateY(0) scaleY(1); } to { transform: translateY(-4px) scaleY(.55); } }
+.boia { transform-box: fill-box; transform-origin: 50% 100%; animation: boia 3.2s ease-in-out infinite alternate; }
+@keyframes boia { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-2.5px) rotate(3deg); } }
+.feixe-giro { transform-box: fill-box; transform-origin: 50% 50%; animation: feixe 7s ease-in-out infinite; }
+@keyframes feixe { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(-1); } }
+@media (prefers-reduced-motion: reduce) {
+    .onda, .reflexo, .navio-longe, .gaivota, .boia, .feixe-giro { animation: none; }
+}
+
+.trilha-cenarios { display: inline-flex; gap: 6px; margin-left: auto; align-self: flex-start; }
+.trilha-cenarios button {
+    padding: 6px 12px; border-radius: 999px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+    color: var(--texto-acento); background: var(--superficie); border: 1.5px solid var(--linha);
+}
+.trilha-cenarios button[aria-pressed="true"] { color: #fff; background: var(--botao); border-color: var(--botao); }
+@media (max-width: 560px) { .trilha-cenarios { margin-left: 0; } }
+
+
+/* ---------- cabeçalho que cabe em qualquer largura ---------- */
+.logo { min-width: 0; }
+.logo-jp { flex: none; }
+.logo p, .add-task { white-space: nowrap; }
+.header .header-acoes { flex: none; }
+@media (max-width: 899px) {
+    .logo p { display: none; }
+    .nav-telas .nav-tab { white-space: nowrap; padding-inline: 10px; }
+    .add-task .add-rotulo { display: none; }
+    .add-task { padding: 8px 14px; }
+}
+@media (max-width: 650px) {
+    .add-task .add-rotulo { display: inline; }
+}
+@media (max-width: 400px) {
+    .add-task .add-rotulo { display: none; }
+}

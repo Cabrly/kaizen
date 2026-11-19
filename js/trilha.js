@@ -364,6 +364,173 @@ function floresta({ horizontal, LARG, alt, fogos, novosFogos, prog }) {
 }
 
 
+/* =========================================================
+   MAR DA JORNADA (cenário alternativo à floresta)
+   Céu com estrelas e lua sobre um oceano de ondas que se mexem, ilhas e
+   um navio ao longe, gaivotas e plâncton que brilha. Cada fase concluída
+   acende uma boia luminosa no caminho; nas fases de chefe (a cada 5) é
+   um farol com o feixe de luz girando. Ao terminar, amanhece no mar.
+   Liga sozinho em planos de Marinha/Escola Naval e dá pra trocar no botão.
+========================================================= */
+
+function mar({ horizontal, LARG, alt, fogos, novosFogos, prog }) {
+
+    const aleat = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+    const mix = (a, b, t) => a.map((v, k) => Math.round(v + (b[k] - v) * t));
+    const rgb = (c) => `rgb(${c.join(",")})`;
+
+    const horizonte = horizontal ? Math.round(alt * .46) : 84;
+    const pctH = Math.round((100 * horizonte) / alt);
+
+    // quanto de luz de boia ou farol chega num ponto (0 a 1)
+    const luzEm = (x, y) => fogos.reduce((m, g) => Math.max(m, 1 - Math.hypot(g.x - x, g.by - y) / 200), 0);
+
+    // céu: amanhece no horizonte a cada fase concluída; abaixo da linha do horizonte, o mar
+    const topo = mix([4, 12, 32], [30, 70, 120], prog).join(",");
+    const base = mix([14, 52, 86], [238, 164, 98], prog).join(",");
+    const ceu = `background-color: rgb(${base}); background-image: linear-gradient(180deg, rgb(${topo}) 0%, rgb(${base}) ${pctH}%, rgb(9,46,76) ${pctH}%, rgb(4,22,42) 100%);`;
+
+    const defs = `<defs>
+        <radialGradient id="luzlua"><stop offset="0" stop-color="#cfe6ff" stop-opacity=".45"/><stop offset="1" stop-color="#cfe6ff" stop-opacity="0"/></radialGradient>
+        <radialGradient id="luzsol"><stop offset="0" stop-color="#ffd27a" stop-opacity=".85"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
+        <radialGradient id="luzfarol"><stop offset="0" stop-color="#ffe08a" stop-opacity="${horizontal ? ".6" : ".3"}"/><stop offset="1" stop-color="#ffe08a" stop-opacity="0"/></radialGradient>
+        <linearGradient id="feixe" x1="0" x2="1"><stop offset="0" stop-color="#fff2b8" stop-opacity=".75"/><stop offset="1" stop-color="#fff2b8" stop-opacity="0"/></linearGradient>
+    </defs>`;
+
+    let ceuSvg = "", horizonteSvg = "", ondas = "", reflexos = "", marcadores = "", brilhos = "", plancton = "", gaivotas = "";
+
+    // ---- estrelas (só no céu)
+    const nEstrelas = horizontal ? Math.round(LARG / 28) : 22;
+    for (let k = 0; k < nEstrelas; k++) {
+        const x = Math.round(aleat(k + 40) * LARG), y = Math.round(aleat(k + 80) * horizonte * .9);
+        ceuSvg += `<circle class="${k % 4 === 0 ? "estrela-pisca" : ""}" style="animation-delay:${(aleat(k) * 4).toFixed(1)}s" cx="${x}" cy="${y}" r="${aleat(k + 5) > .75 ? 1.7 : 1}" fill="#fff" opacity="${(.25 + aleat(k + 7) * .45).toFixed(2)}"/>`;
+    }
+
+    // ---- lua (some aos poucos) com reflexo na água, e sol (aparece no fim)
+    const luaX = horizontal ? 190 : 70, luaY = horizontal ? 40 : 40;
+    ceuSvg += `<g opacity="${(1 - prog * .75).toFixed(2)}">
+        <circle cx="${luaX}" cy="${luaY}" r="60" fill="url(#luzlua)"/>
+        <circle cx="${luaX}" cy="${luaY}" r="20" fill="#e9f1fb"/>
+        <circle cx="${luaX - 6}" cy="${luaY - 4}" r="4" fill="#cddaea"/><circle cx="${luaX + 7}" cy="${luaY + 5}" r="3" fill="#cddaea"/>
+    </g>`;
+    for (let k = 0; k < 9; k++) {
+        const w = 34 - k * 3 + aleat(k) * 8, y = horizonte + 8 + k * (horizontal ? 8 : 7);
+        reflexos += `<rect class="reflexo" style="animation-delay:${(aleat(k + 3) * 3).toFixed(1)}s" x="${(luaX - w / 2 + (aleat(k + 9) - .5) * 14).toFixed(0)}" y="${y}" width="${w.toFixed(0)}" height="1.8" rx=".9" fill="#dcecff" opacity="${(.5 * (1 - prog * .7) * (1 - k / 11)).toFixed(2)}"/>`;
+    }
+    if (prog > .85) {
+        const o = Math.min(1, (prog - .85) / .15).toFixed(2);
+        const sx = horizontal ? LARG - 160 : LARG / 2 + 80;
+        ceuSvg += `<g opacity="${o}"><circle cx="${sx}" cy="${horizonte - 6}" r="105" fill="url(#luzsol)"/><circle cx="${sx}" cy="${horizonte - 4}" r="28" fill="#ffd27a"/></g>`;
+        for (let k = 0; k < 8; k++) {
+            reflexos += `<rect class="reflexo" style="animation-delay:${(aleat(k + 20) * 3).toFixed(1)}s" x="${(sx - (26 - k * 2.4) / 2 + (aleat(k) - .5) * 10).toFixed(0)}" y="${horizonte + 6 + k * 9}" width="${(26 - k * 2.4).toFixed(0)}" height="2" rx="1" fill="#ffe3a3" opacity="${(.6 * Number(o) * (1 - k / 10)).toFixed(2)}"/>`;
+        }
+    }
+
+    // ---- ilhas na linha do horizonte e um navio cruzando bem devagar
+    const ilha = (x, w, h, cor) => `<path d="M${x},${horizonte + 1} Q${x + w * .25},${horizonte - h} ${x + w * .5},${horizonte - h * .8} Q${x + w * .8},${horizonte - h * 1.1} ${x + w},${horizonte + 1} Z" fill="${cor}"/>`;
+    const nIlhas = horizontal ? Math.max(3, Math.round(LARG / 520)) : 2;
+    for (let k = 0; k < nIlhas; k++) {
+        const x = (horizontal ? 260 + k * 520 : 20 + k * 280) + aleat(k + 70) * 160;
+        horizonteSvg += ilha(x, 60 + aleat(k + 71) * 80, 12 + aleat(k + 72) * 16, "rgb(10,32,52)");
+    }
+    horizonteSvg += `<g class="navio-longe" style="--curso:${LARG + 160}px; --y:${horizonte - 1}px" transform="translate(-80,${horizonte - 1})">
+        <path d="M0,0 L22,0 L18,5 L4,5 Z" fill="#06182a"/><rect x="9" y="-12" width="1.6" height="12" fill="#06182a"/>
+        <path d="M10.6,-11 L18,-3 L10.6,-3 Z" fill="#0b2740"/><path d="M8.6,-9 L3,-3 L8.6,-3 Z" fill="#0b2740"/>
+    </g>`;
+
+    // ---- ondas: camadas de seno que correm de lado (cada uma volta exatamente um comprimento de onda)
+    const onda = (y, amp, comp, cor, op, fase, seg) => {
+        let d = `M${-comp * 2},${alt} L${-comp * 2},${y}`;
+        for (let x = -comp * 2; x <= LARG + comp * 2; x += comp / 4) d += ` L${x},${(y + Math.sin((x / comp) * Math.PI * 2 + fase) * amp).toFixed(1)}`;
+        return `<path class="onda" style="--comp:${comp}px; animation-duration:${seg}s" d="${d} L${LARG + comp * 2},${alt} Z" fill="${cor}" opacity="${op}"/>`;
+    };
+    if (horizontal) {
+        [[10, 2.5, 90, "rgb(18,70,108)", .5, 0, 16], [34, 4, 130, "rgb(12,52,88)", .6, 1.4, 20], [62, 6, 170, "rgb(8,38,70)", .75, 2.6, 26],
+         [96, 8, 220, "rgb(5,28,54)", .9, 4, 32], [132, 10, 260, "rgb(3,20,40)", 1, 5, 40]]
+            .forEach(([dy, a, c, cor, op, f, s]) => { if (horizonte + dy < alt) ondas += onda(horizonte + dy, a, c, cor, op, f, s); });
+    } else {
+        for (let y = horizonte + 18, k = 0; y < alt; y += 96, k++) {
+            ondas += onda(y, 3 + (k % 3) * 2, 100 + (k % 4) * 30, k % 2 ? "rgb(10,44,76)" : "rgb(14,58,92)", .55, k * 1.3, 18 + (k % 4) * 5);
+        }
+    }
+
+    // ---- reflexo de cada boia ou farol aceso na água
+    reflexos += fogos.map((g) => `<ellipse class="reflexo" cx="${g.x}" cy="${g.by + 9}" rx="${g.chefe ? 30 : 20}" ry="3.4" fill="#ffd979" opacity=".42"/>`).join("");
+
+    // ---- brilho de cada marcador
+    brilhos = fogos.map((g) => `<circle class="brilho-fogo" cx="${g.x}" cy="${g.by - (g.chefe ? 54 : 26)}" r="${horizontal ? (g.chefe ? 130 : 84) : (g.chefe ? 90 : 60)}" fill="url(#luzfarol)"/>`).join("");
+
+    // ---- gaivotas: mais gaivotas quanto mais perto do amanhecer
+    const nGaivotas = (horizontal ? 2 : 1) + Math.round(prog * (horizontal ? 5 : 3));
+    for (let k = 0; k < nGaivotas; k++) {
+        const x = Math.round(80 + aleat(k + 120) * (LARG - 160)), y = Math.round(18 + aleat(k + 130) * Math.max(20, horizonte - 50));
+        gaivotas += `<path class="gaivota" style="animation-delay:${(-aleat(k + 140) * 6).toFixed(1)}s" d="M${x},${y} q4,-5 8,0 q4,-5 8,0" fill="none" stroke="#e8eef5" stroke-width="1.6" stroke-linecap="round" opacity=".75"/>`;
+    }
+
+    // ---- plâncton que brilha na água (mais perto dos marcadores)
+    const nPlancton = horizontal ? Math.round(LARG / 140) : 6;
+    for (let k = 0; k < nPlancton; k++) {
+        plancton += `<circle class="vagalume" style="animation-delay:${(aleat(k * 5) * 5).toFixed(1)}s" cx="${Math.round(aleat(k + 60) * LARG)}" cy="${Math.round(horizonte + 14 + aleat(k + 90) * (alt - horizonte - 24))}" r="1.8" fill="#9ff3ff"/>`;
+    }
+    fogos.forEach((g, k) => {
+        for (let n = 0; n < 3; n++) {
+            plancton += `<circle class="vagalume" style="animation-delay:${(aleat(k * 3 + n) * 3).toFixed(1)}s" cx="${Math.round(g.x + (aleat(k + n * 7) - .5) * 150)}" cy="${Math.round(g.by + 2 + aleat(k + n * 11) * 28)}" r="2" fill="#ffe9a8"/>`;
+        }
+    });
+
+    // ---- boias luminosas (e faróis nas fases de chefe)
+    marcadores = fogos.map((g) => {
+        const novo = novosFogos.some((n) => n.id === g.id) ? "acendendo" : "";
+        if (g.chefe) {
+            return `<g class="fogueira farol ${novo}" transform="translate(${g.x},${g.by})">
+                <ellipse cx="0" cy="5" rx="26" ry="6" fill="#0a1824"/><ellipse cx="-10" cy="2" rx="9" ry="5" fill="#2a3a46"/><ellipse cx="11" cy="3" rx="8" ry="4.4" fill="#33444f"/>
+                <path d="M-9,3 L-6,-46 L6,-46 L9,3 Z" fill="#f2efe6"/>
+                <path d="M-8.2,-12 L8.2,-12 L7.5,-23 L-7.5,-23 Z" fill="#c8362e"/><path d="M-6.9,-34 L6.9,-34 L6.5,-44 L-6.5,-44 Z" fill="#c8362e"/>
+                <rect x="-9" y="-50" width="18" height="4" fill="#33434f"/>
+                <rect x="-5.5" y="-60" width="11" height="10" fill="#ffd166"/><path d="M-8,-60 L0,-69 L8,-60 Z" fill="#c8362e"/>
+                <g transform="translate(0,-55)"><g class="feixe-giro"><path d="M0,0 L150,-16 L150,16 Z" fill="url(#feixe)"/><path d="M0,0 L-150,-16 L-150,16 Z" fill="url(#feixe)"/></g></g>
+            </g>`;
+        }
+        return `<g class="fogueira boia-marcador ${novo}" transform="translate(${g.x},${g.by})">
+            <g class="boia">
+                <ellipse cx="0" cy="3" rx="15" ry="3.4" fill="none" stroke="#9fd6ff" stroke-width="1" opacity=".5"/>
+                <path d="M-8,2 L-6,-13 L6,-13 L8,2 Z" fill="#d8392f"/><path d="M-6.6,-5 L6.6,-5 L6.2,-9 L-6.2,-9 Z" fill="#f4f1e6"/>
+                <rect x="-1" y="-27" width="2" height="14" fill="#cfd6dc"/>
+                <circle cx="0" cy="-29" r="3.6" fill="#ffe08a"/>
+            </g>
+        </g>`;
+    }).join("");
+
+    const atras = `
+        <g class="par par-ceu">${ceuSvg}</g>
+        <g class="par par-colinas">${horizonteSvg}</g>
+        ${ondas}${reflexos}${brilhos}`;
+
+    return { defs, atras, frente: `${gaivotas}${plancton}${marcadores}`, ceu };
+}
+
+
+/* Qual cenário vale pra cada plano: a escolha da pessoa, ou "mar" sozinho se o plano é de Marinha. */
+const CHAVE_CENARIO = "kaizen.trilha.cenario.v1";   // { [planoId]: "floresta" | "mar" }
+
+function cenarioDe(plano) {
+    try {
+        const salvo = JSON.parse(localStorage.getItem(CHAVE_CENARIO) || "{}")[plano.id];
+        if (salvo === "mar" || salvo === "floresta") return salvo;
+    } catch (erro) { /* sem storage: usa o padrão */ }
+    return /marinha|naval|cpaen|n[aá]utic|oceano|\bmar\b|navega/i.test(`${plano.titulo || ""} ${plano.tema || ""}`) ? "mar" : "floresta";
+}
+
+function definirCenario(planoId, cenario) {
+    try {
+        const todos = JSON.parse(localStorage.getItem(CHAVE_CENARIO) || "{}");
+        todos[planoId] = cenario;
+        localStorage.setItem(CHAVE_CENARIO, JSON.stringify(todos));
+    } catch (erro) { /* a troca vale até recarregar */ }
+}
+
+
+
 function desenhar() {
 
     const plano = estado.planos.find((p) => p.id === estado.planoId);
@@ -437,7 +604,8 @@ function desenhar() {
     estado.fogosVistos = new Set(fogos.map((g) => g.id));
 
     const prog = fases.length ? feitas / fases.length : 0;
-    const cena = floresta({ horizontal, LARG, alt, fogos, novosFogos, prog });
+    const cenario = cenarioDe(plano);
+    const cena = (cenario === "mar" ? mar : floresta)({ horizontal, LARG, alt, fogos, novosFogos, prog });
     const { ceu } = cena;
 
     const nos = fases.map((f, i) => {
@@ -485,10 +653,14 @@ function desenhar() {
                 <p>${feitas} de ${fases.length} fases${atualIdx >= 0 ? ` · você está na fase ${atualIdx + 1}` : " · trilha completa 🎉"}</p>
             </div>
             ${escolhaPlanos(plano)}
+            <div class="trilha-cenarios" role="group" aria-label="Cenário da trilha">
+                <button type="button" data-cenario="floresta" aria-pressed="${cenario === "floresta"}">🌲 Floresta</button>
+                <button type="button" data-cenario="mar" aria-pressed="${cenario === "mar"}">🌊 Mar</button>
+            </div>
         </header>
         <div class="trilha-barra"><div style="width:${fases.length ? Math.round(100 * feitas / fases.length) : 0}%"></div></div>
         <div class="trilha-heroi" id="trilha-heroi">${heroi()}</div>
-        <div class="trilha-rolagem floresta ${horizontal ? "horizontal" : ""}" style="--cor:${esc(plano.cor)}; ${ceu}">
+        <div class="trilha-rolagem floresta ${cenario === "mar" ? "mar" : ""} ${horizontal ? "horizontal" : ""}" style="--cor:${esc(plano.cor)}; ${ceu}">
             <svg viewBox="0 0 ${LARG} ${alt}" ${horizontal ? `style="width:${LARG}px;height:${alt}px"` : ""} role="group" aria-label="Mapa das fases">
                 ${cena.defs}
                 <g aria-hidden="true">${cena.atras}</g>
@@ -554,6 +726,12 @@ secao.addEventListener("keydown", (e) => {
 });
 
 secao.addEventListener("click", (e) => {
+    const troca = e.target.closest("[data-cenario]");
+    if (troca) {
+        definirCenario(estado.planoId, troca.dataset.cenario);
+        desenhar();
+        return;
+    }
     const cartao = e.target.closest("[data-plano-id]");
     if (!cartao) return;
     estado.planoId = Number(cartao.dataset.planoId);
