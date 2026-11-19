@@ -1,5 +1,15 @@
 [
     {
+        "versao": "2.0.3",
+        "data": "2026-11-19",
+        "itens": [
+            "Jornada mais fácil de usar: três níveis de zoom (os três pontinhos), um botão 📍 que volta pra fase em que você está, e a trilha agora acompanha a sua fase atual sozinha, sem perder o lugar quando você marca algo como feito.",
+            "Botões da Jornada maiores e só com ícone, e nomes de fase mais curtos, com o ícone da matéria. No celular a trilha rola dentro do próprio quadro, sem esticar a página.",
+            "Linha de corrida na loja dos pets, em vermelho e amarelo de equipe: capacete de piloto, boné e cachecol, bandeira quadriculada, pneu, semáforo de largada, volante e carro, mais os cenários Pista de corrida e Pódio.",
+            "Planos de presente agora podem desbloquear itens da loja dos pets e dar uns pontos pra começar."
+        ]
+    },
+    {
         "versao": "2.0.2",
         "data": "2026-11-19",
         "itens": [
