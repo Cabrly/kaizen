@@ -215,7 +215,7 @@ function escolhaPlanos(atual) {
    que ilumina árvores, mato e pedras em volta. Ao terminar, amanhece.
 ========================================================= */
 
-function floresta({ horizontal, LARG, alt, fogos, novosFogos, prog }) {
+function floresta({ horizontal, LARG, alt, fogos, novosFogos, prog, fim, completo }) {
 
     const aleat = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
     const mix = (a, b, t) => a.map((v, k) => Math.round(v + (b[k] - v) * t));
@@ -381,6 +381,24 @@ function floresta({ horizontal, LARG, alt, fogos, novosFogos, prog }) {
         </g>`;
     }).join("");
 
+    // ---- chegada: uma cabana com fogueira no fim da trilha (acende quando o plano termina)
+    const chegada = (() => {
+        const { x, y } = fim, aceso = completo;
+        return `<g class="chegada" transform="translate(${x},${y + 22}) scale(${horizontal ? 1.25 : 1.05})">
+            ${aceso ? `<circle cx="20" cy="-34" r="140" fill="url(#luzfogo)"/>` : ""}
+            <ellipse cx="14" cy="6" rx="92" ry="14" fill="${aceso ? "#3a2a1a" : "#141c17"}"/>
+            <rect x="-34" y="-30" width="68" height="34" fill="#6b4426"/><rect x="-34" y="-30" width="68" height="5" fill="#7d5230"/>
+            <path d="M-44,-28 L0,-58 L44,-28 Z" fill="#5d2f27"/><rect x="18" y="-56" width="8" height="18" fill="#4b4540"/>
+            <rect x="-22" y="-20" width="16" height="22" rx="2" fill="#2a170f"/>
+            <rect x="8" y="-22" width="16" height="14" rx="1.5" fill="${aceso ? "#ffd166" : "#27352f"}"/><path d="M16,-22 V-8 M8,-15 H24" stroke="#4a2c1b" stroke-width="1.2"/>
+            <g transform="translate(62,2)">
+                ${[-14, -7, 7, 14].map((px, n) => `<ellipse cx="${px}" cy="${n % 2 ? 4 : 2}" rx="4.4" ry="3" fill="#6a625a"/>`).join("")}
+                <rect x="-13" y="-3" width="26" height="5.4" rx="2.7" fill="#6b4426" transform="rotate(-12)"/><rect x="-13" y="-3" width="26" height="5.4" rx="2.7" fill="#7d5230" transform="rotate(12)"/>
+                ${aceso ? `<path class="chama" d="M0,-5 C-10,-12 -9,-25 0,-37 C9,-25 10,-12 0,-5Z" fill="#ff8a1f"/><path class="chama chama2" d="M0,-5 C-5,-11 -4,-20 0,-27 C4,-20 5,-11 0,-5Z" fill="#ffd166"/>` : ""}
+            </g>
+        </g>`;
+    })();
+
     // parallax só no céu e nas colinas (as árvores precisam bater com a luz das fogueiras)
     const atras = `
         <g class="par par-ceu">${ceuSvg}</g>
@@ -388,7 +406,7 @@ function floresta({ horizontal, LARG, alt, fogos, novosFogos, prog }) {
         <g class="par par-nevoa">${nevoa}</g>
         ${arvoresFundo}${arvoresMeio}${arvoresPerto}${chao}${brilhos}`;
 
-    return { defs, atras, frente: `${olhos}${vagalumes}${fogueiras}`, ceu };
+    return { defs, atras, frente: `${olhos}${vagalumes}${fogueiras}${chegada}`, ceu };
 }
 
 
@@ -401,7 +419,7 @@ function floresta({ horizontal, LARG, alt, fogos, novosFogos, prog }) {
    Liga sozinho em planos de Marinha/Escola Naval e dá pra trocar no botão.
 ========================================================= */
 
-function mar({ horizontal, LARG, alt, fogos, novosFogos, prog }) {
+function mar({ horizontal, LARG, alt, fogos, novosFogos, prog, fim, completo }) {
 
     const aleat = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
     const mix = (a, b, t) => a.map((v, k) => Math.round(v + (b[k] - v) * t));
@@ -529,12 +547,29 @@ function mar({ horizontal, LARG, alt, fogos, novosFogos, prog }) {
         </g>`;
     }).join("");
 
+    // ---- chegada: um farol grande numa ilhota no fim da trilha (acende quando o plano termina)
+    const chegada = (() => {
+        const { x, y } = fim, aceso = completo;
+        return `<g class="chegada" transform="translate(${x},${y + 20}) scale(${horizontal ? 1.3 : 1.1})">
+            ${aceso ? `<circle cx="0" cy="-62" r="130" fill="url(#luzfarol)"/><ellipse class="reflexo" cx="0" cy="12" rx="44" ry="4" fill="#ffd979" opacity=".45"/>` : ""}
+            <ellipse cx="0" cy="9" rx="56" ry="11" fill="#071522"/>
+            <ellipse cx="0" cy="4" rx="46" ry="9" fill="#cdb98c"/><ellipse cx="0" cy="2" rx="38" ry="6.5" fill="#dcc99d"/>
+            <ellipse cx="-31" cy="3" rx="10" ry="5" fill="#2a3a46"/><ellipse cx="33" cy="4" rx="9" ry="4.4" fill="#33444f"/>
+            <path d="M-11,3 L-7,-52 L7,-52 L11,3 Z" fill="#f2efe6"/>
+            <path d="M-10,-12 L10,-12 L9,-24 L-9,-24 Z" fill="#c8362e"/><path d="M-8,-36 L8,-36 L7.5,-47 L-7.5,-47 Z" fill="#c8362e"/>
+            <rect x="-3" y="-5" width="6" height="8" fill="#5a3a22"/><rect x="-11" y="-57" width="22" height="5" fill="#33434f"/>
+            <rect x="-6.5" y="-69" width="13" height="12" fill="${aceso ? "#ffd166" : "#56626c"}"/><path d="M-9,-69 L0,-79 L9,-69 Z" fill="#c8362e"/>
+            <rect x="-.8" y="-93" width="1.6" height="14" fill="#cfd6dc"/><path d="M.8,-93 L13,-89 L.8,-85 Z" fill="${aceso ? "#ffd166" : "#c8362e"}"/>
+            ${aceso ? `<g transform="translate(0,-63)"><g class="feixe-giro"><path d="M0,0 L170,-18 L170,18 Z" fill="url(#feixe)"/><path d="M0,0 L-170,-18 L-170,18 Z" fill="url(#feixe)"/></g></g>` : ""}
+        </g>`;
+    })();
+
     const atras = `
         <g class="par par-ceu">${ceuSvg}</g>
         <g class="par par-colinas">${horizonteSvg}</g>
         ${ondas}${reflexos}${brilhos}`;
 
-    return { defs, atras, frente: `${gaivotas}${plancton}${marcadores}`, ceu };
+    return { defs, atras, frente: `${gaivotas}${plancton}${marcadores}${chegada}`, ceu };
 }
 
 
@@ -585,6 +620,11 @@ function desenhar() {
         alt = TOPO + Math.max(fases.length - 1, 0) * PASSO + 40;
     }
 
+    // depois da última fase o caminho segue até um destino (farol ou cabana), pro cenário não acabar do nada
+    const ult = pos[pos.length - 1] || (horizontal ? { x: 120, y: 150 } : { x: 190, y: 58 });
+    const fim = horizontal ? { x: ult.x + 230, y: ult.y } : { x: 190, y: ult.y + 140 };
+    if (horizontal) LARG += 330; else alt += 200;
+
     // de que lado do nó o texto e a fogueira ficam
     const ladoDe = (x) => (x > (horizontal ? 300 : LARG * 0.55) ? "esq" : "dir");
     const raioDe = (i) => ((i + 1) % 5 === 0 ? 31 : 25);
@@ -593,7 +633,8 @@ function desenhar() {
         ? `C${(a.x + p.x) / 2},${a.y} ${(a.x + p.x) / 2},${p.y} ${p.x},${p.y}`
         : `C${a.x},${(a.y + p.y) / 2} ${p.x},${(a.y + p.y) / 2} ${p.x},${p.y}`;
 
-    const caminho = pos.map((p, i) => i === 0 ? `M${p.x},${p.y}` : trecho(pos[i - 1], p)).join(" ");
+    const caminhoFases = pos.map((p, i) => i === 0 ? `M${p.x},${p.y}` : trecho(pos[i - 1], p)).join(" ");
+    const caminho = `${caminhoFases} ${trecho(ult, fim)}`;
 
     // trecho já percorrido
     const caminhoFeito = atualIdx === -1 ? caminho
@@ -637,7 +678,7 @@ function desenhar() {
 
     const prog = fases.length ? feitas / fases.length : 0;
     const cenario = cenarioDe(plano);
-    const cena = (cenario === "mar" ? mar : floresta)({ horizontal, LARG, alt, fogos, novosFogos, prog });
+    const cena = (cenario === "mar" ? mar : floresta)({ horizontal, LARG, alt, fogos, novosFogos, prog, fim, completo: fases.length > 0 && atualIdx === -1 });
     const { ceu } = cena;
 
     const nos = fases.map((f, i) => {
