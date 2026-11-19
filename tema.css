@@ -1203,7 +1203,7 @@ html[data-cor="laranja"][data-tema="escuro"] {
 .quiz-extra, .quiz-texto { margin-top: 6px; font-size: 13px; }
 .quiz-extra summary, .quiz-texto summary { cursor: pointer; color: var(--texto-acento); font-weight: 600; min-height: 32px; display: flex; align-items: center; }
 
-dialog.quiz { width: min(640px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 18px 18px 14px; border: 1px solid var(--linha); border-radius: 18px; background: var(--superficie); color: var(--tinta); overflow: auto; box-shadow: 0 20px 60px rgba(10, 15, 40, .35); }
+dialog.quiz { position: fixed; inset: 0; margin: auto; height: fit-content; width: min(640px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 18px 18px 14px; border: 1px solid var(--linha); border-radius: 18px; background: var(--superficie); color: var(--tinta); overflow: auto; box-shadow: 0 20px 60px rgba(10, 15, 40, .35); }
 dialog.quiz::backdrop { background: rgba(14, 20, 50, .55); }
 .quiz-topo { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 .quiz-x { width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--suave); font-size: 18px; cursor: pointer; }

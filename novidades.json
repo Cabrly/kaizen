@@ -1,5 +1,12 @@
 [
     {
+        "versao": "2.0.8",
+        "data": "2026-11-19",
+        "itens": [
+            "A janela de prática de questões agora abre centralizada na tela."
+        ]
+    },
+    {
         "versao": "2.0.7",
         "data": "2026-11-19",
         "itens": [
