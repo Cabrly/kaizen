@@ -1156,3 +1156,12 @@ html[data-cor="laranja"][data-tema="escuro"] {
 @media (max-width: 400px) {
     .add-task .add-rotulo { display: none; }
 }
+
+
+/* ---------- mensagem de boas-vindas do plano de presente (js/compartilhar.js) ---------- */
+.presente-modal { max-width: min(440px, calc(100vw - 32px)); text-align: center; padding: 34px 28px 28px; }
+.presente-titulo { margin: 0 0 12px; font-size: clamp(24px, 6vw, 32px); font-weight: 900; color: var(--texto-acento); }
+.presente-texto { margin: 0 0 22px; font-size: 17px; line-height: 1.55; color: var(--tinta); }
+
+/* o passeio fica por cima da barra de navegação do celular (ela tem z-index 9500) */
+.tut { z-index: 9800; }

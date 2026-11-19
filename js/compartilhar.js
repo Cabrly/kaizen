@@ -280,7 +280,42 @@ async function carregarPacote() {
 }
 
 
+/* Plano de presente: uma mensagem de boas-vindas por cima da janela de escolher os dias (ver `presente` no pacote). */
+function boasVindas(presente) {
+
+    if (!presente?.titulo) return;
+
+    const caixa = document.createElement("dialog");
+    caixa.className = "modal presente-modal";
+    caixa.setAttribute("aria-labelledby", "presente-titulo");
+
+    const titulo = document.createElement("h2");
+    titulo.id = "presente-titulo";
+    titulo.className = "presente-titulo";
+    titulo.textContent = String(presente.titulo).slice(0, 120);
+
+    const texto = document.createElement("p");
+    texto.className = "presente-texto";
+    texto.textContent = String(presente.texto || "").slice(0, 400);
+
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "btn-primario";
+    botao.textContent = "Abrir o meu plano";
+    botao.addEventListener("click", () => caixa.close());
+    caixa.addEventListener("close", () => caixa.remove());
+
+    caixa.append(titulo, texto, botao);
+    document.body.append(caixa);
+    caixa.showModal();
+    botao.focus();
+
+}
+
+
 function mostrarPrevia(pacote) {
+
+    boasVindas(pacote.presente);
 
     const materiais = pacote.sessoes.reduce((soma, s) => soma + s.itens.filter((i) => i.tipo !== "atividade").length, 0);
     const atividades = pacote.sessoes.reduce((soma, s) => soma + s.itens.filter((i) => i.tipo === "atividade").length, 0);
@@ -325,6 +360,8 @@ async function adicionar() {
         });
 
         if (pacoteOrigem === "galeria") document.dispatchEvent(new CustomEvent("kaizen:uso", { detail: "plano_galeria" }));
+        // plano de presente: depois de adicionar, abre o passeio exclusivo (js/tutorial.js)
+        if (pacoteRecebido?.presente) document.dispatchEvent(new CustomEvent("kaizen:tutorial-presente", { detail: { nome: String(pacoteRecebido.presente.para || "").slice(0, 40) } }));
         importar.close();
         document.querySelector('.nav-tab[data-tela="estudos"]')?.click();
         document.dispatchEvent(new CustomEvent("kaizen:recarregar-estudos"));
@@ -385,6 +422,7 @@ if (compartilhar && importar) {
 
     // link aberto: .../#plano=cofre.chave (sai da barra de endereço na hora)
     if (lerDoLink(location.hash)) {
+        window.kaizenAbriuLink = true;   // o js/tutorial.js usa isso (o endereço é apagado logo abaixo)
         const link = location.href;
         history.replaceState(null, "", location.pathname + location.search);
         window.kaizenModo.then(() => abrirImportar(link));

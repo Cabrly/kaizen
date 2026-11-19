@@ -15,7 +15,7 @@
 
 const VISTO = "kaizen.tutorial.visto";
 
-const PASSOS = [
+const GERAL = [
     {
         titulo: "Bem-vindo ao Kaizen 改善",
         texto: "Kaizen é melhorar um pouco todo dia. Em um minuto você vê as três partes do app: " +
@@ -63,6 +63,138 @@ const PASSOS = [
 ];
 
 
+/* =========================================================
+   PASSEIO DE PRESENTE
+   Pro plano que alguém monta de presente (o pacote traz `presente`).
+   Abre uma vez, depois que a pessoa adiciona o plano, e passa por
+   cada área do sistema. O botão Tutorial do rodapé mostra de novo.
+========================================================= */
+
+const CHAVE_PRESENTE = "kaizen.tutorial.presente";   // "1" quando o plano de presente foi aberto neste navegador
+const CHAVE_NOME = "kaizen.tutorial.presente.nome";
+
+function passosPresente(nome) {
+
+    const oi = nome ? `${nome}, ` : "";
+
+    return [
+        {
+            titulo: `${oi}bem-vinda ao seu Kaizen 改善`,
+            texto: "Este passeio foi feito só pra você. Em poucos minutos você conhece cada parte do sistema e como usar o seu plano " +
+                   "pra Escola Naval. Dá pra pular e rever depois: é só tocar em <b>Tutorial</b> no rodapé."
+        },
+        {
+            tela: "estudos", alvo: ".nav-telas",
+            titulo: "As 4 telas",
+            texto: "<b>Jornada</b> é a sua trilha de estudo. <b>Calendário</b> mostra as sessões dia a dia. <b>Tarefas</b> é um quadro " +
+                   "simples de afazeres. <b>Assistente IA</b> tira dúvidas e corrige atividades. No celular ficam aqui embaixo."
+        },
+        {
+            tela: "estudos", alvo: "#est-trilha .trilha-rolagem",
+            titulo: "A Jornada: o seu mar até a prova",
+            texto: "Cada círculo é uma fase, ou seja, uma sessão de estudo de cerca de 2 horas. Concluiu uma fase, acende uma " +
+                   "<b>boia luminosa</b>. A cada cinco aparece um <b>farol</b>. E o céu vai clareando até <b>amanhecer</b> no fim do plano.",
+            aviso: "As fases são livres: o Kaizen só <b>recomenda</b> seguir a ordem, não trava nada."
+        },
+        {
+            tela: "estudos", alvo: "#est-trilha .trilha-heroi",
+            titulo: "A fase do dia",
+            texto: "Este cartão mostra a fase atual: o objetivo e o que tem nela (documentação e atividade). O botão <b>Começar fase</b> " +
+                   "abre a sessão no calendário, onde você estuda e marca o que fez. Toque em qualquer círculo da trilha pra ver outra fase."
+        },
+        {
+            tela: "estudos", alvo: ".trilha-cenarios",
+            titulo: "Mar ou floresta",
+            texto: "O seu plano abre no mar. Se preferir, troque pra floresta aqui. É só visual."
+        },
+        {
+            tela: "calendario", alvo: ".est-cal",
+            titulo: "Calendário",
+            texto: "Cada dia com sessão fica marcado. Toque num dia pra ver o que estudar nele. As datas foram distribuídas a partir " +
+                   "do dia de início e dos dias da semana que você escolheu."
+        },
+        {
+            tela: "calendario", alvo: "#est-dia",
+            titulo: "A sessão do dia",
+            texto: "Toque na sessão pra abrir. Cada item tem <b>✓</b> (fiz) e <b>✕</b> (não deu tempo: ele passa pra próxima sessão). " +
+                   "Os links abrem a documentação. Nas <b>atividades</b> há o botão <b>Entregar</b>: você escreve ou anexa a resposta e, " +
+                   "com uma IA conectada, ela corrige com nota de 0 a 10 e diz onde errou."
+        },
+        {
+            tela: "estudos", alvo: "#fc-abrir",
+            titulo: "Flashcards",
+            texto: "Cada sessão traz cartões. Ao marcar ✓ na sessão, eles entram na sua revisão. Revise <b>todo dia</b>: o que você " +
+                   "acerta volta cada vez mais tarde e o que erra volta logo. É o melhor jeito de fixar fórmulas e regras."
+        },
+        {
+            tela: "estudos", alvo: "#est-planos",
+            titulo: "O seu plano",
+            texto: "O cartão mostra o progresso. <b>🗓 Remarcar</b>: mudou a rotina ou perdeu uns dias? Escolha novos dias da semana e o " +
+                   "Kaizen redistribui o que falta, sem perder o que você já estudou. <b>📅</b> põe as sessões na agenda do celular."
+        },
+        {
+            tela: "estudos", alvo: "#gal-abrir-topo",
+            titulo: "Planos prontos",
+            texto: "Quer estudar outro assunto junto (redação, inglês, ENEM...)? Aqui tem 34 planos prontos, com filtro por área e busca. " +
+                   "Escolha, marque os dias e eles entram no calendário."
+        },
+        {
+            tela: "estudos", alvo: "#est-mais", abrir: "#est-mais",
+            titulo: "Mais: semana, pets e IA",
+            texto: "<b>Semana</b> resume o que você estudou e o que fazer na próxima. <b>Pets</b>: o seu plano vira um bichinho que acompanha " +
+                   "o seu progresso (ele aparece na trilha), e você compra roupinhas com os pontos do estudo. <b>O que a IA sabe</b> é o resumo " +
+                   "do seu progresso que a IA usa pra te ajudar melhor."
+        },
+        {
+            tela: "kanban", alvo: "#tela-kanban .kanban",
+            titulo: "Tarefas",
+            texto: "Um quadro simples (A fazer e Concluído) pro que não está no plano: <i>refazer as questões erradas, comprar o livro, " +
+                   "tirar uma dúvida com o professor</i>. Arraste os cartões, com prazo e prioridade."
+        },
+        {
+            tela: "ia", alvo: "#ia-servidores", abrir: "#srv-mais",
+            titulo: "Conecte a sua IA",
+            texto: "A <b>IA do Kaizen</b> (grátis) já monta planos e flashcards, mas tem limite por dia e não conversa no chat. Pra usar o chat sem " +
+                   "limite, entre com a conta grátis do <b>OpenRouter</b> (um clique) ou conecte uma IA sua. A chave fica só no seu aparelho."
+        },
+        {
+            tela: "ia", alvo: "#ia-form",
+            titulo: "Converse com o Assistente",
+            texto: "Escreva a sua dúvida (pode colar o enunciado de uma questão). Ele conhece o seu progresso e responde de forma organizada. " +
+                   "Dica: depois de errar um tipo de problema, peça <i>\"me dê 3 questões parecidas e me explique a primeira\"</i>."
+        },
+        {
+            tela: "estudos", alvo: "#cores",
+            titulo: "Cor e tema",
+            texto: "No topo: <b>◐</b> muda a cor do app (índigo, rosa, verde ou laranja) e <b>☾</b> alterna entre claro e escuro. " +
+                   "Estude do jeito mais confortável pros seus olhos."
+        },
+        {
+            alvo: ".rodape-backup",
+            titulo: "Os seus dados",
+            texto: "No rodapé: <b>Fazer backup</b> salva tudo num arquivo (faça de vez em quando). <b>Sincronizar aparelhos</b> gera um código " +
+                   "pra usar o mesmo plano no celular e no computador, criptografado e sem conta. <b>Acessibilidade</b> aumenta o texto e muda " +
+                   "o contraste. <b>PIN</b> protege a abertura do app."
+        },
+        {
+            titulo: "Como estudar com o plano",
+            texto: "1) Uma sessão por dia, na ordem. 2) Faça o <b>diagnóstico inicial</b> sem estudar antes: ele é o seu ponto de partida. " +
+                   "3) Mantenha um <b>caderno de erros</b>: todo erro vira uma linha. 4) A meta do edital é no mínimo <b>50% em cada disciplina</b>; " +
+                   "mire em 70%. 5) A cada mês, revisão geral e simulado. 6) Perdeu uns dias? Sem culpa: use <b>🗓 Remarcar</b> e mantenha a " +
+                   "<b>sequência 🔥</b> de dias estudando."
+        },
+        {
+            titulo: `${oi}bons ventos!`,
+            texto: "O seu plano começa pela <b>mensagem de abertura</b>: abra a primeira fase e escreva a sua razão. Quando quiser rever este passeio, " +
+                   "toque em <b>Tutorial</b> no rodapé. Boa jornada rumo à Escola Naval ⚓",
+            final: true
+        }
+    ];
+
+}
+
+
+let passos = GERAL;
 let raiz = null;
 let atual = 0;
 let telaAntes = null;
@@ -105,7 +237,7 @@ function montar() {
     raiz.querySelector(".tut-pular").addEventListener("click", () => fechar(false));
     raiz.querySelector(".tut-voltar").addEventListener("click", () => mostrar(atual - 1));
     raiz.querySelector(".tut-proximo").addEventListener("click", () =>
-        PASSOS[atual].final ? fechar(true) : mostrar(atual + 1));
+        passos[atual].final ? fechar(true) : mostrar(atual + 1));
     // clique no embaçado não faz nada: o passeio só anda pelos botões
     raiz.addEventListener("keydown", teclado);
 
@@ -116,7 +248,7 @@ function montar() {
 
 function teclado(evento) {
     if (evento.key === "Escape") fechar(false);
-    if (evento.key === "ArrowRight" && !PASSOS[atual].final) mostrar(atual + 1);
+    if (evento.key === "ArrowRight" && !passos[atual].final) mostrar(atual + 1);
     if (evento.key === "ArrowLeft" && atual > 0) mostrar(atual - 1);
     // o foco fica dentro do balão
     if (evento.key === "Tab") {
@@ -131,8 +263,8 @@ function teclado(evento) {
 
 function mostrar(indice) {
 
-    atual = Math.max(0, Math.min(PASSOS.length - 1, indice));
-    const passo = PASSOS[atual];
+    atual = Math.max(0, Math.min(passos.length - 1, indice));
+    const passo = passos[atual];
 
     irPara(passo.tela);
     if (passo.abrir) {
@@ -140,14 +272,14 @@ function mostrar(indice) {
         if (detalhes) detalhes.open = true;
     }
 
-    raiz.querySelector(".tut-passo").textContent = `${atual + 1} de ${PASSOS.length}`;
+    raiz.querySelector(".tut-passo").textContent = `${atual + 1} de ${passos.length}`;
     raiz.querySelector(".tut-titulo").textContent = passo.titulo;
     raiz.querySelector(".tut-texto").innerHTML = passo.texto;
     const aviso = raiz.querySelector(".tut-aviso");
     aviso.hidden = !passo.aviso;
     aviso.innerHTML = passo.aviso || "";
     raiz.querySelector(".tut-pontos").innerHTML =
-        PASSOS.map((_, i) => `<span class="${i === atual ? "ativo" : ""}"></span>`).join("");
+        passos.map((_, i) => `<span class="${i === atual ? "ativo" : ""}"></span>`).join("");
     raiz.querySelector(".tut-voltar").hidden = atual === 0;
     raiz.querySelector(".tut-pular").hidden = Boolean(passo.final);
     raiz.querySelector(".tut-proximo").textContent = passo.final ? "Começar" : atual === 0 ? "Vamos lá" : "Próximo";
@@ -165,7 +297,7 @@ function posicionar() {
 
     if (!raiz) return;
 
-    const passo = PASSOS[atual];
+    const passo = passos[atual];
     const alvo = passo.alvo && document.querySelector(passo.alvo);
     const largura = window.innerWidth;
     const altura = window.innerHeight;
@@ -237,9 +369,10 @@ function fechar(terminou) {
 }
 
 
-export function abrirTutorial() {
+export function abrirTutorial(conjunto = "geral", dados = {}) {
 
     if (raiz) return;
+    passos = conjunto === "presente" ? passosPresente(dados.nome) : GERAL;
     telaAntes = telaAtiva();
     montar();
     window.addEventListener("resize", posicionar);
@@ -251,7 +384,26 @@ export function abrirTutorial() {
 
 function iniciar() {
 
-    document.querySelector("#tutorial-abrir")?.addEventListener("click", abrirTutorial);
+    // quem tem o plano de presente revê o passeio dele; os outros, o geral
+    document.querySelector("#tutorial-abrir")?.addEventListener("click", () => {
+        let presente = false, nome = "";
+        try { presente = localStorage.getItem(CHAVE_PRESENTE) === "1"; nome = localStorage.getItem(CHAVE_NOME) || ""; } catch (erro) { /* sem storage: passeio geral */ }
+        abrirTutorial(presente ? "presente" : "geral", { nome });
+    });
+
+    // o plano de presente acabou de ser adicionado (js/compartilhar.js): abre o passeio exclusivo uma vez
+    document.addEventListener("kaizen:tutorial-presente", ({ detail }) => {
+        try {
+            localStorage.setItem(VISTO, "terminou");   // o passeio geral não precisa mais aparecer
+            if (localStorage.getItem(CHAVE_PRESENTE) === "1") return;   // já viu: não repete sozinho
+            localStorage.setItem(CHAVE_PRESENTE, "1");
+            localStorage.setItem(CHAVE_NOME, detail?.nome || "");
+        } catch (erro) { /* sem storage: mostra mesmo assim */ }
+        setTimeout(() => abrirTutorial("presente", { nome: detail?.nome || "" }), 900);
+    });
+
+    // abriu por um link de plano compartilhado: o passeio geral cobriria a janela de escolher os dias
+    if (window.kaizenAbriuLink || /#plano=/.test(location.hash)) return;
 
     const params = new URLSearchParams(location.search);
     if (params.has("demo")) return;

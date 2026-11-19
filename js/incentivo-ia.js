@@ -29,6 +29,9 @@ async function talvezMostrar() {
 
     if (!modal || jaTentou || silenciado()) return;
 
+    // durante o passeio do app a janelinha ficaria na frente dele: espera a próxima visita à tela da IA
+    if (document.querySelector(".tut")) return;
+
     // no site de demonstração não há o que conectar
     if (new URLSearchParams(location.search).has("demo")) return;
 
