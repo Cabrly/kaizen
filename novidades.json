@@ -1,5 +1,13 @@
 [
     {
+        "versao": "2.0.5",
+        "data": "2026-11-19",
+        "itens": [
+            "As atividades com questões agora mostram cada questão e alternativa em sua própria linha, e no celular o texto aparece inteiro em vez de cortado em duas linhas.",
+            "O passeio guiado passou a destacar os botões novos da Jornada (cenário, zoom e centralizar)."
+        ]
+    },
+    {
         "versao": "2.0.4",
         "data": "2026-11-19",
         "itens": [

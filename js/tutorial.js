@@ -105,7 +105,7 @@ function passosPresente(nome, notaPets = "") {
                    "abre a sessão no calendário, onde você estuda e marca o que fez. Toque em qualquer círculo da trilha pra ver outra fase."
         },
         {
-            tela: "estudos", alvo: ".trilha-cenarios",
+            tela: "estudos", alvo: ".trilha-ferramentas",
             titulo: "Mar ou floresta",
             texto: "O seu plano abre no mar. Se preferir, troque pra floresta aqui. É só visual."
         },
