@@ -27,6 +27,14 @@ export function renderizarTarefas(
     });
 
 
+    // o quadro só tem "A fazer" e "Concluído": o que estava nas colunas do meio volta pra "A fazer"
+    tarefas.forEach((tarefa) => {
+        if (tarefa.status === "em-andamento" || tarefa.status === "em-revisao") {
+            tarefa.status = "a-fazer";
+        }
+    });
+
+
     tarefas.forEach((tarefa) => {
 
         const area =

@@ -25,7 +25,7 @@ const PASSOS = [
         tela: "kanban",
         alvo: "#tela-kanban .kanban",
         titulo: "1. Seu quadro Kanban",
-        texto: "Suas tarefas em colunas: A fazer, Em andamento, Em revisão e Concluído. Arraste um cartão pra " +
+        texto: "Suas tarefas em colunas: A fazer e Concluído. Arraste um cartão pra " +
                "mudar de coluna; concluir tarefas faz a cena do fundo mudar."
     },
     {

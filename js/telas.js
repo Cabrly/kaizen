@@ -13,6 +13,7 @@ const abas =
 const paineis = {
     kanban: document.querySelector("#tela-kanban"),
     estudos: document.querySelector("#tela-estudos"),
+    calendario: document.querySelector("#tela-estudos"),   // mesmo painel, outra vista
     ia: document.querySelector("#tela-ia")
 };
 
@@ -21,7 +22,7 @@ const botaoNovaTarefa =
     document.querySelector("#botao-nova-tarefa");
 
 
-const CHAVE = "kaizen.tela-ativa.v1";
+const CHAVE = "kaizen.tela-ativa.v2";
 
 
 function lembrarTela(nome) {
@@ -36,9 +37,9 @@ function lembrarTela(nome) {
 function telaLembrada() {
     try {
         const salva = localStorage.getItem(CHAVE);
-        return salva in paineis ? salva : "kanban";
+        return salva in paineis ? salva : "estudos";
     } catch (erro) {
-        return "kanban";
+        return "estudos";
     }
 }
 
@@ -62,7 +63,12 @@ function ativarTela(nome) {
             return;
         }
 
-        painel.hidden = chave !== nome;
+        // Jornada e Calendário dividem o painel de estudos: só muda a vista
+        painel.hidden = !(chave === nome || (painel === paineis.estudos && ["estudos", "calendario"].includes(nome)));
+
+        if (painel === paineis.estudos && !painel.hidden) {
+            painel.dataset.vista = nome;
+        }
 
     });
 

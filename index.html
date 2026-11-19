@@ -27,13 +27,23 @@
 
     <!-- a fonte chega depois, sem segurar a primeira pintura (até lá, Arial) -->
     <link
-        href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700;900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@700;900&display=swap"
         rel="stylesheet"
         media="print"
         onload="this.media='all'"
     >
 
+    <script>
+        try {
+            var t = localStorage.getItem("kaizen.tema");
+            if (!t) t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
+            document.documentElement.dataset.tema = t;
+            document.documentElement.dataset.cor = localStorage.getItem("kaizen.cor") || "indigo";
+        } catch (e) { /* sem armazenamento: tema claro */ }
+    </script>
+
     <link rel="stylesheet" href="./style.css?v=tutorial1">
+    <link rel="stylesheet" href="./tema.css?v=28">
 
     <!-- com PIN, esconde o app antes de desenhar qualquer coisa (js/pin.js destrava) -->
     <script>
@@ -90,7 +100,7 @@
 
             <div>
                 <h1>KAIZEN</h1>
-                <p>Kanban Board</p>
+                <p>Jornada de estudos</p>
             </div>
 
         </div>
@@ -106,23 +116,34 @@
             <button
                 type="button"
                 class="nav-tab ativa"
-                data-tela="kanban"
+                data-tela="estudos"
                 role="tab"
                 aria-selected="true"
-                aria-controls="tela-kanban"
+                aria-controls="tela-estudos"
             >
-                Kanban
+                <svg class="nav-icone" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H14a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h5.5"/></svg><span class="nav-rotulo">Jornada</span>
             </button>
 
             <button
                 type="button"
                 class="nav-tab"
-                data-tela="estudos"
+                data-tela="calendario"
                 role="tab"
                 aria-selected="false"
                 aria-controls="tela-estudos"
             >
-                Estudos
+                <svg class="nav-icone" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span class="nav-rotulo">Calendário</span>
+            </button>
+
+            <button
+                type="button"
+                class="nav-tab"
+                data-tela="kanban"
+                role="tab"
+                aria-selected="false"
+                aria-controls="tela-kanban"
+            >
+                <svg class="nav-icone" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span class="nav-rotulo">Tarefas</span>
             </button>
 
             <button
@@ -133,19 +154,31 @@
                 aria-selected="false"
                 aria-controls="tela-ia"
             >
-                Assistente IA
+                <svg class="nav-icone" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span class="nav-rotulo">Assistente IA</span>
             </button>
 
         </nav>
 
-        <button
-            class="add-task"
-            type="button"
-            id="botao-nova-tarefa"
-        >
-            <span>+</span>
-            Nova tarefa
-        </button>
+        <div class="header-acoes">
+            <details class="cores" id="cores">
+                <summary class="tema-botao" aria-label="Escolher a cor do tema" title="Cor do tema">◐</summary>
+                <div class="cores-menu" role="group" aria-label="Cor do tema">
+                    <button type="button" data-cor="indigo"><span class="amostra" style="background:#2b3a8f"></span>Índigo</button>
+                    <button type="button" data-cor="rosa"><span class="amostra" style="background:#c2185b"></span>Rosa</button>
+                    <button type="button" data-cor="verde"><span class="amostra" style="background:#1f7a4d"></span>Verde</button>
+                    <button type="button" data-cor="laranja"><span class="amostra" style="background:#b45309"></span>Laranja</button>
+                </div>
+            </details>
+            <button type="button" class="tema-botao" id="tema-alternar" aria-label="Alternar tema claro e escuro" title="Tema claro/escuro">☾</button>
+            <button
+                class="add-task"
+                type="button"
+                id="botao-nova-tarefa"
+            >
+                <span>+</span>
+                Nova tarefa
+            </button>
+        </div>
 
     </header>
 
@@ -366,98 +399,6 @@
             </section>
 
 
-            <!-- EM ANDAMENTO -->
-            <section
-                class="column"
-                data-coluna="em-andamento"
-            >
-
-                <div class="column-header">
-
-                    <div class="column-title">
-
-                        <span
-                            class="status red"
-                        ></span>
-
-                        <h3>
-                            Em andamento
-                        </h3>
-
-                    </div>
-
-                    <span
-                        class="task-count"
-                        data-contador="em-andamento"
-                    >
-                        0
-                    </span>
-
-                </div>
-
-
-                <div
-                    class="tasks"
-                    data-tarefas="em-andamento"
-                ></div>
-
-
-                <button
-                    class="add-column-task"
-                    type="button"
-                >
-                    + Adicionar tarefa
-                </button>
-
-            </section>
-
-
-            <!-- EM REVISÃO -->
-            <section
-                class="column"
-                data-coluna="em-revisao"
-            >
-
-                <div class="column-header">
-
-                    <div class="column-title">
-
-                        <span
-                            class="status review"
-                        ></span>
-
-                        <h3>
-                            Em revisão
-                        </h3>
-
-                    </div>
-
-                    <span
-                        class="task-count"
-                        data-contador="em-revisao"
-                    >
-                        0
-                    </span>
-
-                </div>
-
-
-                <div
-                    class="tasks"
-                    data-tarefas="em-revisao"
-                ></div>
-
-
-                <button
-                    class="add-column-task"
-                    type="button"
-                >
-                    + Adicionar tarefa
-                </button>
-
-            </section>
-
-
             <!-- CONCLUÍDO -->
             <section
                 class="column"
@@ -535,22 +476,27 @@
             </div>
 
             <div class="est-topo-acoes">
-                <button type="button" class="est-atalho" id="resumo-abrir"
-                        title="O que você estudou nos últimos 7 dias e o que fazer na próxima semana">
-                    📊 Semana
-                </button>
-                <button type="button" class="est-atalho" id="pets-abrir"
-                        title="Cada plano vira um pet que você cuida estudando">
-                    🐾 Pets
-                </button>
                 <button type="button" class="est-atalho" id="fc-abrir"
                         title="Cartões de revisão do que você estudou nos últimos dias">
                     🃏 Flashcards <span class="fc-contador" id="fc-contador" hidden></span>
                 </button>
-                <button type="button" class="est-atalho" id="perfil-abrir"
+                <details class="est-mais" id="est-mais">
+                    <summary class="est-atalho">Mais</summary>
+                    <div class="est-mais-menu">
+                        <button type="button" class="est-atalho" id="resumo-abrir"
+                        title="O que você estudou nos últimos 7 dias e o que fazer na próxima semana">
+                    📊 Semana
+                </button>
+                        <button type="button" class="est-atalho" id="pets-abrir"
+                        title="Cada plano vira um pet que você cuida estudando">
+                    🐾 Pets
+                </button>
+                        <button type="button" class="est-atalho" id="perfil-abrir"
                         title="O que a IA leva em conta pra explicar do seu jeito">
                     🧠 O que a IA sabe
                 </button>
+                    </div>
+                </details>
                 <button
                     type="button"
                     class="btn-primario"
@@ -561,6 +507,9 @@
             </div>
 
         </section>
+
+
+        <section class="est-trilha" id="est-trilha" aria-label="Trilha de fases" hidden></section>
 
 
         <section
@@ -1122,7 +1071,6 @@
             <section class="pets-painel" id="pets-painel"></section>
 
             <div class="form-acoes pets-rodape">
-                <button type="button" class="est-link pets-desligar" id="pets-desligar">Desligar os pets</button>
                 <button type="button" class="btn-secundario" data-fechar>Fechar</button>
             </div>
 
@@ -1182,6 +1130,8 @@
             </label>
 
             <button type="button" class="est-link" id="est-config-ia">Configurar onde a IA roda →</button>
+
+            <button type="button" class="est-link" id="gal-abrir">Prefere um plano pronto, sem esperar a IA? Ver a galeria →</button>
 
             <button type="button" class="est-link" id="imp-abrir">Recebeu o link de um plano? Cole aqui →</button>
 
@@ -1528,6 +1478,16 @@
 
     <script
         type="module"
+        src="./js/galeria.js?v=2"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/sequencia.js?v=1"
+    ></script>
+
+    <script
+        type="module"
         src="./js/compartilhar.js?v=2"
     ></script>
 
@@ -1583,7 +1543,7 @@
 
     <script
         type="module"
-        src="./js/main.js"
+        src="./js/main.js?v=sf1"
     ></script>
 
     <script
@@ -1613,6 +1573,16 @@
 
     <script
         type="module"
+        src="./js/tema.js?v=2"
+    ></script>
+
+    <script
+        type="module"
+        src="./js/trilha.js?v=16"
+    ></script>
+
+    <script
+        type="module"
         src="./js/entregas.js?v=3"
     ></script>
 
@@ -1623,7 +1593,7 @@
 
     <script
         type="module"
-        src="./js/pets.js?v=8"
+        src="./js/pets.js?v=sempre1"
     ></script>
 
 

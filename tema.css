@@ -1,0 +1,1108 @@
+/* =========================================================
+   TEMA — papel, tinta e índigo (por cima do style.css)
+   ---------------------------------------------------------
+   Índigo (o azul do tingimento japonês) pra agir e navegar,
+   ouro pro que já foi feito, pedra pro que ainda vem.
+   A trilha é um caminho de pedras de jardim; o único bloco
+   forte da tela é o cartão da fase. Letra Zen Maru Gothic.
+========================================================= */
+
+:root {
+    --papel: #f5f6fa;
+    --superficie: #ffffff;
+    --tinta: #1c2033;
+    --suave: #4b5168;
+    --linha: #dadded;
+    --indigo: #2b3a8f;
+    --indigo-fundo: #1b2766;
+    --indigo-claro: #e6e9f8;
+    --ouro: #f2b632;
+    --ouro-fundo: #c98f0a;
+    --ouro-claro: #fdf1d3;
+    --pedra: #c9cedf;
+    --pedra-fundo: #a8aec6;
+    --brasa: #b3261e;
+    --botao: #2b3a8f;
+    --botao-fundo: #1b2766;
+    --botao-hover: #34459f;
+    --heroi: #2b3a8f;
+    --heroi-fundo: #1b2766;
+    --texto-acento: #2b3a8f;
+    color-scheme: light;
+}
+
+body, button, input, select, textarea {
+    font-family: "Zen Maru Gothic", "Noto Sans JP", system-ui, sans-serif;
+}
+
+body {
+    background: var(--papel) !important;
+    color: var(--tinta);
+}
+
+/* sem tinta, desenhos nem cenas atrás */
+#fundo-tinta, #fundo-arte, #fundo-cena, .fundo-tinta, .fundo-cena { display: none !important; }
+
+/* ---------- topo ---------- */
+.header, body.com-vidro .header {
+    background: var(--superficie) !important;
+    background-image: none !important;
+    border-bottom: 1px solid var(--linha);
+}
+
+.logo-jp { background: var(--botao); color: #fff; }
+.logo h1 { font-weight: 900; letter-spacing: 2px; color: var(--tinta); }
+.logo p { color: var(--suave); font-weight: 500; }
+
+/* ---------- navegação ---------- */
+.nav-telas { background: transparent; border: 0; gap: 4px; }
+.nav-bolha, .nav-telas.com-bolha .nav-bolha { display: none !important; }
+
+.nav-telas .nav-tab, .nav-telas.com-bolha .nav-tab {
+    padding: 10px 18px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--suave);
+    background: transparent;
+    border: 0;
+    border-radius: 12px;
+}
+
+.nav-telas .nav-tab:hover { background: var(--indigo-claro); color: var(--texto-acento); }
+
+.nav-telas .nav-tab.ativa, .nav-telas.com-bolha .nav-tab.ativa {
+    color: var(--texto-acento);
+    background: var(--indigo-claro);
+    box-shadow: none;
+}
+
+/* ---------- títulos da tela ---------- */
+.intro h2, .intro p, .tag { text-shadow: none !important; }
+.intro h2 { color: var(--tinta) !important; font-size: 32px; font-weight: 900; }
+.intro p { color: var(--suave) !important; font-size: 16px; font-weight: 500; }
+.tag { color: var(--texto-acento) !important; font-weight: 700; letter-spacing: 1px; }
+
+/* ---------- botões ---------- */
+.btn-primario, .btn-secundario, .est-atalho, .add-task {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    min-height: 44px;
+    padding: 10px 20px;
+    border-radius: 14px;
+    transition: transform .08s, box-shadow .08s, background .15s;
+}
+
+.btn-primario, .add-task {
+    color: #fff;
+    background: var(--botao);
+    border: 0;
+    box-shadow: 0 3px 0 var(--botao-fundo);
+}
+
+.btn-primario:hover, .add-task:hover { background: var(--botao-hover); }
+
+.btn-secundario, .est-atalho {
+    color: var(--texto-acento);
+    background: var(--superficie);
+    border: 1.5px solid var(--linha);
+    box-shadow: 0 3px 0 var(--linha);
+}
+
+.btn-secundario:hover, .est-atalho:hover { background: var(--indigo-claro); }
+
+.btn-primario:active, .add-task:active, .btn-secundario:active, .est-atalho:active {
+    transform: translateY(3px);
+    box-shadow: none;
+}
+
+.add-task span { color: #fff; }
+
+/* ---------- cartões ---------- */
+.est-cartao, .est-plano, .task, .filtros, .ia-chat, .column,
+body.com-vidro .est-cartao, body.com-vidro .est-plano, body.com-vidro .task,
+body.com-vidro .filtros, body.com-vidro .ia-chat, body.com-vidro .column {
+    background: var(--superficie) !important;
+    background-image: none !important;
+    border: 1px solid var(--linha);
+    border-radius: 16px;
+    box-shadow: none;
+}
+
+.est-sessao { border: 1px solid var(--linha); border-radius: 14px; background: var(--superficie); }
+.est-item { border-radius: 12px; }
+.est-marca { border-radius: 10px; border: 1.5px solid var(--linha); font-weight: 700; }
+.est-marca.feito[aria-pressed="true"] { background: var(--ouro); border-color: var(--ouro-fundo); color: #1c2033; }
+.est-progresso, .progress-bar { border-radius: 8px; }
+.est-progresso div { background: var(--indigo) !important; }
+
+.estado-sucesso { color: var(--suave) !important; font-weight: 700; font-size: 14px; }
+.est-sutil, .est-plano-info, .est-dia small { color: var(--suave); }
+
+/* ---------- quadro: só "A fazer" e "Concluído" ---------- */
+.kanban { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 650px) { .kanban { grid-template-columns: 1fr; } }
+.column { background: var(--coluna) !important; }
+
+/* tarefas concluídas: limpas, sem tinta, inclinação nem corte */
+.task.completed {
+    transform: none !important; clip-path: none !important; filter: none !important;
+    background: var(--ouro-claro) !important; border-color: #f0d28a !important;
+}
+.task.completed::before, .task.completed::after, .task.completed .corte-linha, .task.completed .mancha,
+.task.completed .selo-concluido, .task.completed .selo-carimbo { display: none !important; }
+.task.completed .task-title, .task.completed h3, .task.completed strong { text-decoration: line-through; color: var(--suave); }
+
+/* ---------- trilha: pedras de jardim ---------- */
+.est-trilha { background: transparent !important; border: 0; padding: 0; margin-bottom: 24px; }
+
+.trilha-topo { margin-bottom: 12px; }
+.trilha-topo h3 { font-size: 24px; font-weight: 900; color: var(--tinta); }
+.trilha-topo p, .trilha-nome { font-size: 15px; font-weight: 500; color: var(--suave); opacity: 1; }
+.trilha-topo select { font-family: inherit; }
+
+.trilha-barra { height: 10px; border-radius: 5px; background: var(--linha); margin-bottom: 20px; }
+.trilha-barra div { background: var(--ouro); border-radius: 5px; }
+
+/* o único bloco forte: a fase de agora, em índigo cheio */
+.trilha-heroi {
+    background: var(--heroi);
+    color: #fff;
+    border: 0;
+    border-radius: 22px;
+    box-shadow: 0 5px 0 var(--heroi-fundo);
+    padding: 24px 26px 26px;
+    gap: 12px;
+}
+
+.trilha-heroi h3 { color: #fff; font-size: 30px; font-weight: 900; line-height: 1.15; }
+.trilha-etapa { color: #d6dbf5; opacity: 1; font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.trilha-objetivo { color: #fff; opacity: 1; font-size: 17px; font-weight: 500; line-height: 1.55; }
+
+.trilha-itens li {
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
+    border: 0;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.trilha-itens li small { color: #ffd77a; opacity: 1; font-size: 13px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+.trilha-itens li.feito { opacity: .65; }
+
+.trilha-heroi .btn-primario {
+    color: #1c2033;
+    background: var(--ouro);
+    box-shadow: 0 4px 0 var(--ouro-fundo);
+    align-self: flex-start;
+    padding: 13px 28px;
+    font-size: 17px;
+}
+
+.trilha-heroi .trilha-aviso { background: var(--ouro-claro); color: #4d3500; border-radius: 12px; font-weight: 500; }
+.trilha-aviso button { color: #2b3a8f; font-weight: 700; }
+
+/* caminho */
+.trilha-rolagem svg { max-width: 520px; margin: 0 auto; }
+.trilha-fio { stroke: var(--pedra); stroke-width: 3; stroke-dasharray: 1 11; display: block; }
+.trilha-fio.feito { stroke: var(--ouro); stroke-width: 5; stroke-dasharray: none; opacity: 1; }
+
+/* pedras: elipses achatadas com uma "sombra" de pedra embaixo */
+.trilha-no .base, .trilha-no .disco { transform-box: fill-box; transform-origin: center; transform: scaleY(.88); }
+.trilha-no .base { fill: var(--pedra-fundo); }
+.trilha-no .disco { fill: var(--pedra); stroke: none; }
+.trilha-no:hover .disco { fill: #d6dae8; }
+.trilha-no .num { fill: var(--tinta); font-size: 20px; font-weight: 900; font-family: "Zen Maru Gothic", sans-serif; }
+
+.trilha-no.andamento .base { fill: var(--botao-fundo); }
+.trilha-no.andamento .disco { fill: var(--botao); }
+.trilha-no.andamento .num { fill: #fff; }
+
+.trilha-no.feita .base { fill: var(--ouro-fundo); }
+.trilha-no.feita .disco { fill: var(--ouro); }
+.trilha-no.feita .num { fill: #1c2033; font-size: 24px; }
+
+.trilha-no.atual .base { fill: var(--botao-fundo); }
+.trilha-no.atual .disco { fill: var(--botao); stroke: none; }
+.trilha-no.atual .num { fill: #fff; }
+.trilha-no .pulso { fill: var(--indigo); opacity: .18; }
+
+.trilha-no.escolhida .disco { stroke: var(--tinta); stroke-width: 3; }
+
+.trilha-no .balao rect, .trilha-no .balao path { fill: var(--superficie); stroke: var(--linha); stroke-width: 1.5; }
+.trilha-no .balao path { stroke: none; }
+.trilha-no .balao text { fill: var(--texto-acento); font-size: 13px; font-weight: 700; letter-spacing: 0; font-family: "Zen Maru Gothic", sans-serif; }
+
+.trilha-no .rotulo { fill: var(--tinta); font-size: 17px; font-weight: 700; font-family: "Zen Maru Gothic", sans-serif; }
+.trilha-no .data { fill: var(--suave); font-size: 14px; font-weight: 500; opacity: 1; font-family: "Zen Maru Gothic", sans-serif; }
+.trilha-no .data.atrasada { fill: var(--brasa); font-weight: 700; }
+
+/* pet que acompanha a pessoa na trilha */
+.trilha-pet { overflow: visible; pointer-events: none; }
+.trilha-pet-pula { width: 78px; height: 78px; animation: trilha-pet-pula 1.6s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes trilha-pet-pula { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .trilha-pet-pula { animation: none; } }
+
+/* ---------- calendário ---------- */
+.est-cal-dia { border-radius: 12px; }
+.est-cal-dia.hoje, .est-cal-dia.selecionado { border-color: var(--indigo); }
+
+/* foco visível */
+:focus-visible { outline: 3px solid var(--indigo); outline-offset: 2px; }
+
+/* ---------- celular: barra de baixo ---------- */
+@media (max-width: 650px) {
+    .header .nav-telas {
+        background: var(--superficie);
+        border-top: 1px solid var(--linha);
+        box-shadow: none;
+    }
+
+    .nav-telas .nav-tab, .nav-telas.com-bolha .nav-tab {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--suave);
+        border: 0;
+    }
+
+    .nav-telas .nav-tab.ativa, .nav-telas.com-bolha .nav-tab.ativa {
+        color: var(--texto-acento);
+        background: var(--indigo-claro);
+    }
+}
+
+/* o resto do vermelho antigo vira índigo (vermelho só pra erro e atraso) */
+.est-cal-dia.hoje .est-cal-num { background: var(--indigo); color: #fff; }
+.est-cal-dia.selecionado { border-color: var(--indigo); box-shadow: 0 0 0 2px var(--indigo-claro); }
+.est-cal-dia.atrasado::after { background: var(--brasa); }
+.est-dia-titulo { border-bottom-color: var(--indigo); }
+.est-dia-titulo span { background: var(--indigo); color: #fff; }
+.est-chip.ativo { background: var(--indigo); border-color: var(--indigo); color: #fff; }
+.est-item-texto a:hover, .est-link, .est-link:hover { color: var(--indigo); }
+.est-cal-dia .est-cal-ponto, .est-cal-dia [class*="ponto"] { background: var(--indigo); }
+.est-cal-evento { border-left-color: var(--indigo); }
+
+/* ---------- fundo: ondas (seigaiha) bem suaves, na cor do tema ---------- */
+body {
+    background-color: var(--fundo) !important;
+    background-image: linear-gradient(180deg, var(--brilho-topo) 0, rgba(255, 255, 255, 0) 360px), var(--ondas) !important;
+    background-repeat: no-repeat, repeat !important;
+    background-attachment: scroll, scroll !important;
+}
+
+/* o caminho de pedras fica sobre um painel claro: o desenho do fundo não disputa com ele */
+.trilha-rolagem { background: rgba(255, 255, 255, .88); border-radius: 22px; padding: 18px 8px 8px; margin-top: 18px; }
+.trilha-barra { background: var(--barra); }
+
+/* =========================================================
+   MAIS COMPACTO: menos ar entre as coisas
+========================================================= */
+
+.header { height: 64px; }
+.logo-jp { width: 40px; height: 40px; font-size: 18px; }
+
+.intro { margin-bottom: 16px; align-items: center; }
+.intro h2 { font-size: 26px; margin: 2px 0; }
+.intro p { font-size: 15px; margin-bottom: 0; }
+.est-topo-acoes { gap: 8px; }
+.btn-primario, .btn-secundario, .est-atalho, .add-task { min-height: 40px; padding: 8px 16px; font-size: 14px; }
+
+.est-trilha { margin-bottom: 16px; }
+.trilha-topo { margin-bottom: 6px; }
+.trilha-topo h3 { font-size: 20px; }
+.trilha-topo p, .trilha-nome { font-size: 14px; }
+.trilha-barra { height: 8px; margin-bottom: 12px; }
+
+.trilha-heroi { padding: 18px 20px 20px; gap: 8px; margin-bottom: 0; border-radius: 18px; }
+.trilha-heroi h3 { font-size: 24px; }
+.trilha-objetivo { font-size: 15px; line-height: 1.45; }
+.trilha-itens { gap: 6px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.trilha-itens li { padding: 8px 10px; font-size: 14px; }
+.trilha-heroi .btn-primario { padding: 10px 22px; font-size: 16px; }
+
+.trilha-rolagem { margin-top: 12px; padding: 8px 6px 4px; border-radius: 18px; }
+.trilha-no .rotulo { font-size: 16px; }
+.trilha-no .data { font-size: 13px; }
+.trilha-no .num { font-size: 18px; }
+
+.est-planos { margin-bottom: 12px; gap: 10px; }
+.est-grade { gap: 14px; }
+.est-cartao { padding: 14px; }
+
+@media (max-width: 650px) {
+    .header { height: auto; }
+    .intro h2 { font-size: 23px; }
+    .intro p { display: none; }
+    .est-topo-acoes { gap: 6px; }
+}
+
+/* =========================================================
+   JORNADA NA HORIZONTAL (computador) / VERTICAL (celular)
+========================================================= */
+
+@media (min-width: 1000px) {
+
+    /* cartão da fase: texto de um lado, itens do outro */
+    .trilha-heroi {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+        column-gap: 28px;
+        row-gap: 8px;
+        align-content: start;
+    }
+    .trilha-heroi > * { grid-column: 1; }
+    .trilha-heroi > .trilha-detalhes { grid-column: 2; grid-row: 1 / span 6; align-self: center; }
+    .trilha-detalhes .trilha-itens { grid-template-columns: 1fr 1fr; }
+    .trilha-detalhes summary { display: none; }
+
+    /* trilha em linha, rolando de lado */
+    .trilha-rolagem.horizontal { overflow-x: auto; overflow-y: hidden; padding: 6px 0 10px; scrollbar-width: thin; }
+    .trilha-rolagem.horizontal svg { max-width: none; margin: 0; display: block; }
+}
+
+/* ---------- menos botões juntos: o resto vai pro "Mais" ---------- */
+.est-topo-acoes { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+
+.est-mais { position: relative; }
+.est-mais summary { list-style: none; cursor: pointer; user-select: none; display: inline-flex; align-items: center; }
+.est-mais summary::-webkit-details-marker { display: none; }
+.est-mais summary::after { content: "▾"; margin-left: 8px; font-size: 11px; }
+.est-mais[open] summary { background: var(--indigo-claro); }
+
+.est-mais-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 50;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    background: var(--superficie);
+    border: 1px solid var(--linha);
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(20, 24, 60, .18);
+}
+
+.est-mais-menu .est-atalho {
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    color: var(--tinta);
+    font-weight: 500;
+}
+
+.est-mais-menu .est-atalho:hover { background: var(--indigo-claro); }
+
+.header .header-acoes { grid-column: 3; justify-self: end; display: flex; align-items: center; gap: 10px; }
+.tema-botao {
+    width: 40px; height: 40px; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; color: var(--suave);
+    border: 1.5px solid var(--linha); border-radius: 12px; cursor: pointer; font-size: 18px;
+}
+.tema-botao:hover { background: var(--indigo-claro); color: var(--texto-acento); }
+@media (max-width: 650px) { .header .header-acoes { grid-column: 2; } }
+
+/* =========================================================
+   TEMA ESCURO (segue o aparelho; o botão do topo troca)
+========================================================= */
+
+html[data-tema="escuro"] {
+    color-scheme: dark;
+    --papel: #12141f;
+    --superficie: #1c2033;
+    --tinta: #eceefa;
+    --suave: #aab0cc;
+    --linha: #333857;
+    --indigo: #aab4ff;
+    --indigo-fundo: #232a5c;
+    --indigo-claro: #272d57;
+    --pedra: #3b4163;
+    --pedra-fundo: #292e49;
+    --brasa: #ff8a80;
+    --ouro-claro: #3a3015;
+    --botao: #4a5bd6;
+    --botao-fundo: #2e3a99;
+    --botao-hover: #5868e0;
+    --heroi: #2f3b9a;
+    --heroi-fundo: #1f2870;
+    --texto-acento: #b9c1ff;
+}
+
+
+html[data-tema="escuro"] .header, html[data-tema="escuro"] body.com-vidro .header { background: var(--superficie) !important; }
+html[data-tema="escuro"] .logo h1 { color: var(--tinta); }
+html[data-tema="escuro"] .intro h2 { color: var(--tinta) !important; }
+html[data-tema="escuro"] .task.completed { border-color: #5a4a1c !important; }
+html[data-tema="escuro"] .trilha-rolagem { background: rgba(28, 32, 51, .88); }
+html[data-tema="escuro"] .trilha-heroi .trilha-aviso { color: #f3e3b0; }
+html[data-tema="escuro"] .trilha-no:hover .disco { fill: #4a5078; }
+.est-cal-dia { background: var(--campo); color: var(--tinta); }
+html[data-tema="escuro"] .est-cal-sessao { color: var(--tinta); }
+html[data-tema="escuro"] .est-cal-dia.hoje .est-cal-num { background: var(--botao); }
+html[data-tema="escuro"] .est-dia-titulo span { background: var(--botao); }
+html[data-tema="escuro"] .est-item, html[data-tema="escuro"] .est-sessao-cab { color: var(--tinta); }
+html[data-tema="escuro"] .est-item-texto a { color: var(--texto-acento); }
+html[data-tema="escuro"] .est-chip.ativo { background: var(--botao); border-color: var(--botao); }
+html[data-tema="escuro"] input, html[data-tema="escuro"] select, html[data-tema="escuro"] textarea {
+    background: var(--campo); color: var(--tinta); border-color: var(--linha);
+}
+html[data-tema="escuro"] dialog, html[data-tema="escuro"] .pin-cartao {
+    background: var(--superficie); color: var(--tinta); border-color: var(--linha);
+}
+html[data-tema="escuro"] .task, html[data-tema="escuro"] .filtros, html[data-tema="escuro"] .ia-chat { color: var(--tinta); }
+html[data-tema="escuro"] .nav-telas .nav-tab { color: var(--suave); }
+html[data-tema="escuro"] .nav-telas .nav-tab.ativa { color: var(--texto-acento); }
+html[data-tema="escuro"] .header .nav-telas { background: var(--superficie); border-color: var(--linha); }
+html[data-tema="escuro"] .est-mais-menu { box-shadow: 0 12px 30px rgba(0, 0, 0, .5); }
+
+/* ---------- celular: cartão da fase com o botão primeiro, filtros mais curtos ---------- */
+@media (max-width: 999px) {
+    .trilha-heroi .trilha-aviso { order: 2; }
+    .trilha-heroi .btn-primario { order: 3; align-self: stretch; text-align: center; }
+    .trilha-heroi .trilha-detalhes { order: 4; }
+}
+
+@media (max-width: 650px) {
+    .filtros { grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; }
+    .filtros .campo-busca { grid-column: 1 / -1; }
+    .filtros .limpar-filtros { grid-column: 1 / -1; }
+    .filtros label { font-size: 12px; }
+}
+
+/* ---------- menos texto de cara no celular ---------- */
+.trilha-detalhes summary {
+    cursor: pointer;
+    list-style: none;
+    color: #d6dbf5;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 4px 0;
+}
+.trilha-detalhes summary::-webkit-details-marker { display: none; }
+.trilha-detalhes summary::before { content: "＋ "; }
+.trilha-detalhes[open] summary::before { content: "－ "; }
+.trilha-detalhes .trilha-itens { margin-top: 8px; }
+
+@media (max-width: 999px) {
+    .trilha-objetivo {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        overflow: hidden;
+        font-size: 15px;
+    }
+    .trilha-heroi h3 { font-size: 22px; }
+    .trilha-itens { grid-template-columns: 1fr; }
+    .trilha-itens li { padding: 8px 10px; font-size: 14px; }
+    .est-item-texto p {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        overflow: hidden;
+    }
+}
+
+
+/* ---------- escolha da jornada: cartõezinhos com o bichinho ---------- */
+.trilha-topo { flex-direction: column; align-items: stretch; gap: 10px; }
+.trilha-escolha {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 4px 2px 8px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+}
+
+.trilha-cartao {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 210px;
+    max-width: 280px;
+    padding: 10px 16px 10px 10px;
+    text-align: left;
+    font-family: inherit;
+    color: var(--tinta);
+    background: var(--superficie);
+    border: 2px solid var(--linha);
+    border-radius: 22px;
+    box-shadow: 0 3px 0 var(--linha);
+    cursor: pointer;
+    transition: transform .12s, box-shadow .12s, border-color .12s;
+}
+
+.trilha-cartao:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 0 var(--linha); }
+.trilha-cartao:disabled { cursor: default; }
+
+.trilha-cartao.escolhido {
+    background: var(--indigo-claro);
+    border-color: var(--botao);
+    box-shadow: 0 3px 0 var(--botao);
+}
+
+.trilha-avatar {
+    flex: none;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--cor) 22%, var(--superficie));
+    overflow: hidden;
+}
+
+.trilha-avatar .pet { width: 100%; height: 100%; }
+.trilha-avatar-letra { font-size: 22px; font-weight: 900; color: var(--tinta); }
+
+.trilha-cartao-texto { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.trilha-cartao-texto strong {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+.trilha-cartao-texto small { font-size: 13px; font-weight: 500; color: var(--suave); }
+
+.trilha-mini { display: block; height: 6px; border-radius: 3px; background: var(--linha); overflow: hidden; margin-top: 3px; }
+.trilha-mini i { display: block; height: 100%; background: var(--ouro); border-radius: 3px; }
+
+@media (max-width: 650px) {
+    .trilha-cartao { min-width: 180px; }
+    .trilha-topo { margin-bottom: 4px; }
+}
+
+/* =========================================================
+   ASSISTENTE IA — cabe no celular e usa as cores do tema
+========================================================= */
+
+/* a causa da quebra: itens de grid não encolhiam abaixo do conteúdo (select com texto longo) */
+.ia-painel { grid-template-columns: 260px minmax(0, 1fr); }
+.ia-painel > *, .ia-config > *, .srv, .srv-item, .srv-texto { min-width: 0; }
+.ia-config select, .ia-config input { max-width: 100%; }
+.srv-texto strong, .srv-texto small { overflow-wrap: anywhere; }
+
+.ia-config { border-top-color: var(--botao); border-radius: 16px; }
+.ia-chat { border-radius: 18px; }
+.ia-bolha { border-radius: 16px; font-size: 15px; }
+.ia-bolha-usuario { background: var(--botao); color: #fff; border-bottom-right-radius: 4px; }
+.ia-bolha-assistente {
+    background: var(--papel);
+    color: var(--tinta);
+    border: 1px solid var(--linha);
+    border-left: 4px solid var(--botao);
+    border-bottom-left-radius: 4px;
+}
+.ia-erro { color: var(--brasa); background: var(--ouro-claro); border-left-color: var(--brasa); border-radius: 12px; }
+.ia-form { background: var(--superficie); border-top-color: var(--linha); }
+.ia-input { background: var(--papel); color: var(--tinta); border-color: var(--linha); border-radius: 12px; font-size: 15px; }
+.ia-input:focus { background: var(--superficie); border-color: var(--botao); box-shadow: 0 0 0 3px color-mix(in srgb, var(--botao) 25%, transparent); }
+.ia-vazio { color: var(--suave); }
+
+@media (max-width: 900px) {
+    .ia-painel { grid-template-columns: minmax(0, 1fr); }
+    /* a conversa vem primeiro; os ajustes ficam logo abaixo */
+    .ia-chat { order: -1; }
+}
+
+@media (max-width: 650px) {
+    .tela-ia { width: 94%; margin-top: 12px; }
+    .ia-chat { height: calc(100dvh - 250px); min-height: 340px; }
+    .ia-mensagens { padding: 12px; }
+    .ia-bolha, .ia-erro { max-width: 90%; }
+    .ia-form { padding: 10px; gap: 8px; }
+    .ia-enviar { padding: 10px 14px; }
+    .ia-config { flex-direction: column; align-items: stretch; }
+    .ia-config .campo-filtro { min-width: 0; }
+}
+
+@media (max-width: 650px) {
+    /* bloco simples: os filhos ocupam exatamente a largura útil do painel */
+    .ia-config { display: block; }
+    .ia-config > * { width: auto; max-width: 100%; margin-left: 0; margin-right: 0; }
+    .ia-config > * + * { margin-top: 16px; }
+}
+
+/* rodapé (backup, sincronia, acessibilidade…) legível no escuro */
+html[data-tema="escuro"] footer, html[data-tema="escuro"] footer p { color: var(--suave); }
+html[data-tema="escuro"] footer button {
+    background: var(--superficie); color: var(--tinta); border-color: var(--linha);
+}
+
+/* =========================================================
+   LEGIBILIDADE — nenhum texto abaixo de 4,5:1 de contraste
+   (checado por script nos dois temas, no computador e no celular)
+========================================================= */
+
+.est-cal-cab { color: var(--suave); font-weight: 700; }
+.est-cal-dia.fora { opacity: 1; }
+.est-cal-dia.fora .est-cal-num, .est-cal-dia.fora .est-cal-sessao { color: var(--suave); }
+.est-icone { color: var(--suave); }
+.est-icone:hover { color: var(--texto-acento); }
+.est-sutil, .est-vazio p, .est-dia p, .est-dia-titulo + p { color: var(--suave); }
+.campo-filtro label, .progress span, .progress strong { color: var(--suave); }
+.limpar-filtros { color: var(--brasa); border-color: var(--brasa); background: transparent; }
+.task-count { background: var(--papel); color: var(--tinta); border-color: var(--linha); }
+.add-column-task { color: var(--suave); border-color: var(--pedra-fundo); }
+.add-column-task:hover { color: var(--texto-acento); }
+footer, footer p { color: var(--suave); font-size: 13px; }
+.rodape-backup .btn-secundario {
+    background: var(--superficie);
+    color: var(--texto-acento);
+    border: 1.5px solid var(--linha);
+    font-size: 13px;
+    min-height: 36px;
+    padding: 6px 14px;
+    box-shadow: none;
+}
+.rodape-backup .btn-secundario:hover { background: var(--indigo-claro); }
+
+/* painel escuro do Assistente (fica escuro nos dois temas) */
+.ia-config small, .ia-config .srv-texto small, .ia-config .srv-dica, .ia-config .ia-dica { color: #d0d0da; }
+.ia-config a { color: #d4d9ff; text-decoration: underline; }
+.ia-config .btn-secundario { background: transparent; color: #f2f2f2; border: 1.5px solid #6a6a78; box-shadow: none; }
+.ia-config .btn-secundario:hover { background: #2a2a33; }
+.ia-config .ia-limpar { color: #ffc2c7; border-color: #8a5a60; }
+
+
+/* =========================================================
+   FLORESTA — o caminho da jornada, de noite
+   Começa escuro; cada fase concluída acende uma fogueira,
+   ilumina as árvores em volta e o céu amanhece um pouco.
+   O painel é escuro nos dois temas, então o texto dele é claro.
+========================================================= */
+
+.trilha-rolagem.floresta {
+    --tinta: #f4f1e6;
+    --suave: #cdd6d2;
+    --brasa: #ffb4ab;
+    --pedra: #aeb6cf;
+    --pedra-fundo: #7d86a6;
+    background-color: #0f2a22;
+    border: 1px solid #1d3b33;
+    color: #f4f1e6;
+}
+
+.floresta .trilha-no .num { fill: #1c2033; }
+.floresta .trilha-no.andamento .num, .floresta .trilha-no.atual .num { fill: #ffffff; }
+.floresta .trilha-no.feita .num { fill: #1c2033; }
+.floresta .trilha-no .rotulo { fill: #f4f1e6; }
+.floresta .trilha-no .data { fill: #cdd6d2; }
+.floresta .trilha-no .data.atrasada { fill: #ffb4ab; }
+.floresta .trilha-no .pulso { fill: #ffd166; opacity: .25; }
+.floresta .trilha-no:hover .disco { fill: #c9d0e6; }
+.floresta .trilha-no.escolhida .disco { stroke: #ffd166; stroke-width: 3; }
+.floresta .trilha-fio { stroke: rgba(244, 241, 230, .35); }
+.floresta .trilha-fio.feito { stroke: #ffb347; stroke-width: 4; }
+
+.brilho-fogo { mix-blend-mode: screen; animation: fogo-pulsa 2.4s ease-in-out infinite; }
+@keyframes fogo-pulsa { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+
+.chama { transform-box: fill-box; transform-origin: 50% 100%; animation: chama 0.8s ease-in-out infinite alternate; }
+.chama2 { animation-duration: 0.6s; animation-delay: -.3s; }
+@keyframes chama { from { transform: scale(1, 1) rotate(-2deg); } to { transform: scale(.88, 1.14) rotate(2deg); } }
+
+.fogueira.acendendo { transform-box: fill-box; transform-origin: 50% 100%; animation: fogo-acende 1.1s ease-out both; }
+@keyframes fogo-acende { from { opacity: 0; transform: translate(var(--tx, 0), 0) scale(.2); } to { opacity: 1; } }
+
+.vagalume { animation: vagalume 5s ease-in-out infinite; }
+@keyframes vagalume { 0%, 100% { opacity: .15; transform: translate(0, 0); } 50% { opacity: 1; transform: translate(10px, -14px); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .brilho-fogo, .chama, .vagalume, .fogueira.acendendo { animation: none; }
+}
+
+/* =========================================================
+   ESTUDOS (calendário, painel do dia, sessões): cores do tema
+========================================================= */
+
+.est-cal-sessao { color: var(--tinta); background: color-mix(in srgb, var(--cor) 18%, var(--superficie)); }
+.est-cal-dia.completo .est-cal-sessao { opacity: 1; color: var(--suave); }
+.est-sessao-cab { color: var(--tinta); background: var(--superficie); }
+.est-sessao-cab:hover { background: var(--indigo-claro); }
+.est-sessao-cab strong { color: var(--tinta); }
+.est-sessao-tema { color: var(--texto-acento); font-weight: 700; }
+.est-sessao-progresso { color: var(--tinta); background: var(--indigo-claro); }
+.est-objetivo, .est-item-texto p, .est-item-texto small, .est-grupo h4 { color: var(--suave); }
+.est-item { background: var(--papel); }
+.est-item-feito { background: var(--ouro-claro); }
+.est-item-feito .est-item-texto > a, .est-item-feito .est-item-texto > span { color: var(--suave); }
+.est-item-nao-feito { background: color-mix(in srgb, var(--brasa) 14%, var(--superficie)); }
+.est-item-texto a, .est-item-texto span { color: var(--tinta); }
+.est-marca { background: var(--superficie); color: var(--suave); }
+.est-marca.nao[aria-pressed="true"] { background: var(--brasa); border-color: var(--brasa); color: #fff; }
+html[data-tema="escuro"] .est-marca.nao[aria-pressed="true"] { color: #1c2033; }
+.est-adiar, .est-entregar { color: var(--texto-acento); }
+.est-nota { color: var(--tinta); }
+
+
+/* =========================================================
+   CORES DE TEMA — índigo (padrão), rosa, verde e laranja,
+   cada uma em claro e escuro. html[data-cor] + html[data-tema].
+   Todas as combinações passam na auditoria de contraste.
+========================================================= */
+
+/* indigo */
+:root {
+    --fundo: #e8ebf7;
+    --coluna: #eef0f7;
+    --campo: #f7f7f5;
+    --barra: #d3d8ee;
+    --brilho-topo: rgba(255,255,255,.55);
+    --ondas: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cg fill='none' stroke='%232b3a8f' stroke-opacity='.11' stroke-width='1.2'%3E%3Ccircle cx='0' cy='24' r='24'/%3E%3Ccircle cx='0' cy='24' r='17'/%3E%3Ccircle cx='0' cy='24' r='10'/%3E%3Ccircle cx='48' cy='24' r='24'/%3E%3Ccircle cx='48' cy='24' r='17'/%3E%3Ccircle cx='48' cy='24' r='10'/%3E%3Ccircle cx='24' cy='12' r='24'/%3E%3Ccircle cx='24' cy='12' r='17'/%3E%3Ccircle cx='24' cy='12' r='10'/%3E%3C/g%3E%3C/svg%3E");
+    --papel: #f5f6fa;
+    --superficie: #ffffff;
+    --tinta: #1c2033;
+    --suave: #4b5168;
+    --linha: #dadded;
+    --indigo: #2b3a8f;
+    --indigo-fundo: #1b2766;
+    --indigo-claro: #e6e9f8;
+    --botao: #2b3a8f;
+    --botao-fundo: #1b2766;
+    --botao-hover: #34459f;
+    --heroi: #2b3a8f;
+    --heroi-fundo: #1b2766;
+    --texto-acento: #2b3a8f;
+    --pedra: #c9cedf;
+    --pedra-fundo: #a8aec6;
+}
+html[data-tema="escuro"] {
+    --fundo: #12141f;
+    --coluna: #181b2b;
+    --campo: #232843;
+    --barra: #2a2f4d;
+    --brilho-topo: rgba(120,135,255,.10);
+    --ondas: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cg fill='none' stroke='%23aab4ff' stroke-opacity='.07' stroke-width='1.2'%3E%3Ccircle cx='0' cy='24' r='24'/%3E%3Ccircle cx='0' cy='24' r='17'/%3E%3Ccircle cx='0' cy='24' r='10'/%3E%3Ccircle cx='48' cy='24' r='24'/%3E%3Ccircle cx='48' cy='24' r='17'/%3E%3Ccircle cx='48' cy='24' r='10'/%3E%3Ccircle cx='24' cy='12' r='24'/%3E%3Ccircle cx='24' cy='12' r='17'/%3E%3Ccircle cx='24' cy='12' r='10'/%3E%3C/g%3E%3C/svg%3E");
+    --papel: #12141f;
+    --superficie: #1c2033;
+    --tinta: #eceefa;
+    --suave: #aab0cc;
+    --linha: #333857;
+    --indigo: #aab4ff;
+    --indigo-fundo: #2e3a99;
+    --indigo-claro: #272d57;
+    --botao: #4a5bd6;
+    --botao-fundo: #2e3a99;
+    --botao-hover: #5868e0;
+    --heroi: #2f3b9a;
+    --heroi-fundo: #1f2870;
+    --texto-acento: #b9c1ff;
+    --pedra: #3b4163;
+    --pedra-fundo: #292e49;
+}
+
+/* rosa */
+html[data-cor="rosa"]:not([data-tema="escuro"]) {
+    --fundo: #fbe9f1;
+    --coluna: #fbeef4;
+    --campo: #fcf4f8;
+    --barra: #f0cfde;
+    --brilho-topo: rgba(255,255,255,.6);
+    --ondas: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cg fill='none' stroke='%23c2185b' stroke-opacity='.10' stroke-width='1.2'%3E%3Ccircle cx='0' cy='24' r='24'/%3E%3Ccircle cx='0' cy='24' r='17'/%3E%3Ccircle cx='0' cy='24' r='10'/%3E%3Ccircle cx='48' cy='24' r='24'/%3E%3Ccircle cx='48' cy='24' r='17'/%3E%3Ccircle cx='48' cy='24' r='10'/%3E%3Ccircle cx='24' cy='12' r='24'/%3E%3Ccircle cx='24' cy='12' r='17'/%3E%3Ccircle cx='24' cy='12' r='10'/%3E%3C/g%3E%3C/svg%3E");
+    --papel: #fdf3f7;
+    --superficie: #ffffff;
+    --tinta: #2a1620;
+    --suave: #5e4552;
+    --linha: #efd3df;
+    --indigo: #c2185b;
+    --indigo-fundo: #8e1142;
+    --indigo-claro: #fbe0ec;
+    --botao: #c2185b;
+    --botao-fundo: #8e1142;
+    --botao-hover: #d02a6d;
+    --heroi: #a3144a;
+    --heroi-fundo: #760e36;
+    --texto-acento: #a3144a;
+    --pedra: #d9c3cf;
+    --pedra-fundo: #b99aaa;
+}
+html[data-cor="rosa"][data-tema="escuro"] {
+    --fundo: #1d1018;
+    --coluna: #24141e;
+    --campo: #2e1b27;
+    --barra: #4a2a3b;
+    --brilho-topo: rgba(255,120,180,.10);
+    --ondas: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cg fill='none' stroke='%23ffb3d1' stroke-opacity='.07' stroke-width='1.2'%3E%3Ccircle cx='0' cy='24' r='24'/%3E%3Ccircle cx='0' cy='24' r='17'/%3E%3Ccircle cx='0' cy='24' r='10'/%3E%3Ccircle cx='48' cy='24' r='24'/%3E%3Ccircle cx='48' cy='24' r='17'/%3E%3Ccircle cx='48' cy='24' r='10'/%3E%3Ccircle cx='24' cy='12' r='24'/%3E%3Ccircle cx='24' cy='12' r='17'/%3E%3Ccircle cx='24' cy='12' r='10'/%3E%3C/g%3E%3C/svg%3E");
+    --papel: #1d1018;
+    --superficie: #2a1822;
+    --tinta: #fbeaf2;
+    --suave: #d1b3c2;
+    --linha: #4a2a3b;
+    --indigo: #ffb3d1;
+    --indigo-fundo: #8f1049;
+    --indigo-claro: #4a2038;
+    --botao: #d81b73;
+    --botao-fundo: #8f1049;
+    --botao-hover: #e23a85;
+    --heroi: #8f1a52;
+    --heroi-fundo: #5f1036;
+    --texto-acento: #ffb3d1;
+    --pedra: #5a3a4b;
+    --pedra-fundo: #3f2634;
+}
+
+/* verde */
+html[data-cor="verde"]:not([data-tema="escuro"]) {
+    --fundo: #e6f2eb;
+    --coluna: #ecf5f0;
+    --campo: #f4f9f6;
+    --barra: #cfe3d8;
+    --brilho-topo: rgba(255,255,255,.6);
+    --ondas: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cg fill='none' stroke='%231f7a4d' stroke-opacity='.11' stroke-width='1.2'%3E%3Ccircle cx='0' cy='24' r='24'/%3E%3Ccircle cx='0' cy='24' r='17'/%3E%3Ccircle cx='0' cy='24' r='10'/%3E%3Ccircle cx='48' cy='24' r='24'/%3E%3Ccircle cx='48' cy='24' r='17'/%3E%3Ccircle cx='48' cy='24' r='10'/%3E%3Ccircle cx='24' cy='12' r='24'/%3E%3Ccircle cx='24' cy='12' r='17'/%3E%3Ccircle cx='24' cy='12' r='10'/%3E%3C/g%3E%3C/svg%3E");
+    --papel: #f1f8f4;
+    --superficie: #ffffff;
+    --tinta: #14261d;
+    --suave: #43584d;
+    --linha: #cfe3d8;
+    --indigo: #1f7a4d;
+    --indigo-fundo: #145736;
+    --indigo-claro: #daf0e3;
+    --botao: #1f7a4d;
+    --botao-fundo: #145736;
+    --botao-hover: #278a58;
+    --heroi: #1b6b44;
+    --heroi-fundo: #0f4a2e;
+    --texto-acento: #14693f;
+    --pedra: #c0d3c8;
+    --pedra-fundo: #98b2a5;
+}
+html[data-cor="verde"][data-tema="escuro"] {
+    --fundo: #0f1a15;
+    --coluna: #142019;
+    --campo: #1b2c22;
+    --barra: #2b4638;
+    --brilho-topo: rgba(110,230,170,.08);
+    --ondas: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cg fill='none' stroke='%239fe0bd' stroke-opacity='.07' stroke-width='1.2'%3E%3Ccircle cx='0' cy='24' r='24'/%3E%3Ccircle cx='0' cy='24' r='17'/%3E%3Ccircle cx='0' cy='24' r='10'/%3E%3Ccircle cx='48' cy='24' r='24'/%3E%3Ccircle cx='48' cy='24' r='17'/%3E%3Ccircle cx='48' cy='24' r='10'/%3E%3Ccircle cx='24' cy='12' r='24'/%3E%3Ccircle cx='24' cy='12' r='17'/%3E%3Ccircle cx='24' cy='12' r='10'/%3E%3C/g%3E%3C/svg%3E");
+    --papel: #0f1a15;
+    --superficie: #17261e;
+    --tinta: #e8f5ee;
+    --suave: #b3cbbd;
+    --linha: #2b4638;
+    --indigo: #9fe0bd;
+    --indigo-fundo: #155535;
+    --indigo-claro: #1e3a2b;
+    --botao: #23804f;
+    --botao-fundo: #155535;
+    --botao-hover: #2e9560;
+    --heroi: #1d6a43;
+    --heroi-fundo: #114a2d;
+    --texto-acento: #9fe0bd;
+    --pedra: #34503f;
+    --pedra-fundo: #243a2d;
+}
+
+/* laranja */
+html[data-cor="laranja"]:not([data-tema="escuro"]) {
+    --fundo: #fbefe0;
+    --coluna: #fcf2e7;
+    --campo: #fdf6ee;
+    --barra: #efd9bf;
+    --brilho-topo: rgba(255,255,255,.6);
+    --ondas: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cg fill='none' stroke='%23b45309' stroke-opacity='.11' stroke-width='1.2'%3E%3Ccircle cx='0' cy='24' r='24'/%3E%3Ccircle cx='0' cy='24' r='17'/%3E%3Ccircle cx='0' cy='24' r='10'/%3E%3Ccircle cx='48' cy='24' r='24'/%3E%3Ccircle cx='48' cy='24' r='17'/%3E%3Ccircle cx='48' cy='24' r='10'/%3E%3Ccircle cx='24' cy='12' r='24'/%3E%3Ccircle cx='24' cy='12' r='17'/%3E%3Ccircle cx='24' cy='12' r='10'/%3E%3C/g%3E%3C/svg%3E");
+    --papel: #fdf4e9;
+    --superficie: #ffffff;
+    --tinta: #2b1a0c;
+    --suave: #5d4631;
+    --linha: #efd9bf;
+    --indigo: #b45309;
+    --indigo-fundo: #7c3a06;
+    --indigo-claro: #fde6c8;
+    --botao: #b45309;
+    --botao-fundo: #7c3a06;
+    --botao-hover: #c5600f;
+    --heroi: #a24a08;
+    --heroi-fundo: #6e3305;
+    --texto-acento: #92400e;
+    --pedra: #dccbb4;
+    --pedra-fundo: #b9a283;
+}
+html[data-cor="laranja"][data-tema="escuro"] {
+    --fundo: #1c140c;
+    --coluna: #231a10;
+    --campo: #2e2216;
+    --barra: #4a3820;
+    --brilho-topo: rgba(255,170,80,.09);
+    --ondas: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cg fill='none' stroke='%23ffc78a' stroke-opacity='.07' stroke-width='1.2'%3E%3Ccircle cx='0' cy='24' r='24'/%3E%3Ccircle cx='0' cy='24' r='17'/%3E%3Ccircle cx='0' cy='24' r='10'/%3E%3Ccircle cx='48' cy='24' r='24'/%3E%3Ccircle cx='48' cy='24' r='17'/%3E%3Ccircle cx='48' cy='24' r='10'/%3E%3Ccircle cx='24' cy='12' r='24'/%3E%3Ccircle cx='24' cy='12' r='17'/%3E%3Ccircle cx='24' cy='12' r='10'/%3E%3C/g%3E%3C/svg%3E");
+    --papel: #1c140c;
+    --superficie: #2a1e12;
+    --tinta: #fbefe0;
+    --suave: #d6bf9f;
+    --linha: #4a3820;
+    --indigo: #ffc78a;
+    --indigo-fundo: #6e3505;
+    --indigo-claro: #44301a;
+    --botao: #a85208;
+    --botao-fundo: #6e3505;
+    --botao-hover: #bd6112;
+    --heroi: #8f4607;
+    --heroi-fundo: #5e2f04;
+    --texto-acento: #ffc78a;
+    --pedra: #55422c;
+    --pedra-fundo: #3b2d1d;
+}
+
+
+/* seletor de cor no topo */
+.cores { position: relative; }
+.cores summary { list-style: none; cursor: pointer; }
+.cores summary::-webkit-details-marker { display: none; }
+.cores[open] summary { background: var(--indigo-claro); }
+.cores-menu {
+    position: absolute; right: 0; top: calc(100% + 8px); z-index: 60;
+    min-width: 190px; padding: 8px;
+    display: flex; flex-direction: column; gap: 2px;
+    background: var(--superficie); border: 1px solid var(--linha); border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(20, 24, 60, .2);
+}
+.cores-menu button {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 9px 10px; border: 0; border-radius: 10px; cursor: pointer;
+    background: transparent; color: var(--tinta); font-family: inherit; font-size: 15px; font-weight: 500; text-align: left;
+}
+.cores-menu button:hover { background: var(--indigo-claro); }
+.cores-menu button[aria-pressed="true"] { background: var(--indigo-claro); font-weight: 700; }
+.cores-menu .amostra {
+    flex: none; width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid var(--superficie); box-shadow: 0 0 0 1.5px var(--linha);
+}
+.cores-menu button[aria-pressed="true"]::after { content: "✓"; margin-left: auto; color: var(--texto-acento); font-weight: 900; }
+
+/* ajustes achados pela auditoria por pixel */
+.est-entregar { background: var(--papel); color: var(--texto-acento); border-color: var(--linha); }
+.add-column-task { background: transparent; }
+.trilha-itens li small { color: #ffe9a8; }
+
+
+/* ---------- floresta: movimento (tudo desliga com "reduzir movimento") ---------- */
+.par-ceu { transform: translateX(calc(var(--sx, 0px) * .85)); }
+.par-colinas { transform: translateX(calc(var(--sx, 0px) * .6)); }
+.par-nevoa { transform: translateX(calc(var(--sx, 0px) * .35)); }
+
+.estrela-pisca { animation: estrela 3.6s ease-in-out infinite; }
+@keyframes estrela { 0%, 100% { opacity: .25; } 50% { opacity: .95; } }
+
+.nevoa { animation: nevoa 18s ease-in-out infinite alternate; }
+@keyframes nevoa { from { transform: translateX(-26px); } to { transform: translateX(26px); } }
+
+.cogu-brilho { animation: cogu 3.4s ease-in-out infinite; }
+@keyframes cogu { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+
+.olhos { transform-box: fill-box; transform-origin: 50% 50%; animation: piscar 6s infinite; }
+@keyframes piscar { 0%, 44%, 50%, 100% { transform: scaleY(1); opacity: 1; } 47% { transform: scaleY(.1); } 70% { opacity: 0; } 76% { opacity: 1; } }
+
+.faisca { animation: faisca 2.2s ease-out infinite; }
+@keyframes faisca { 0% { opacity: 0; transform: translate(0, 0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx, 8px), -46px); } }
+
+.fumaca { animation: fumaca 4.4s ease-out infinite; }
+@keyframes fumaca { 0% { opacity: 0; transform: translate(0, 0) scale(.6); } 25% { opacity: .22; } 100% { opacity: 0; transform: translate(10px, -34px) scale(1.7); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .estrela-pisca, .nevoa, .cogu-brilho, .olhos, .faisca, .fumaca { animation: none; }
+    .par-ceu, .par-colinas, .par-nevoa { transform: none; }
+}
+
+/* ---------- legibilidade do cartão da fase (testada por pixel nas 4 cores) ---------- */
+.trilha-itens li { background: rgba(0, 0, 0, .24); }
+.trilha-itens li small { color: #ffe9a8; }
+.trilha-etapa, .trilha-detalhes summary { color: #ffffff; }
+.add-column-task { color: var(--tinta); }
+
+
+/* ---------- galeria de planos prontos (js/galeria.js) ---------- */
+.gal-vazio {
+    grid-column: 1 / -1; width: 100%; margin: 0 0 20px; padding: 22px 22px 14px; border-radius: 18px;
+    background: var(--superficie); border: 1px solid var(--linha);
+}
+.gal-vazio header h3 { margin: 0 0 6px; font-size: 20px; color: var(--tinta); }
+.gal-vazio header p { margin: 0 0 16px; color: var(--suave); max-width: 62ch; }
+.gal-lista { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.gal-lista-grande { max-height: 62vh; overflow-y: auto; padding: 2px 4px 2px 2px; margin: 14px 0; }
+.gal-cartao {
+    display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: start;
+    padding: 16px; border-radius: 14px; background: var(--papel); border: 1px solid var(--linha);
+}
+.gal-emoji { grid-row: 1 / span 2; font-size: 30px; line-height: 1; }
+.gal-corpo h4 { margin: 0 0 4px; font-size: 16px; color: var(--tinta); }
+.gal-corpo p { margin: 0 0 6px; font-size: 14px; color: var(--suave); }
+.gal-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px !important; }
+.gal-chip {
+    padding: 1px 9px; border-radius: 999px; font-weight: 700;
+    color: var(--texto-acento); background: var(--indigo-claro);
+}
+.gal-comecar { grid-column: 2; justify-self: start; margin-top: 4px; }
+.gal-modal { width: min(960px, calc(100vw - 24px)); max-width: none; }
+.gal-lista-grande { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+@media (max-width: 560px) {
+    .gal-vazio { padding: 16px 14px 10px; }
+    .gal-lista { grid-template-columns: 1fr; }
+}
+
+
+/* ---------- sequência de dias (js/sequencia.js) ---------- */
+.sequencia-selo {
+    display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px;
+    font-size: 14px; font-weight: 700; color: var(--texto-acento); background: var(--ouro-claro);
+    border: 1px solid var(--ouro);
+}
+.sequencia-selo[hidden] { display: none; }
+.sequencia-selo.em-risco { border-style: dashed; }
+.sequencia-selo.parada { font-weight: 500; color: var(--suave); background: transparent; border-color: var(--linha); }
+
+
+/* ---------- restos do vermelho antigo (achados por varredura de cores renderizadas) ---------- */
+.modal .modal-titulo { border-bottom-color: var(--ouro); }
+.campo-modal input:focus, .campo-modal select:focus, .campo-modal textarea:focus,
+.campo-filtro input:focus, .campo-filtro select:focus, .ia-input:focus, .ia-config select:focus, .srv-form input:focus {
+    background: var(--superficie); border-color: var(--botao);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--botao) 25%, transparent);
+}
+.srv-usar[aria-pressed="true"] { background: color-mix(in srgb, var(--botao) 16%, transparent); border-color: var(--botao); }
+.srv-em-uso { background: var(--botao); }
+.limpar-filtros { color: var(--texto-acento); border-color: var(--botao); }
+.est-cal-sessao { border-left-color: var(--botao); }
+.entrega-enunciado { border-left-color: var(--ouro); }
+/* texto de apoio dos modais: o cinza fixo (#444) sumia no tema escuro */
+.sinc-texto { color: var(--suave); }
+
+/* ---------- legibilidade nos modais (varredura de contraste, claro/escuro, PC/celular) ---------- */
+.modal .btn-secundario { color: var(--texto-acento); background: var(--superficie); }
+.modal .campo-modal > span, .modal label > span, .est-rotulo, .modal strong { color: var(--tinta); }
+.sinc-segredo, .entrega-subtitulo, .entrega-escolher small { color: var(--suave); }
+.entrega-escolher { color: var(--tinta); background: var(--papel); }
+.aces-opcao { background: var(--papel); border-color: var(--linha); }
+.aces-opcao strong { color: var(--tinta); }
+.aces-opcao small { color: var(--suave); }
+.aces-opcao input, input[type="checkbox"], input[type="radio"] { accent-color: var(--botao); }
+.progress-fill { background: var(--ouro); }
+
+/* galeria: filtros por área e busca */
+.gal-filtros { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+.gal-area {
+    padding: 6px 13px; border-radius: 999px; font-family: inherit; font-weight: 700; font-size: 13px; line-height: 1.3; cursor: pointer;
+    color: var(--texto-acento); background: var(--superficie); border: 1.5px solid var(--linha);
+}
+.gal-area[aria-pressed="true"] { color: #fff; background: var(--botao); border-color: var(--botao); }
+.gal-busca { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.gal-busca input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; border: 1.5px solid var(--linha); background: var(--papel); color: var(--tinta); font: inherit; }
+.gal-contagem { flex: none; font-size: 13px; color: var(--suave); }
+.gal-nada { padding: 20px 4px; color: var(--suave); }

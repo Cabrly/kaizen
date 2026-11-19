@@ -25,8 +25,6 @@ import {
 /* Colunas do quadro, na ordem. */
 const STATUS = [
     { valor: "a-fazer", nome: "A fazer" },
-    { valor: "em-andamento", nome: "Em andamento" },
-    { valor: "em-revisao", nome: "Em revisão" },
     { valor: "concluido", nome: "Concluído" }
 ];
 

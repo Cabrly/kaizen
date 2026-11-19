@@ -32,7 +32,8 @@ const SLOTS = { cabeca: "Cabeça", rosto: "Rosto", boca: "Boca", pescoco: "Pesco
 const SECOES = { bichos: "Bichos", acessorios: "Acessórios", memes: "Status", tons: "Tons de pelo", cenarios: "Cenários" };
 const QUANDO = { triste: "Quando fica tristinho", feliz: "Quando fica feliz", esperando: "Enquanto espera" };
 
-let estado = { ligado: false, compras: [], pets: {}, encerrados: [] };
+// Os pets ficam sempre ativos (decisão de 2026-11-19): quem tinha desligado antes volta a ver, e não há botão de desligar.
+let estado = { ligado: true, compras: [], pets: {}, encerrados: [] };
 let dados = { planos: [], sessoes: [], itens: [] };
 let aba = "cuidando";
 let secaoLoja = "bichos";
@@ -56,7 +57,7 @@ async function api(caminho, opcoes = {}) {
 
 async function carregar() {
     const [pets, backup] = await Promise.all([api("/estudos/pets"), api("/backup?leve=1")]);
-    estado = { ligado: false, compras: [], pets: {}, encerrados: [], ...(pets.dados || {}) };
+    estado = { compras: [], pets: {}, encerrados: [], ...(pets.dados || {}), ligado: true };
     dados = backup.estudos || dados;
 }
 
@@ -693,6 +694,10 @@ function aoClicar(evento) {
 function decorarPlanos() {
 
     document.querySelectorAll(".est-plano-pet").forEach((el) => el.remove());
+
+    // a trilha (js/trilha.js) põe o pet no ponto onde a pessoa parou
+    document.dispatchEvent(new CustomEvent("kaizen:pets", { detail: { pets: estado.ligado ? listarPets() : [] } }));
+
     if (!estado.ligado) return;
 
     const pets = listarPets();
@@ -751,13 +756,6 @@ function iniciar() {
         estado.ligado = true;
         salvar();
         abrir();
-        decorarPlanos();
-    });
-
-    $("pets-desligar").addEventListener("click", () => {
-        estado.ligado = false;   // aparência e compras ficam guardadas pra quando voltar
-        salvar();
-        modal.close();
         decorarPlanos();
     });
 

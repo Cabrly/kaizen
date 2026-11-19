@@ -237,6 +237,8 @@ function renderizarPlanos() {
 
     if (estado.planos.length === 0) {
         lista.innerHTML = "";
+        // js/galeria.js põe os planos prontos aqui, pra quem chega e não tem nada ainda
+        document.dispatchEvent(new CustomEvent("kaizen:planos-vazio", { detail: { lista } }));
         return;
     }
 

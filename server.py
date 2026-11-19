@@ -36,7 +36,7 @@ OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 
 # O navegador só baixa daqui o próprio app (o mesmo que o desktop/empacotar_servidor.py leva).
 # O resto da pasta (o banco com as chaves de API, sync/.env, o código, o .git) nunca sai.
-ARQUIVOS_PUBLICOS = {"index.html", "style.css", "sw.js", "manifest.webmanifest", "dados.json", "prompts.json", "novidades.json",
+ARQUIVOS_PUBLICOS = {"index.html", "style.css", "tema.css", "sw.js", "manifest.webmanifest", "dados.json", "prompts.json", "novidades.json",
                      "areas.json"}
 PASTAS_PUBLICAS = ("js/", "icones/")
 CORPO_MAXIMO = 100_000_000   # backup com todas as entregas cabe folgado

@@ -404,9 +404,16 @@ limparFiltros.addEventListener(
 
 async function iniciar() {
 
-    iniciarFundo();
+    // Fundos (tinta, desenhos, cenas): desligados por enquanto. Pra voltar, troque por true.
+    const FUNDOS_LIGADOS = false;
 
-    iniciarTinta();
+    if (FUNDOS_LIGADOS) {
+        iniciarFundo();
+    }
+
+    if (FUNDOS_LIGADOS) {
+        iniciarTinta();
+    }
 
 
     /*

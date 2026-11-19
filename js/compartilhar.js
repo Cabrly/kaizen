@@ -22,6 +22,7 @@ const $ = (id) => document.querySelector(`#${id}`);
 
 
 let pacoteRecebido = null;
+let pacoteOrigem = null;   // "galeria" quando o plano veio dos planos prontos
 
 
 
@@ -211,6 +212,7 @@ function hojeIso() {
 function abrirImportar(link = "") {
 
     pacoteRecebido = null;
+    pacoteOrigem = null;
     $("imp-link").value = link;
     $("imp-campo-link").hidden = false;
     $("imp-previa").hidden = true;
@@ -219,6 +221,20 @@ function abrirImportar(link = "") {
     importar.showModal();
 
     if (link) carregarPacote();
+
+}
+
+
+/* Pacote que já está na mão (a galeria de planos): pula o link e vai direto pra escolha dos dias. */
+function abrirComPacote(pacote, origem) {
+
+    pacoteRecebido = pacote;
+    pacoteOrigem = origem || null;
+    $("imp-link").value = "";
+    $("imp-erro").textContent = "";
+    mostrarPrevia(pacote);
+    document.querySelector("#est-assistente")?.close();
+    importar.showModal();
 
 }
 
@@ -308,6 +324,7 @@ async function adicionar() {
             body: JSON.stringify({ plano: pacoteRecebido, dias, inicio: $("imp-inicio").value, horario: $("imp-horario").value })
         });
 
+        if (pacoteOrigem === "galeria") document.dispatchEvent(new CustomEvent("kaizen:uso", { detail: "plano_galeria" }));
         importar.close();
         document.querySelector('.nav-tab[data-tela="estudos"]')?.click();
         document.dispatchEvent(new CustomEvent("kaizen:recarregar-estudos"));
@@ -349,6 +366,8 @@ if (compartilhar && importar) {
     });
 
     $("comp-parar").addEventListener("click", pararDeCompartilhar);
+
+    document.addEventListener("kaizen:abrir-pacote", ({ detail }) => abrirComPacote(detail.pacote, detail.origem));
 
     $("imp-abrir")?.addEventListener("click", () => {
         document.querySelector("#est-assistente")?.close();

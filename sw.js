@@ -3,12 +3,13 @@
    Rede primeiro (online pega sempre a versão nova; offline usa a cópia
    guardada). /api e outros sites nunca passam por aqui. */
 
-const CACHE = "kaizen-v40";
+const CACHE = "kaizen-v72";
 
 const ARQUIVOS = [
     "./",
     "./index.html",
     "./style.css",
+    "./tema.css",
     "./dados.json",
     "./prompts.json",
     "./areas.json",
@@ -27,6 +28,13 @@ const ARQUIVOS = [
     "./js/remarcar.js",
     "./js/cofre.js",
     "./js/compartilhar.js",
+    "./js/galeria.js",
+    "./js/galeria-dados.js",
+    "./js/galeria-ajudas.js",
+    "./js/galeria-enem-a.js",
+    "./js/galeria-enem-b.js",
+    "./js/galeria-areas.js",
+    "./js/sequencia.js",
     "./js/agenda.js",
     "./js/resumo.js",
     "./js/acessibilidade.js",
@@ -38,6 +46,8 @@ const ARQUIVOS = [
     "./js/instalar.js",
     "./js/main.js",
     "./js/telas.js",
+    "./js/trilha.js",
+    "./js/tema.js",
     "./js/bolha.js",
     "./js/chat.js",
     "./js/estudos.js",

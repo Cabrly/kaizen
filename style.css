@@ -7111,3 +7111,208 @@ html.alto-contraste .tut-veu {
 .srv-uso-acabando {
     color: #c90016;
 }
+
+
+/* =========================================================
+   TRILHA — fases em zigue-zague (js/trilha.js)
+========================================================= */
+
+.est-trilha {
+    background: #ffffff;
+    border: 1px solid #dedede;
+    border-radius: 12px;
+    padding: 14px 16px 8px;
+    margin-bottom: 18px;
+}
+
+.est-trilha[hidden] { display: none; }
+
+.trilha-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.trilha-topo h3 { margin: 0; font-size: 16px; }
+.trilha-topo p { margin: 2px 0 0; font-size: 13px; opacity: .7; }
+.trilha-nome { font-size: 13px; opacity: .8; }
+.trilha-topo select { max-width: 200px; }
+
+.trilha-barra {
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(128, 128, 128, .2);
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.trilha-barra div { height: 100%; background: #f5a524; transition: width .4s; }
+
+.trilha-aviso {
+    margin: 0 0 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    background: rgba(245, 165, 36, .15);
+}
+
+.trilha-aviso button {
+    margin-left: 6px;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.trilha-rolagem {
+    max-height: 420px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.trilha-rolagem svg { width: 100%; max-width: 520px; display: block; margin: 0 auto; }
+
+.trilha-fio {
+    fill: none;
+    stroke: rgba(128, 128, 128, .35);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 2 14;
+}
+
+.trilha-fio.feito { stroke: var(--cor); stroke-dasharray: none; opacity: .55; }
+
+.trilha-no { cursor: pointer; outline: none; }
+.trilha-no .disco { fill: #e9e9ee; stroke: rgba(128, 128, 128, .5); stroke-width: 3; transition: transform .15s; transform-box: fill-box; transform-origin: center; }
+.trilha-no:hover .disco, .trilha-no:focus-visible .disco { transform: scale(1.1); }
+.trilha-no .num { font-size: 16px; font-weight: 700; fill: #444; pointer-events: none; }
+.trilha-no.chefe .num { font-size: 20px; }
+.trilha-no.andamento .disco { fill: #fff; stroke: var(--cor); }
+.trilha-no.feita .disco { fill: var(--cor); stroke: var(--cor); }
+.trilha-no.feita .num { fill: #fff; font-size: 20px; }
+.trilha-no.atual .disco { fill: #fff; stroke: var(--cor); stroke-width: 5; }
+.trilha-no .rotulo { font-size: 13px; font-weight: 600; fill: currentColor; pointer-events: none; }
+.trilha-no .data { font-size: 11px; fill: currentColor; opacity: .6; pointer-events: none; }
+.trilha-no .data.atrasada { fill: #d9480f; opacity: 1; }
+
+.trilha-no .pulso {
+    fill: var(--cor);
+    opacity: .25;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: trilha-pulso 1.8s ease-in-out infinite;
+}
+
+@keyframes trilha-pulso { 50% { transform: scale(1.25); opacity: .1; } }
+
+@media (prefers-reduced-motion: reduce) { .trilha-no .pulso { animation: none; } }
+
+}
+
+/* trilha: cartão da fase escolhida */
+.trilha-heroi { display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; margin-bottom: 14px; border-radius: 14px; background: rgba(128,128,128,.08); border-left: 5px solid var(--cor, #3b5bdb); }
+.est-trilha { --cor: #3b5bdb; }
+.trilha-heroi h3 { margin: 0; font-size: 26px; line-height: 1.15; }
+.trilha-etapa { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; opacity: .65; }
+.trilha-objetivo { margin: 0; line-height: 1.5; opacity: .85; max-width: 62ch; }
+.trilha-itens { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+.trilha-itens li { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: rgba(128,128,128,.1); font-size: 13px; }
+.trilha-itens li small { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; opacity: .6; }
+.trilha-itens li.feito { opacity: .55; text-decoration: line-through; }
+.trilha-heroi .btn-primario { align-self: flex-start; }
+.trilha-heroi .trilha-aviso { margin: 0; }
+.trilha-no.escolhida .disco { stroke-width: 5; }
+.trilha-rolagem { max-height: 360px; }
+.trilha-no .rotulo { font-size: 15px; }
+.trilha-no .data { font-size: 12.5px; opacity: .8; }
+.trilha-rolagem svg { max-width: 560px; margin: 0; }
+.trilha-rolagem { max-height: none; overflow: visible; }
+.trilha-topo p, .trilha-etapa { opacity: .85; }
+
+
+/* =========================================================
+   JORNADA x CALENDÁRIO (mesmo painel, duas vistas)
+========================================================= */
+
+/* Jornada: trilha + atividades do dia; o calendário não aparece */
+#tela-estudos[data-vista="estudos"] .est-cal { display: none; }
+#tela-estudos[data-vista="estudos"] .est-grade { grid-template-columns: 1fr; }
+
+/* Calendário: só o calendário e o dia */
+#tela-estudos[data-vista="calendario"] .est-trilha,
+#tela-estudos[data-vista="calendario"] .est-planos { display: none; }
+
+.nav-icone, .nav-rotulo { pointer-events: none; }
+.nav-icone { display: none; }
+
+
+/* =========================================================
+   CELULAR: atalhos embaixo, ao alcance do polegar
+========================================================= */
+
+@media (max-width: 650px) {
+
+    body { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+
+    .header .nav-telas {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        z-index: 9500;
+        width: 100%;
+        box-sizing: border-box;
+        justify-self: stretch;
+        grid-column: auto;
+        grid-row: auto;
+
+        gap: 0;
+        padding: 6px 6px calc(8px + env(safe-area-inset-bottom));
+
+        background: #ffffff;
+        border: 0;
+        border-top: 1px solid #dedede;
+        border-radius: 0;
+        box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-telas .nav-bolha { display: none !important; }
+
+    .nav-telas .nav-tab,
+    .nav-telas.com-bolha .nav-tab {
+        flex: 1;
+        min-width: 0;
+        min-height: 56px;
+        padding: 6px 2px;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0;
+        color: #555;
+        background: transparent;
+        border-radius: 12px;
+    }
+
+    .nav-icone { display: block; }
+
+    .nav-telas .nav-tab.ativa,
+    .nav-telas.com-bolha .nav-tab.ativa {
+        color: #c90016;
+        background: rgba(201, 0, 22, 0.1);
+        box-shadow: none;
+    }
+
+    .aces-ouvir, .aces-ler-selecao { bottom: calc(92px + env(safe-area-inset-bottom)); }
+
+}
