@@ -12,6 +12,7 @@
 
 
 import { blocosPorDia } from "./intensidade.js";
+import { lerQuestoes, resultadoSalvo } from "./quiz.js?v=1";
 
 
 const tela =
@@ -579,11 +580,23 @@ function linhaItem(item) {
     ].join("");
 
 
+    // atividade com questões de marcar: vira prática em telas (js/quiz.js); o texto completo fica recolhido
+    const quiz = item.tipo === "atividade" ? lerQuestoes(item.descricao) : null;
+    const ultimo = quiz ? resultadoSalvo(item.id) : null;
+    const blocoQuiz = quiz ? `
+                <p class="quiz-resumo">📝 ${quiz.questoes.length} questões de marcar. O gabarito aparece no final.</p>
+                <div class="quiz-acoes">
+                    <button type="button" class="quiz-iniciar" data-quiz="${item.id}">▶ Praticar</button>
+                    <span class="quiz-ultimo">${ultimo ? `Última tentativa: ${ultimo.acertos}/${ultimo.total}` : ""}</span>
+                </div>
+                ${quiz.extra ? `<details class="quiz-extra"><summary>Dicas e treino extra</summary><p>${esc(quiz.extra)}</p></details>` : ""}
+                <details class="quiz-texto"><summary>Ver tudo em texto</summary><p class="quiz-fonte">${esc(item.descricao)}</p></details>` : "";
+
     return `
         <div class="est-item est-item-${item.estado}">
             <div class="est-item-texto">
                 ${titulo}
-                ${item.descricao ? `<p>${esc(item.descricao)}</p>` : ""}
+                ${quiz ? blocoQuiz : item.descricao ? `<p>${esc(item.descricao)}</p>` : ""}
                 ${meta || avisos ? `<small>${meta}${avisos}</small>` : ""}
                 ${item.tipo === "atividade" ? botaoEntrega(item) : ""}
             </div>

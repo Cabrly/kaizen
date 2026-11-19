@@ -1,5 +1,12 @@
 [
     {
+        "versao": "2.0.7",
+        "data": "2026-11-19",
+        "itens": [
+            "Atividades de marcar viraram uma prática em telas: uma questão por vez, barra de progresso e, no final, o resultado com o gabarito e a resolução de cada questão. Dá para refazer e marcar a atividade como feita ali mesmo."
+        ]
+    },
+    {
         "versao": "2.0.6",
         "data": "2026-11-19",
         "itens": [
