@@ -313,6 +313,25 @@ function floresta({ horizontal, LARG, alt, fogos, novosFogos, prog, fim, complet
         }
     }
 
+    // ---- mata fechada em volta da clareira da cabana, pra floresta não acabar do nada no fim da trilha
+    if (fim) {
+        if (horizontal) {
+            for (let x = fim.x - 110; x < fim.x + 120; x += 30) arvoresFundo += arvore({ x: x + aleat(x + 14) * 12, yb: alt - 70, h: 72 + aleat(x + 15) * 34, w: 28, tipo: "p" }, "fundo");
+            for (let x = fim.x + 96; x < LARG + 30; x += 24) arvoresPerto += arvore({ x: x + aleat(x + 11) * 12, yb: alt + 8, h: 96 + aleat(x + 12) * 60, w: 46 + aleat(x + 13) * 16, tipo: "p" }, "perto");
+            for (let x = fim.x - 150; x < fim.x - 70; x += 28) arvoresPerto += arvore({ x: x + aleat(x + 16) * 12, yb: alt + 8, h: 92 + aleat(x + 17) * 40, w: 44, tipo: "p" }, "perto");
+        } else {
+            const cy = fim.y + 22;
+            for (let x = 100; x < LARG - 90; x += 34) arvoresFundo += arvore({ x: x + aleat(x + 14) * 14, yb: cy - 52, h: 60 + aleat(x + 15) * 30, w: 26, tipo: "p" }, "fundo");
+            for (let y = cy - 90; y < alt + 30; y += 28) {
+                for (const lado of [0, 1]) {
+                    const x = lado ? LARG - 22 - aleat(y + 50 + lado) * 40 : 22 + aleat(y + 60 + lado) * 40;
+                    arvoresPerto += arvore({ x, yb: y + 44, h: 84 + aleat(y + 70 + lado) * 40, w: 42, tipo: aleat(y + lado + 80) > .78 ? "f" : "p" }, "perto");
+                }
+            }
+            for (let x = 30; x < LARG; x += 44) arvoresPerto += arvore({ x: x + aleat(x + 90) * 16, yb: alt + 14, h: 70 + aleat(x + 91) * 40, w: 44, tipo: "p" }, "perto");
+        }
+    }
+
     // ---- chão com mato, pedras e cogumelos que brilham (horizontal)
     if (horizontal) {
         let d = `M0,${alt} L0,${alt - 12}`;
@@ -622,7 +641,8 @@ function desenhar() {
 
     // depois da última fase o caminho segue até um destino (farol ou cabana), pro cenário não acabar do nada
     const ult = pos[pos.length - 1] || (horizontal ? { x: 120, y: 150 } : { x: 190, y: 58 });
-    const fim = horizontal ? { x: ult.x + 230, y: ult.y } : { x: 190, y: ult.y + 140 };
+    // na floresta (horizontal) a cabana fica no chão e o caminho desce até a porta; no mar o farol fica na altura do caminho
+    const fim = horizontal ? { x: ult.x + 230, y: cenarioDe(plano) === "floresta" ? alt - 34 : ult.y } : { x: 190, y: ult.y + 140 };
     if (horizontal) LARG += 330; else alt += 200;
 
     // de que lado do nó o texto e a fogueira ficam
