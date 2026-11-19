@@ -7318,3 +7318,23 @@ html.alto-contraste .tut-veu {
     .aces-ouvir, .aces-ler-selecao { bottom: calc(92px + env(safe-area-inset-bottom)); }
 
 }
+
+
+/* ---------- reações de corrida ---------- */
+.pet-confete {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+    background:
+        radial-gradient(circle, #ffd400 0 3px, transparent 4px) 8% 0 / 70px 92px,
+        radial-gradient(circle, #e10600 0 3px, transparent 4px) 40% 20px / 82px 106px,
+        radial-gradient(circle, #ffffff 0 2.5px, transparent 3.5px) 65% 10px / 74px 98px,
+        radial-gradient(circle, #1f6feb 0 3px, transparent 4px) 90% 34px / 90px 114px;
+    animation: pet-confete 3.4s linear infinite;
+}
+@keyframes pet-confete { to { background-position: 8% 92px, 40% 126px, 65% 108px, 90% 148px; } }
+.pet-fala-p1 { font-size: 15cqw; color: #d40a0a; text-shadow: 0 2px 0 #ffffff, 0 0 10px #ffd400, 0 0 4px #ffffff; letter-spacing: .02em; }
+.pet-acena { transform-origin: 8% 100%; animation: pet-acena .8s ease-in-out infinite alternate; }
+@keyframes pet-acena { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
+.pet-r-pole-position .pet-corpo { animation: pet-pulinho 1.2s ease-in-out infinite; }
+.pet-r-bandeirada .pet-corpo { animation: pet-vibe 0.5s ease-in-out infinite alternate; }
+.pet-r-pit-stop .pet-corpo { animation: pet-cabisbaixo 4.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .pet-confete, .pet-acena { animation: none; } }
