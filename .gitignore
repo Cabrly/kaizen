@@ -10,3 +10,7 @@ desktop/src-tauri/target/
 desktop/src-tauri/gen/
 desktop/src-tauri/binarios/
 previa-*.html
+# backups automáticos do banco (dados pessoais, nunca vão pro git)
+copias/
+# plano de estudos pessoal gerado por scripts (não faz parte do app)
+scripts/escola-naval/

@@ -1,5 +1,18 @@
 [
     {
+        "versao": "2.0.0",
+        "data": "2026-11-19",
+        "itens": [
+            "Visual novo: a tela inicial agora é a Jornada, uma trilha de fases em que cada fase concluída acende uma fogueira numa floresta e o céu amanhece conforme você avança. O kanban ficou mais simples, só com A fazer e Concluído.",
+            "Quatro cores (índigo, rosa, verde e laranja), em tema claro ou escuro, e uma barra de navegação com ícones feita pro celular. Os fundos animados foram desligados nesta versão.",
+            "34 planos prontos pra começar na hora, sem IA e sem espera: ENEM e vestibular (redação, matemática, física, química, biologia, história, geografia, literatura, português, inglês e atualidades), programação, concursos, direito, finanças, idiomas, saúde, fotografia, música e psicologia. Com filtro por área e busca.",
+            "Sequência de dias estudando (🔥 N dias): se você perde um dia, recomeça sem drama, e o seu recorde fica guardado.",
+            "Os pets agora ficam sempre ativos e acompanham você na trilha da Jornada.",
+            "Texto revisado nos modais dos temas claro e escuro, com contraste conferido em computador e celular.",
+            "A IA grátis do Kaizen ganhou chave nova e a contagem anônima de uso agora mostra só em quantos dias as pessoas voltam (sem nome nem identificador). Dá pra desligar no botão Privacidade."
+        ]
+    },
+    {
         "versao": "1.8.0",
         "data": "2026-10-24",
         "itens": [
