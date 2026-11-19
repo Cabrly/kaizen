@@ -1,5 +1,15 @@
 [
     {
+        "versao": "2.0.1",
+        "data": "2026-11-19",
+        "itens": [
+            "A Jornada ganhou um cenário de mar 🌊: cada fase concluída acende uma boia no caminho, a cada cinco aparece um farol com a luz girando, e o céu amanhece sobre as ondas. Ele liga sozinho em planos de Marinha, e dá pra trocar entre Floresta e Mar no botão acima da trilha.",
+            "O botão Planos prontos agora fica sempre à vista no topo dos estudos, mesmo com um plano já ativo.",
+            "Ícone novo, índigo e ouro, com fundo transparente, e a cor da barra do navegador no celular acompanha.",
+            "O cabeçalho agora cabe em celulares e tablets: o botão Nova tarefa estourava a tela em algumas larguras."
+        ]
+    },
+    {
         "versao": "2.0.0",
         "data": "2026-11-19",
         "itens": [
