@@ -1256,3 +1256,18 @@ dialog.quiz::backdrop { background: rgba(14, 20, 50, .55); }
     #est-mes-anterior, #est-mes-proximo { min-width: 44px; min-height: 44px; }
     .rodape-backup .btn-secundario, .rodape-backup a { min-height: 44px; }
 }
+
+
+/* ---------- passeio e loja de pets: sem o vermelho antigo ---------- */
+.tut-balao, .tut-balao.tut-centro { border-top-color: var(--indigo); }
+.tut-passo { color: var(--texto-acento); }
+.tut-pontos span.ativo { background: var(--indigo); }
+.tut-anel { border: 3px solid var(--ouro); box-shadow: 0 0 0 2px var(--indigo), 0 0 24px 4px rgba(242, 182, 50, .55); }
+.pets-opcao.ativa { background: var(--botao); border-color: var(--botao); color: #fff; }
+.tut-balao { color: var(--tinta); background: var(--superficie); }
+
+
+/* menu "Mais" da Jornada: no celular o botão fica à esquerda, então o menu abre pra direita (antes saía da tela) */
+@media (max-width: 700px) {
+    .est-mais-menu { left: 0; right: auto; max-width: calc(100vw - 32px); }
+}

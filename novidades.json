@@ -1,5 +1,14 @@
 [
     {
+        "versao": "2.0.10",
+        "data": "2026-11-19",
+        "itens": [
+            "O passeio guiado não cobre mais o que está mostrando: o balão sobe ou desce conforme o lugar do destaque, inclusive no celular.",
+            "O menu Mais da Jornada abre dentro da tela no celular (antes saía pela esquerda).",
+            "O passeio e a loja de pets passaram a usar as cores do tema, sem o vermelho antigo."
+        ]
+    },
+    {
         "versao": "2.0.9",
         "data": "2026-11-19",
         "itens": [
