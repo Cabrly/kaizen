@@ -364,6 +364,17 @@ async function adicionar() {
         if (pacoteRecebido?.presente) {
             const p = pacoteRecebido.presente;
             const ids = (Array.isArray(p.desbloquear) ? p.desbloquear : []).filter((id) => typeof id === "string").map((id) => id.slice(0, 40)).slice(0, 60);
+            // IA de presente: guarda a chave do OpenRouter só neste navegador, no mesmo lugar da tela "Conectar IA"
+            const ia = p.ia && typeof p.ia === "object" ? p.ia : null;
+            if (ia && ia.provedor === "openrouter" && /^sk-or-[A-Za-z0-9_-]{20,200}$/.test(String(ia.chave || ""))) {
+                try {
+                    const bruto = JSON.parse(localStorage.getItem("kaizen.nuvem.config.v1") || "{}");
+                    const config = { contas: {}, preferido: null, ...bruto };
+                    config.contas = { ...config.contas, openrouter: { chave: ia.chave } };
+                    config.preferido = "openrouter";
+                    localStorage.setItem("kaizen.nuvem.config.v1", JSON.stringify(config));
+                } catch (erro) { /* sem armazenamento: ela conecta pela tela de IA */ }
+            }
             const v = p.visual && typeof p.visual === "object" ? p.visual : null;
             const visual = v ? {
                 acessorios: (Array.isArray(v.acessorios) ? v.acessorios : []).filter((id) => typeof id === "string").map((id) => id.slice(0, 40)).slice(0, 6),

@@ -1,5 +1,12 @@
 [
     {
+        "versao": "2.0.6",
+        "data": "2026-11-19",
+        "itens": [
+            "Planos de presente podem vir com a IA já conectada: ao abrir o link, o assistente funciona sem a pessoa precisar criar chave."
+        ]
+    },
+    {
         "versao": "2.0.5",
         "data": "2026-11-19",
         "itens": [
