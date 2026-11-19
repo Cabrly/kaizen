@@ -17,7 +17,7 @@
    fabrica pontos.
 ========================================================= */
 
-import { ESPECIES, TONS, FUNDOS, ACESSORIOS, REACOES, desenharPet, normalizar, imagemDe } from "./pets-arte.js?v=4";
+import { ESPECIES, TONS, FUNDOS, ACESSORIOS, REACOES, desenharPet, normalizar, imagemDe } from "./pets-arte.js?v=6";
 
 
 const API = "./api";
@@ -205,7 +205,8 @@ function custo(id) {
     return ESPECIES[id]?.custo ?? ACESSORIOS[id]?.custo ?? 0;
 }
 
-const tem = (id) => custo(id) === 0 || estado.compras.includes(id);
+// itens de presente (estado.presentes) são dela de graça: não entram na conta de pontos gastos
+const tem = (id) => custo(id) === 0 || estado.compras.includes(id) || (estado.presentes || []).includes(id);
 
 
 /* ---------- editor de visual (ficha e adoção) ---------- */
@@ -780,10 +781,26 @@ function iniciar() {
     // plano de presente (js/compartilhar.js): itens já desbloqueados na loja e uns pontos pra começar
     document.addEventListener("kaizen:presente-pets", async ({ detail }) => {
         await atualizar();
-        const valido = (id) => (id.startsWith("fundo:") ? FUNDOS[id.slice(6)] : ACESSORIOS[id]);
+        const valido = (id) => (id.startsWith("fundo:") ? FUNDOS[id.slice(6)] : id.startsWith("meme:") ? REACOES[id.slice(5)] : ACESSORIOS[id]);
         let mudou = false;
         for (const id of detail.desbloquear || []) {
-            if (valido(id) && !estado.compras.includes(id)) { estado.compras.push(id); mudou = true; }
+            if (valido(id) && !(estado.presentes || []).includes(id) && !estado.compras.includes(id)) {
+                estado.presentes = [...(estado.presentes || []), id];
+                mudou = true;
+            }
+        }
+        // o presente já chega com o visual montado no pet do plano novo (ela pode trocar quando quiser)
+        const visual = detail.visual;
+        if (visual && !estado.presenteVisual) {
+            const alvo = listarPets()[0];
+            const pet = alvo && estado.pets[alvo.id];
+            if (pet) {
+                pet.acessorios = (visual.acessorios || []).filter((id) => ACESSORIOS[id]).slice(0, 4);
+                if (FUNDOS[visual.fundo]) pet.fundo = visual.fundo;
+                pet.reacoes = Object.fromEntries(Object.entries(visual.reacoes || {}).filter(([humor, id]) => REACOES[id]?.humor === humor));
+                estado.presenteVisual = true;
+                mudou = true;
+            }
         }
         // o presente só dá os pontos uma vez
         if (detail.pontos > 0 && !estado.presentePontos) { estado.bonus = (estado.bonus || 0) + detail.pontos; estado.presentePontos = true; mudou = true; }

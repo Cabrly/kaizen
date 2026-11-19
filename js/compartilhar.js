@@ -364,7 +364,13 @@ async function adicionar() {
         if (pacoteRecebido?.presente) {
             const p = pacoteRecebido.presente;
             const ids = (Array.isArray(p.desbloquear) ? p.desbloquear : []).filter((id) => typeof id === "string").map((id) => id.slice(0, 40)).slice(0, 60);
-            document.dispatchEvent(new CustomEvent("kaizen:presente-pets", { detail: { desbloquear: ids, pontos: Math.min(1000, Math.max(0, Number(p.pontos) || 0)) } }));
+            const v = p.visual && typeof p.visual === "object" ? p.visual : null;
+            const visual = v ? {
+                acessorios: (Array.isArray(v.acessorios) ? v.acessorios : []).filter((id) => typeof id === "string").map((id) => id.slice(0, 40)).slice(0, 6),
+                fundo: typeof v.fundo === "string" ? v.fundo.slice(0, 40) : "",
+                reacoes: Object.fromEntries(Object.entries(v.reacoes && typeof v.reacoes === "object" ? v.reacoes : {}).filter(([h, id]) => typeof id === "string").slice(0, 3).map(([h, id]) => [String(h).slice(0, 12), id.slice(0, 40)]))
+            } : null;
+            document.dispatchEvent(new CustomEvent("kaizen:presente-pets", { detail: { desbloquear: ids, pontos: Math.min(1000, Math.max(0, Number(p.pontos) || 0)), visual } }));
             document.dispatchEvent(new CustomEvent("kaizen:tutorial-presente", { detail: {
                 nome: String(p.para || "").slice(0, 40), notaPets: String(p.notaPets || "").slice(0, 600) } }));
         }
