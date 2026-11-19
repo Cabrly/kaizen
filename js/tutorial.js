@@ -300,7 +300,12 @@ function mostrar(indice) {
 
     // a tela trocou agora: espera ela pintar antes de medir o alvo
     const alvo = passo.alvo && document.querySelector(passo.alvo);
-    if (alvo) alvo.scrollIntoView({ block: "center", behavior: "instant" });
+    if (alvo) {
+        // alvo alto: encosta no topo (abaixo do cabeçalho) pra sobrar espaço pro balão embaixo
+        const alto = alvo.getBoundingClientRect().height > window.innerHeight * 0.4;
+        alvo.scrollIntoView({ block: alto ? "start" : "center", behavior: "instant" });
+        if (alto) window.scrollBy({ top: -84, behavior: "instant" });
+    }
     requestAnimationFrame(() => requestAnimationFrame(posicionar));
     raiz.querySelector(".tut-proximo").focus();
 
@@ -340,16 +345,10 @@ function posicionar() {
     const x = Math.max(0, r.left - folga);
     const y = Math.max(0, r.top - folga);
     const w = Math.min(largura, r.right + folga) - x;
-    const h = Math.min(altura, r.bottom + folga) - y;
+    let h = Math.min(altura, r.bottom + folga) - y;
 
-    caixa(veus.cima, 0, 0, largura, y);
-    caixa(veus.baixo, 0, y + h, largura, altura - y - h);
-    caixa(veus.esq, 0, y, x, h);
-    caixa(veus.dir, x + w, y, largura - x - w, h);
-    anel.hidden = false;
-    caixa(anel, x, y, w, h);
-
-    // o balão vai embaixo do alvo se couber; senão em cima; senão do lado; senão por cima, embaixo na tela
+    // o balão vai embaixo do alvo se couber; senão em cima; senão do lado; senão embaixo na tela, e o destaque
+    // encolhe pra só a parte do alvo que fica acima do balão (assim o texto nunca cobre o que está sendo mostrado)
     balao.classList.remove("tut-centro");
     const bw = balao.offsetWidth;
     const bh = balao.offsetHeight;
@@ -362,9 +361,19 @@ function posicionar() {
     else if (y - margem - bh >= 0) top = y - margem - bh;
     else if (x + w + margem + bw <= largura - margem) [top, left] = [naAltura, x + w + margem];
     else if (x - margem - bw >= margem) [top, left] = [naAltura, x - margem - bw];
-    else top = altura - bh - margem;
+    else {
+        top = altura - bh - margem;
+        if (y + h > top - margem) h = Math.max(48, top - margem - y);
+    }
     balao.style.left = `${left}px`;
     balao.style.top = `${Math.max(margem, top)}px`;
+
+    caixa(veus.cima, 0, 0, largura, y);
+    caixa(veus.baixo, 0, y + h, largura, altura - y - h);
+    caixa(veus.esq, 0, y, x, h);
+    caixa(veus.dir, x + w, y, largura - x - w, h);
+    anel.hidden = false;
+    caixa(anel, x, y, w, h);
 
 }
 

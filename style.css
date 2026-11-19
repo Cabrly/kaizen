@@ -6874,18 +6874,10 @@ html.alto-contraste :focus-visible {
     display: none;
 }
 
-/* celular: o balão fica sempre embaixo, na largura toda */
+/* celular: o balão ocupa a largura toda; em cima ou embaixo do alvo quem decide é o js (posicionar), */
+/* pra ele nunca cobrir o que está sendo mostrado */
 @media (max-width: 600px) {
-    .tut-balao,
-    .tut-balao.tut-centro {
-        top: auto !important;
-        left: 16px !important;
-        bottom: 16px;
-
-        width: calc(100vw - 32px);
-
-        transform: none;
-    }
+    .tut-balao { width: calc(100vw - 32px); max-height: calc(100dvh - 32px); overflow: auto; }
 }
 
 html.menos-movimento .tut-veu,
