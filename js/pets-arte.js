@@ -81,7 +81,9 @@ export const FUNDOS = {
     espaco:    { nome: "Espaço",          custo: 180 },
     codigo:    { nome: "Código verde",    custo: 180 },
     arcoiris:  { nome: "Arco-íris",       custo: 200 },
-    vaporwave: { nome: "Vaporwave",       custo: 220 }
+    vaporwave: { nome: "Vaporwave",       custo: 220 },
+    pista:     { nome: "Pista de corrida", custo: 120 },
+    podio:     { nome: "Pódio",            custo: 160 }
 };
 
 /* slot: um por lugar. caixa = área visível da imagem (esq, topo, dir, base, em %),
@@ -109,6 +111,10 @@ export const ACESSORIOS = {
                   meme: "anjinho (só na aparência)" },
     chifres:    { nome: "Chifrinhos",          slot: "cabeca", custo: 160, tam: 0.9,  caixa: [6, 32, 94, 92], svg: true, afunda: 0.14 },
     "coroa-flores": { nome: "Coroa de flores", slot: "cabeca", custo: 110, tam: 0.95, caixa: [4, 44, 96, 82], svg: true, afunda: 0.1 },
+    // linha de corrida: vermelho e amarelo de equipe, sem logotipo nem nome de marca
+    "capacete-piloto": { nome: "Capacete de piloto", slot: "cabeca", custo: 140, tam: 1.12, caixa: [8, 6, 92, 90], svg: true, mira: "olhos", meio: 62,
+                  meme: "visor fumê, pronto pra largar" },
+    "bone-equipe": { nome: "Boné da equipe vermelha", slot: "cabeca", custo: 70, tam: 0.95, caixa: [6, 14, 94, 82], svg: true },
     laco:       { nome: "Laço",                slot: "cabeca", custo: 40,  tam: 0.42, caixa: [6, 19, 93, 93], lado: 0.32 },
     sakura:     { nome: "Flor de cerejeira",   slot: "cabeca", custo: 40,  tam: 0.32, caixa: [6, 9, 93, 93],  lado: -0.32 },
     hibisco:    { nome: "Hibisco",             slot: "cabeca", custo: 50,  tam: 0.36, caixa: [9, 7, 96, 91],  lado: 0.32 },
@@ -139,6 +145,7 @@ export const ACESSORIOS = {
     "cachecol-musgo":   { nome: "Cachecol da Casa Musgo",   slot: "pescoco", custo: 120, cores: ["#1e6040", "#c9cfd5"] },
     "cachecol-mare":    { nome: "Cachecol da Casa Maré",    slot: "pescoco", custo: 120, cores: ["#21417f", "#c29a5d"] },
     "cachecol-colmeia": { nome: "Cachecol da Casa Colmeia", slot: "pescoco", custo: 120, cores: ["#efc843", "#2e2e2e"] },
+    "cachecol-equipe":  { nome: "Cachecol da equipe vermelha", slot: "pescoco", custo: 100, cores: ["#d40a0a", "#ffd400"] },
     "gravata-borboleta": { nome: "Gravata-borboleta", slot: "pescoco", custo: 70, tam: 0.42, caixa: [7, 31, 93, 69], svg: true },
     coleira:    { nome: "Coleira com sininho", slot: "pescoco", custo: 60,  tam: 0.95, caixa: [6, 14, 94, 60], svg: true },
     bandana:    { nome: "Bandana",             slot: "pescoco", custo: 80,  tam: 0.85, caixa: [6, 12, 94, 78], svg: true },
@@ -190,6 +197,13 @@ export const ACESSORIOS = {
     moai:       { nome: "Moai",                slot: "lado", custo: 190, caixa: [6, 6, 91, 93], meme: "🗿" },
     notebook:   { nome: "Notebook",            slot: "lado", custo: 200, caixa: [7, 6, 93, 93] },
     foguete:    { nome: "Foguete",             slot: "lado", custo: 220, caixa: [7, 7, 93, 93], meme: "rumo à aprovação" },
+    "bandeira-quadriculada": { nome: "Bandeira quadriculada", slot: "lado", custo: 60, caixa: [6, 4, 94, 98], svg: true,
+                  meme: "acabou a prova (e você foi bem)" },
+    "pneu-macio": { nome: "Pneu macio",         slot: "lado", custo: 70,  caixa: [6, 6, 94, 94], svg: true, meme: "faixa vermelha: aderência máxima" },
+    "semaforo-largada": { nome: "Semáforo de largada", slot: "lado", custo: 90, caixa: [8, 14, 92, 98], svg: true,
+                  meme: "apagou as luzes: é largada!" },
+    "volante-f1": { nome: "Volante de corrida", slot: "lado", custo: 120, caixa: [10, 26, 90, 78], svg: true },
+    "carro-f1": { nome: "Carro de corrida",     slot: "lado", custo: 150, caixa: [2, 28, 98, 86], svg: true, meme: "pisa fundo no estudo" },
     trofeu:     { nome: "Troféu",              slot: "lado", custo: 300, caixa: [14, 6, 86, 93] }
 };
 

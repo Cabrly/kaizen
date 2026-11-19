@@ -17,7 +17,7 @@
    fabrica pontos.
 ========================================================= */
 
-import { ESPECIES, TONS, FUNDOS, ACESSORIOS, REACOES, desenharPet, normalizar, imagemDe } from "./pets-arte.js?v=3";
+import { ESPECIES, TONS, FUNDOS, ACESSORIOS, REACOES, desenharPet, normalizar, imagemDe } from "./pets-arte.js?v=4";
 
 
 const API = "./api";
@@ -775,6 +775,24 @@ function iniciar() {
     document.addEventListener("kaizen:plano-criado", async (evento) => {
         await atualizar();
         if (estado.ligado && evento.detail.plano) mostrarAdocao(evento.detail.plano);
+    });
+
+    // plano de presente (js/compartilhar.js): itens já desbloqueados na loja e uns pontos pra começar
+    document.addEventListener("kaizen:presente-pets", async ({ detail }) => {
+        await atualizar();
+        const valido = (id) => (id.startsWith("fundo:") ? FUNDOS[id.slice(6)] : ACESSORIOS[id]);
+        let mudou = false;
+        for (const id of detail.desbloquear || []) {
+            if (valido(id) && !estado.compras.includes(id)) { estado.compras.push(id); mudou = true; }
+        }
+        // o presente só dá os pontos uma vez
+        if (detail.pontos > 0 && !estado.presentePontos) { estado.bonus = (estado.bonus || 0) + detail.pontos; estado.presentePontos = true; mudou = true; }
+        if (mudou) {
+            // grava na hora (e só depois recarrega): o salvar() normal espera 300 ms, e o recarregar apagaria a mudança
+            clearTimeout(salvando);
+            await api("/estudos/pets", { method: "POST", body: { dados: estado } }).catch(() => null);
+            await atualizar();
+        }
     });
 
     modal.addEventListener("close", () => {
