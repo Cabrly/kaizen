@@ -506,13 +506,6 @@ html[data-tema="escuro"] .est-mais-menu { box-shadow: 0 12px 30px rgba(0, 0, 0, 
     .trilha-heroi h3 { font-size: 22px; }
     .trilha-itens { grid-template-columns: 1fr; }
     .trilha-itens li { padding: 8px 10px; font-size: 14px; }
-    .est-item-texto p {
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
-        overflow: hidden;
-    }
 }
 
 

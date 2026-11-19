@@ -2802,6 +2802,7 @@ footer p,
 
 .est-item-texto p {
     margin-top: 3px;
+    white-space: pre-line;
 
     font-size: 12px;
 
@@ -6100,6 +6101,7 @@ html.travado body > *:not(.pin-tela) {
 }
 
 .entrega-enunciado {
+    white-space: pre-line;
     margin-bottom: 8px;
     padding: 10px 12px;
 
