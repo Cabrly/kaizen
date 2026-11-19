@@ -25,7 +25,7 @@
    Estatísticas anônimas (um Durable Object só, "Estatisticas"): contagens por
    dia, sem nenhum identificador de pessoa ou aparelho.
 
-   POST /v1/uso     { abertura, plataforma, versao, novo, semana, mes, eventos }
+   POST /v1/uso     { abertura, plataforma, versao, novo, idade, semana, mes, eventos }
                     o app manda "abri hoje" uma vez por dia e, de vez em quando,
                     quantas vezes usou cada função (ver js/uso.js)
    POST /v1/visita  { acao, origem }  o site conta visitas e cliques
@@ -200,12 +200,21 @@ export class Cofre extends DurableObject {
 
 const PLATAFORMAS = ["pc", "navegador", "celular"];
 const EVENTOS = ["plano_criado", "plano_importado", "plano_compartilhado", "item_feito", "entrega", "cartao_revisado",
-                 "chat", "agenda", "resumo", "acessibilidade"];
+                 "chat", "agenda", "resumo", "acessibilidade", "galeria_aberta", "plano_galeria", "sequencia_3", "sequencia_7"];
+// há quantos dias a pessoa abriu o app pela primeira vez (só a faixa: dá pra ver quem volta no dia 1, 7 e 30)
+const IDADES = ["d0", "d1", "d2-6", "d7-13", "d14-29", "d30+"];
 const ACOES_SITE = ["visita", "baixar_windows", "baixar_mac", "baixar_linux", "navegador", "demo"];
 const ORIGENS = ["direto", "whatsapp", "instagram", "google", "facebook", "x", "linkedin", "github", "youtube",
                  "tiktok", "telegram", "discord", "outro"];
 const DIAS_NO_PAINEL = 180;
 
+
+// faixas de tokens por pessoa no dia (o painel lê "tok:faixa:N"): 0 = até 10 mil … 6 = 500 mil ou mais
+const FAIXAS_TOKENS = [10_000, 25_000, 50_000, 100_000, 200_000, 500_000];
+const faixaDeTokens = (total) => {
+    const i = FAIXAS_TOKENS.findIndex((limite) => total < limite);
+    return i < 0 ? FAIXAS_TOKENS.length : i;
+};
 
 // o dia no horário de Brasília (sem horário de verão desde 2019)
 function hojeBr() {
@@ -275,6 +284,27 @@ export class Estatisticas extends DurableObject {
         this.somar({ "ia:pedidos": -1, [`ia:ip:${ip}`]: -1, [`ia:ip:u:${usuario}`]: -1, "ia:falhas": 1 });
     }
 
+    // tokens de uma resposta, por serviço e por modelo. Por pessoa guarda só o total do dia (em "ia:ip:tok:*", que
+    // some amanhã) e quantas pessoas caem em cada faixa: dá a média e o "usuário pesado" sem saber quem é quem
+    contarTokens(usuario, servico, modelo, entrada, saida) {
+        const dia = hojeBr();
+        const chave = `ia:ip:tok:${usuario}`;
+        const antes = this.valorDe(dia, chave);
+        const depois = antes + entrada + saida;
+        const m = {
+            [`tok:s:${servico}:chamadas`]: 1, [`tok:s:${servico}:entrada`]: entrada, [`tok:s:${servico}:saida`]: saida,
+            [`tok:m:${modelo}:chamadas`]: 1, [`tok:m:${modelo}:entrada`]: entrada, [`tok:m:${modelo}:saida`]: saida,
+            [chave]: entrada + saida
+        };
+        if (antes === 0) m["tok:usuarios"] = 1;
+        const faixaAntes = antes ? faixaDeTokens(antes) : -1, faixaDepois = faixaDeTokens(depois);
+        if (faixaAntes !== faixaDepois) {
+            if (faixaAntes >= 0) m[`tok:faixa:${faixaAntes}`] = -1;
+            m[`tok:faixa:${faixaDepois}`] = 1;
+        }
+        this.somar(m);
+    }
+
 }
 
 
@@ -288,6 +318,7 @@ function mudancasDoUso(corpo) {
         m.ativos = 1;
         m[`ativos:${plataforma}`] = 1;
         if (corpo.novo === true) { m.novos = 1; m[`novos:${plataforma}`] = 1; }
+        if (IDADES.includes(corpo.idade)) m[`idade:${corpo.idade}`] = 1;
         if (corpo.semana === true) m.semana = 1;
         if (corpo.mes === true) m.mes = 1;
         if (/^\d{1,2}\.\d{1,3}\.\d{1,3}$/.test(corpo.versao || "")) m[`versao:${corpo.versao}`] = 1;
@@ -385,6 +416,23 @@ const MAX_CARACTERES_IA = 260_000;   // a entrega mais o enunciado (o app corta 
 const ORIGENS_IA = /^(https:\/\/cabrly\.github\.io|https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?|tauri:\/\/localhost|https?:\/\/tauri\.localhost)$/;
 
 
+// o app diz quem pediu (só pra contar tokens); o que não está na lista vira "outro"
+const SERVICOS_IA = ["perguntas", "roteiro", "flashcards", "correcao", "chat", "celular"];
+const servicoDe = (nome) => (SERVICOS_IA.includes(nome) ? nome : "outro");
+
+// vira parte da chave de contagem: só letras, números e . _ : / -
+const nomeDeModelo = (modelo) => String(modelo || "desconhecido").toLowerCase().replace(/[^a-z0-9._:/-]/g, "").slice(0, 60) || "desconhecido";
+
+// o número que o serviço informou; sem ele, ~4 caracteres por token
+function tokensDaResposta(uso, mensagens, texto) {
+    const inteiro = (n) => (Number.isFinite(n) && n >= 0 ? Math.round(n) : null);
+    return {
+        entrada: inteiro(uso?.entrada) ?? Math.round(mensagens.reduce((s, m) => s + m.content.length, 0) / 4),
+        saida: inteiro(uso?.saida) ?? Math.round(texto.length / 4)
+    };
+}
+
+
 async function hashDoDia(texto) {
     const bits = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`kaizen-ia:${hojeBr()}:${texto}`));
     return [...new Uint8Array(bits).slice(0, 8)].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -451,7 +499,10 @@ async function chamarOpenRouter(chave, modelo, mensagens) {
     const texto = dados.choices?.[0]?.message?.content || "";
     if (!texto.trim()) return { status: 503, detalhe: "resposta vazia", espera: 0 };
     // alguns modelos soltam o raciocínio antes da resposta
-    return { texto: texto.includes("</think>") ? texto.split("</think>").pop().trim() : texto.trim(), modelo: dados.model };
+    return {
+        texto: texto.includes("</think>") ? texto.split("</think>").pop().trim() : texto.trim(), modelo: dados.model,
+        uso: { entrada: dados.usage?.prompt_tokens, saida: dados.usage?.completion_tokens }
+    };
 
 }
 
@@ -480,8 +531,12 @@ async function chamarGemini(chave, modelo, mensagens, comoJson) {
 
     const partes = dados.candidates?.[0]?.content?.parts;
     if (!partes) return { status: 422, detalhe: dados.promptFeedback?.blockReason || "resposta vazia" };
-    // só o texto da resposta (as partes "thought" são o raciocínio)
-    return { texto: partes.filter((p) => !p.thought).map((p) => p.text || "").join("") };
+    // só o texto da resposta (as partes "thought" são o raciocínio, que o Google cobra como saída)
+    const uso = dados.usageMetadata || {};
+    return {
+        texto: partes.filter((p) => !p.thought).map((p) => p.text || "").join(""),
+        uso: { entrada: uso.promptTokenCount, saida: (uso.candidatesTokenCount || 0) + (uso.thoughtsTokenCount || 0) }
+    };
 
 }
 
@@ -563,7 +618,13 @@ async function ia(pedido, env, ip) {
         if (negados.has(t.grupo)) continue;
         if ((esgotados.get(t.marca) || 0) > Date.now()) { semCota++; continue; }
         const r = await t.chamar(t.chave, t.modelo, mensagens, corpo.json === true);
-        if (r.texto !== undefined) return json(200, { resposta: r.texto, modelo: r.modelo || t.modelo });
+        if (r.texto !== undefined) {
+            const modelo = r.modelo || t.modelo;
+            const uso = tokensDaResposta(r.uso, mensagens, r.texto);
+            // medir nunca derruba a resposta
+            await contador.contarTokens(usuario, servicoDe(corpo.servico), nomeDeModelo(modelo), uso.entrada, uso.saida).catch(console.error);
+            return json(200, { resposta: r.texto, modelo, uso });
+        }
         ultimo = r;
         console.error(`${t.marca} ${t.modelo}: ${r.status} ${r.detalhe.slice(0, 200)}`);
         if (r.status === 429 && r.espera > 120) {
