@@ -17,7 +17,7 @@
 import { servidor } from "./cofre.js";
 
 
-const CHAVE = "kaizen.uso.v1";        // { ultimo, pendentes, enviadoEm, desligado }
+const CHAVE = "kaizen.uso.v1";        // { primeiro, ultimo, pendentes, enviadoEm, desligado }
 const ENVIAR_A_CADA = 6 * 60 * 60 * 1000;  // contagens de funções: no máximo a cada 6 horas
 
 const modal = document.querySelector("#priv-modal");
@@ -77,6 +77,20 @@ function segundaDe(iso) {
 
 
 
+// há quantos dias foi a primeira abertura: só a faixa vai pro servidor (sem data, sem identificador)
+function faixaDeIdade(primeiro, hoje) {
+    if (!primeiro) return "d0";
+    const dias = Math.round((Date.parse(hoje) - Date.parse(primeiro)) / 86400000);
+    if (dias <= 0) return "d0";
+    if (dias === 1) return "d1";
+    if (dias < 7) return "d2-6";
+    if (dias < 14) return "d7-13";
+    if (dias < 30) return "d14-29";
+    return "d30+";
+}
+
+
+
 /* ---------- envio ---------- */
 
 async function enviar(corpo, { beacon = false } = {}) {
@@ -111,6 +125,8 @@ async function abertura(modo) {
         versao: await versaoDoApp(),
         // quem já usava antes desta contagem existir não é "novo"
         novo: !estado.ultimo && !window.kaizenJaUsado,
+        // quem já usava antes desta medição não tem primeiro dia guardado: fica sem faixa até a próxima versão
+        idade: !estado.ultimo || /^\d{4}-/.test(estado.primeiro || "") ? faixaDeIdade(estado.primeiro, hoje) : undefined,
         semana: !estado.ultimo || segundaDe(estado.ultimo) !== segundaDe(hoje),
         mes: !estado.ultimo || estado.ultimo.slice(0, 7) !== hoje.slice(0, 7),
         eventos: estado.pendentes
@@ -119,7 +135,7 @@ async function abertura(modo) {
     try {
         if (await enviar(corpo)) {
             const atual = ler();
-            gravar({ ...atual, ultimo: hoje, enviadoEm: Date.now(), pendentes: subtrair(atual.pendentes, corpo.eventos) });
+            gravar({ ...atual, primeiro: atual.primeiro || (atual.ultimo ? "antigo" : hoje), ultimo: hoje, enviadoEm: Date.now(), pendentes: subtrair(atual.pendentes, corpo.eventos) });
         }
     } catch (erro) {
         /* sem internet: tenta de novo na próxima abertura */
