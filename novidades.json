@@ -1,5 +1,13 @@
 [
     {
+        "versao": "2.0.2",
+        "data": "2026-11-19",
+        "itens": [
+            "Planos de presente: quem monta um plano pra alguém agora pode incluir uma mensagem de boas-vindas, que aparece quando a pessoa abre o link, e um passeio exclusivo por todas as partes do sistema, que abre depois que ela adiciona o plano. O botão Tutorial do rodapé mostra o passeio de novo.",
+            "No celular, o passeio agora fica por cima da barra de navegação de baixo, e a janelinha de incentivo da IA não aparece mais na frente dele."
+        ]
+    },
+    {
         "versao": "2.0.1",
         "data": "2026-11-19",
         "itens": [
