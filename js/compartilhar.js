@@ -361,7 +361,13 @@ async function adicionar() {
 
         if (pacoteOrigem === "galeria") document.dispatchEvent(new CustomEvent("kaizen:uso", { detail: "plano_galeria" }));
         // plano de presente: depois de adicionar, abre o passeio exclusivo (js/tutorial.js)
-        if (pacoteRecebido?.presente) document.dispatchEvent(new CustomEvent("kaizen:tutorial-presente", { detail: { nome: String(pacoteRecebido.presente.para || "").slice(0, 40) } }));
+        if (pacoteRecebido?.presente) {
+            const p = pacoteRecebido.presente;
+            const ids = (Array.isArray(p.desbloquear) ? p.desbloquear : []).filter((id) => typeof id === "string").map((id) => id.slice(0, 40)).slice(0, 60);
+            document.dispatchEvent(new CustomEvent("kaizen:presente-pets", { detail: { desbloquear: ids, pontos: Math.min(1000, Math.max(0, Number(p.pontos) || 0)) } }));
+            document.dispatchEvent(new CustomEvent("kaizen:tutorial-presente", { detail: {
+                nome: String(p.para || "").slice(0, 40), notaPets: String(p.notaPets || "").slice(0, 600) } }));
+        }
         importar.close();
         document.querySelector('.nav-tab[data-tela="estudos"]')?.click();
         document.dispatchEvent(new CustomEvent("kaizen:recarregar-estudos"));

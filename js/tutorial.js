@@ -72,10 +72,12 @@ const GERAL = [
 
 const CHAVE_PRESENTE = "kaizen.tutorial.presente";   // "1" quando o plano de presente foi aberto neste navegador
 const CHAVE_NOME = "kaizen.tutorial.presente.nome";
+const CHAVE_NOTA = "kaizen.tutorial.presente.nota";   // texto extra sobre os pets de presente (opcional)
 
-function passosPresente(nome) {
+function passosPresente(nome, notaPets = "") {
 
     const oi = nome ? `${nome}, ` : "";
+    const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
     return [
         {
@@ -145,6 +147,11 @@ function passosPresente(nome) {
                    "o seu progresso (ele aparece na trilha), e você compra roupinhas com os pontos do estudo. <b>O que a IA sabe</b> é o resumo " +
                    "do seu progresso que a IA usa pra te ajudar melhor."
         },
+        ...(notaPets ? [{
+            tela: "estudos", alvo: "#est-mais", abrir: "#est-mais",
+            titulo: "Um presente na loja dos pets",
+            texto: esc(notaPets) + " Abra <b>Mais → Pets</b> pra escolher o visual do seu bichinho."
+        }] : []),
         {
             tela: "kanban", alvo: "#tela-kanban .kanban",
             titulo: "Tarefas",
@@ -372,7 +379,7 @@ function fechar(terminou) {
 export function abrirTutorial(conjunto = "geral", dados = {}) {
 
     if (raiz) return;
-    passos = conjunto === "presente" ? passosPresente(dados.nome) : GERAL;
+    passos = conjunto === "presente" ? passosPresente(dados.nome, dados.notaPets) : GERAL;
     telaAntes = telaAtiva();
     montar();
     window.addEventListener("resize", posicionar);
@@ -386,9 +393,9 @@ function iniciar() {
 
     // quem tem o plano de presente revê o passeio dele; os outros, o geral
     document.querySelector("#tutorial-abrir")?.addEventListener("click", () => {
-        let presente = false, nome = "";
-        try { presente = localStorage.getItem(CHAVE_PRESENTE) === "1"; nome = localStorage.getItem(CHAVE_NOME) || ""; } catch (erro) { /* sem storage: passeio geral */ }
-        abrirTutorial(presente ? "presente" : "geral", { nome });
+        let presente = false, nome = "", notaPets = "";
+        try { presente = localStorage.getItem(CHAVE_PRESENTE) === "1"; nome = localStorage.getItem(CHAVE_NOME) || ""; notaPets = localStorage.getItem(CHAVE_NOTA) || ""; } catch (erro) { /* sem storage: passeio geral */ }
+        abrirTutorial(presente ? "presente" : "geral", { nome, notaPets });
     });
 
     // o plano de presente acabou de ser adicionado (js/compartilhar.js): abre o passeio exclusivo uma vez
@@ -398,8 +405,9 @@ function iniciar() {
             if (localStorage.getItem(CHAVE_PRESENTE) === "1") return;   // já viu: não repete sozinho
             localStorage.setItem(CHAVE_PRESENTE, "1");
             localStorage.setItem(CHAVE_NOME, detail?.nome || "");
+            localStorage.setItem(CHAVE_NOTA, detail?.notaPets || "");
         } catch (erro) { /* sem storage: mostra mesmo assim */ }
-        setTimeout(() => abrirTutorial("presente", { nome: detail?.nome || "" }), 900);
+        setTimeout(() => abrirTutorial("presente", { nome: detail?.nome || "", notaPets: detail?.notaPets || "" }), 900);
     });
 
     // abriu por um link de plano compartilhado: o passeio geral cobriria a janela de escolher os dias
