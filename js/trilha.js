@@ -8,7 +8,7 @@
 ========================================================= */
 
 
-import { desenharPet } from "./pets-arte.js?v=3";
+import { desenharPet } from "./pets-arte.js?v=4";
 
 
 const secao = document.querySelector("#est-trilha");
@@ -16,8 +16,30 @@ const secao = document.querySelector("#est-trilha");
 const API = "./api/estudos";
 
 const CHAVE_PLANO = "kaizen.trilha.plano.v1";
+const CHAVE_ZOOM = "kaizen.trilha.zoom.v1";   // 0 = ver tudo, 1 = normal, 2 = perto
 
-const estado = { planos: [], planoId: null, fases: [], sel: null, detalhe: null, pets: [] };
+// quanto o desenho cresce ou encolhe em cada nível (computador, celular)
+const ZOOM_H = [0.34, 1, 1.4];
+const ZOOM_V = [0.55, 1, 1.4];
+
+function zoomSalvo() {
+    try {
+        const bruto = localStorage.getItem(CHAVE_ZOOM);
+        if (bruto === "0" || bruto === "1" || bruto === "2") return Number(bruto);
+    } catch (erro) { /* sem storage: nível normal */ }
+    return 1;
+}
+
+// plano que tem "Matemática · Lógica" no título: o ícone da matéria vai pro lugar do prefixo (rótulo mais curto)
+const ICONES_MATERIA = { "Matemática": "🧮", "Física": "⚡", "Português": "📖", "Inglês": "🇬🇧", "Redação": "✍️", "Revisão": "🔁", "Simulado": "📝" };
+
+function rotuloCurto(topico) {
+    const [materia, resto] = String(topico).split(" · ");
+    if (resto && ICONES_MATERIA[materia]) return `${ICONES_MATERIA[materia]} ${resto}`;
+    return topico;
+}
+
+const estado = { planos: [], planoId: null, fases: [], sel: null, detalhe: null, pets: [], zoom: zoomSalvo(), centrar: true, selManual: false };
 
 const TIPOS = { video: "Vídeo", doc: "Documentação", atividade: "Atividade" };
 
@@ -88,9 +110,15 @@ async function carregar(planos) {
     if (estado.sel === null || !estado.fases[estado.sel] || estado.selPlano !== plano.id) {
         estado.sel = atual === -1 ? 0 : atual;
         estado.selPlano = plano.id;
+        estado.selManual = false;
+    } else if (!estado.selManual) {
+        // concluiu uma fase: a trilha acompanha (a menos que a pessoa tenha escolhido olhar outra)
+        const seguir = atual === -1 ? estado.fases.length - 1 : atual;
+        if (seguir !== estado.sel) { estado.sel = seguir; estado.detalhe = null; estado.centrar = true; }
     }
 
     secao.hidden = false;
+    if (estado.centradoNo !== plano.id) { estado.centrar = true; estado.centradoNo = plano.id; }
     desenhar();
     carregarDetalhe();
 
@@ -129,10 +157,10 @@ function heroi() {
         <span class="trilha-etapa">Fase ${i + 1} de ${estado.fases.length} · sessão de ${diaCurto(fase.data)}</span>
         <h3>${esc(fase.topico)}</h3>
         ${d?.objetivo ? `<p class="trilha-objetivo">${esc(d.objetivo)}</p>` : ""}
-        ${faltando.length && !feita ? `<p class="trilha-aviso">💡 Recomendo fazer antes a fase ${faltando[0].j + 1} (${esc(faltando[0].f.topico)}). Você pode começar mesmo assim.
+        ${faltando.length && !feita ? `<p class="trilha-aviso">💡 Sugiro fazer antes a fase ${faltando[0].j + 1}.
             <button type="button" data-fase-ir="${faltando[0].j}">Ver fase ${faltando[0].j + 1}</button></p>` : ""}
         ${d ? `<details class="trilha-detalhes" ${window.matchMedia("(min-width: 1000px)").matches ? "open" : ""}>
-            <summary>Ver o que tem nesta fase (${d.itens.length} itens${total ? ` · ${duracao(total)}` : ""})</summary>
+            <summary>Itens da fase (${d.itens.length}${total ? ` · ${duracao(total)}` : ""})</summary>
             <ul class="trilha-itens">${d.itens.map((it) => `
                 <li class="${it.estado}"><small>${TIPOS[it.tipo] || it.tipo}</small><span>${esc(it.titulo)}</span></li>`).join("")}</ul>
         </details>` : ""}
@@ -551,11 +579,15 @@ function desenhar() {
         LARG = X0 + Math.max(fases.length - 1, 0) * PASSO + 120;
         alt = 310;
     } else {
-        const PASSO = 70, TOPO = 58, X = [250, 320, 350, 320, 250, 180, 150, 180];
+        const PASSO = 80, TOPO = 58, X = [190, 250, 275, 250, 190, 130, 105, 130];
         pos = fases.map((_, i) => ({ x: X[i % 8], y: TOPO + i * PASSO }));
-        LARG = 480;
+        LARG = 360;
         alt = TOPO + Math.max(fases.length - 1, 0) * PASSO + 40;
     }
+
+    // de que lado do nó o texto e a fogueira ficam
+    const ladoDe = (x) => (x > (horizontal ? 300 : LARG * 0.55) ? "esq" : "dir");
+    const raioDe = (i) => ((i + 1) % 5 === 0 ? 31 : 25);
 
     const trecho = (a, p) => horizontal
         ? `C${(a.x + p.x) / 2},${a.y} ${(a.x + p.x) / 2},${p.y} ${p.x},${p.y}`
@@ -588,8 +620,8 @@ function desenhar() {
     // ---------- floresta: escura no começo, uma fogueira acesa por fase concluída ----------
     const fogos = fases.map((f, i) => ({ f, i })).filter(({ f }) => situacao(f) === "feita").map(({ f, i }) => {
         const { x, y } = pos[i];
-        const r = (i + 1) % 5 === 0 ? 26 : 21;
-        const lado = x > 300 ? "esq" : "dir";
+        const r = raioDe(i);
+        const lado = ladoDe(x);
         return horizontal
             ? { id: f.id, x, by: y - r - 8, chefe: (i + 1) % 5 === 0 }
             : { id: f.id, x: lado === "dir" ? x - r - 32 : x + r + 32, by: y + 16, chefe: (i + 1) % 5 === 0 };
@@ -613,14 +645,14 @@ function desenhar() {
         const s = situacao(f);
         const chefe = (i + 1) % 5 === 0;
         const atual = i === atualIdx;
-        const r = chefe ? 26 : 21;
+        const r = raioDe(i);
         const { x, y } = pos[i];
         const icone = s === "feita" ? "★" : chefe ? "🏆" : String(i + 1);
-        const lado = x > 300 ? "esq" : "dir";
+        const lado = ladoDe(x);
         const tx = horizontal ? x : (lado === "dir" ? x + r + 12 : x - r - 12);
         const ancora = horizontal ? "middle" : (lado === "dir" ? "start" : "end");
-        const maxV = lado === "dir" ? Math.max(14, Math.floor((LARG - tx - 8) / 8.8)) : 36;
-        const nome = horizontal ? linhas(f.topico, 17) : linhas(f.topico, maxV);
+        const maxV = Math.max(12, Math.floor((lado === "dir" ? LARG - tx - 8 : tx - 8) / 9.2));
+        const nome = horizontal ? linhas(rotuloCurto(f.topico), 17) : linhas(rotuloCurto(f.topico), maxV);
         const yNome = horizontal ? y + r + 26 : y - 6 - (nome.length - 1) * 9;
         const yData = yNome + nome.length * 18;
         const atrasada = s !== "feita" && f.data < hoje;
@@ -634,6 +666,7 @@ function desenhar() {
             <g class="trilha-no ${s} ${atual ? "atual" : ""} ${i === estado.sel ? "escolhida" : ""} ${chefe ? "chefe" : ""}"
                data-fase="${i}" tabindex="0" role="button"
                aria-label="Fase ${i + 1}: ${esc(f.topico)}, ${f.feitos} de ${f.total} feitos">
+                <title>${esc(f.topico)}</title>
                 ${bicho}
                 ${atual ? `<circle class="pulso" cx="${x}" cy="${y}" r="${r + 6}"/>` : ""}
                 <circle class="base" cx="${x}" cy="${y + 7}" r="${r}"/>
@@ -646,6 +679,10 @@ function desenhar() {
 
     }).join("");
 
+    // se o desenho vai ser refeito (marcou ✓, trocou de aba…), a trilha não volta pro começo: guarda onde estava
+    const rolagemAntes = secao.querySelector(".trilha-rolagem");
+    const guardado = rolagemAntes && !estado.centrar ? { esq: rolagemAntes.scrollLeft, topo: rolagemAntes.scrollTop } : null;
+
     secao.innerHTML = `
         <header class="trilha-topo">
             <div>
@@ -653,15 +690,23 @@ function desenhar() {
                 <p>${feitas} de ${fases.length} fases${atualIdx >= 0 ? ` · você está na fase ${atualIdx + 1}` : " · trilha completa 🎉"}</p>
             </div>
             ${escolhaPlanos(plano)}
-            <div class="trilha-cenarios" role="group" aria-label="Cenário da trilha">
-                <button type="button" data-cenario="floresta" aria-pressed="${cenario === "floresta"}">🌲 Floresta</button>
-                <button type="button" data-cenario="mar" aria-pressed="${cenario === "mar"}">🌊 Mar</button>
+            <div class="trilha-ferramentas" role="toolbar" aria-label="Controles da trilha">
+                <div class="grupo" role="group" aria-label="Cenário">
+                    <button type="button" data-cenario="floresta" aria-pressed="${cenario === "floresta"}" aria-label="Cenário de floresta" title="Floresta">🌲</button>
+                    <button type="button" data-cenario="mar" aria-pressed="${cenario === "mar"}" aria-label="Cenário de mar" title="Mar">🌊</button>
+                </div>
+                <div class="grupo" role="group" aria-label="Zoom da trilha">
+                    <button type="button" data-zoom="0" aria-pressed="${estado.zoom === 0}" aria-label="Ver a trilha toda" title="Ver tudo"><i class="pt pt-1"></i></button>
+                    <button type="button" data-zoom="1" aria-pressed="${estado.zoom === 1}" aria-label="Tamanho normal" title="Normal"><i class="pt pt-2"></i></button>
+                    <button type="button" data-zoom="2" aria-pressed="${estado.zoom === 2}" aria-label="Aproximar" title="Perto"><i class="pt pt-3"></i></button>
+                </div>
+                <button type="button" class="localizar" data-centralizar aria-label="Ir para a fase em que estou" title="Onde estou">📍</button>
             </div>
         </header>
         <div class="trilha-barra"><div style="width:${fases.length ? Math.round(100 * feitas / fases.length) : 0}%"></div></div>
         <div class="trilha-heroi" id="trilha-heroi">${heroi()}</div>
-        <div class="trilha-rolagem floresta ${cenario === "mar" ? "mar" : ""} ${horizontal ? "horizontal" : ""}" style="--cor:${esc(plano.cor)}; ${ceu}">
-            <svg viewBox="0 0 ${LARG} ${alt}" ${horizontal ? `style="width:${LARG}px;height:${alt}px"` : ""} role="group" aria-label="Mapa das fases">
+        <div class="trilha-rolagem floresta zoom-${estado.zoom} ${cenario === "mar" ? "mar" : ""} ${horizontal ? "horizontal" : ""}" style="--cor:${esc(plano.cor)}; ${ceu}">
+            <svg viewBox="0 0 ${LARG} ${alt}" style="${horizontal ? `width:${Math.round(LARG * ZOOM_H[estado.zoom])}px;height:${Math.round(alt * ZOOM_H[estado.zoom])}px` : `width:${Math.round(ZOOM_V[estado.zoom] * 100)}%`}" role="group" aria-label="Mapa das fases">
                 ${cena.defs}
                 <g aria-hidden="true">${cena.atras}</g>
                 <path class="trilha-fio" d="${caminho}"/>
@@ -671,20 +716,49 @@ function desenhar() {
             </svg>
         </div>`;
 
-    // deixa a fase atual à vista
     const caixa = secao.querySelector(".trilha-rolagem");
-    const alvoIdx = atualIdx === -1 ? fases.length - 1 : atualIdx;
+    const alvoIdx = estado.sel ?? (atualIdx === -1 ? fases.length - 1 : atualIdx);
+
+    // parallax do fundo acompanha a rolagem de lado
     if (horizontal) {
-        caixa.scrollLeft = Math.max(0, pos[alvoIdx].x - caixa.clientWidth / 2);
-        caixa.style.setProperty("--sx", caixa.scrollLeft + "px");
         let quadro = 0;
         caixa.addEventListener("scroll", () => {
             if (quadro) return;
             quadro = requestAnimationFrame(() => { quadro = 0; caixa.style.setProperty("--sx", caixa.scrollLeft + "px"); });
         }, { passive: true });
-    } else if (atualIdx > 3) {
-        caixa.scrollTop = Math.max(0, (pos[atualIdx].y - 120) * (caixa.scrollHeight / alt));
     }
+
+    // sempre centraliza onde a pessoa está (ou na fase que ela escolheu); no resto do tempo, mantém a posição
+    if (guardado) {
+        caixa.scrollLeft = guardado.esq;
+        caixa.scrollTop = guardado.topo;
+        caixa.style.setProperty("--sx", caixa.scrollLeft + "px");
+    } else {
+        estado.centrar = false;
+        centralizarFase(alvoIdx);
+    }
+
+}
+
+
+/* Rola a caixa da trilha pra que o nó da fase i fique no meio dela. */
+function centralizarFase(i) {
+
+    const caixa = secao.querySelector(".trilha-rolagem");
+    const no = caixa?.querySelector(`.trilha-no[data-fase="${i}"] .disco`);
+    if (!caixa || !no) return;
+
+    const ver = () => {
+        const c = caixa.getBoundingClientRect();
+        const n = no.getBoundingClientRect();
+        caixa.scrollLeft += n.left + n.width / 2 - (c.left + c.width / 2);
+        caixa.scrollTop += n.top + n.height / 2 - (c.top + c.height / 2);
+        caixa.style.setProperty("--sx", caixa.scrollLeft + "px");
+    };
+
+    ver();
+    // depois que o navegador termina de medir (fontes, zoom), centraliza de novo
+    requestAnimationFrame(ver);
 
 }
 
@@ -692,6 +766,8 @@ function desenhar() {
 function escolher(i) {
     if (!estado.fases[i]) return;
     estado.sel = i;
+    estado.selManual = true;
+    estado.centrar = true;
     estado.detalhe = null;
     desenhar();
     carregarDetalhe();
@@ -726,6 +802,25 @@ secao.addEventListener("keydown", (e) => {
 });
 
 secao.addEventListener("click", (e) => {
+    const zoom = e.target.closest("[data-zoom]");
+    if (zoom) {
+        estado.zoom = Number(zoom.dataset.zoom);
+        try { localStorage.setItem(CHAVE_ZOOM, String(estado.zoom)); } catch (erro) { /* vale até recarregar */ }
+        estado.centrar = true;
+        desenhar();
+        return;
+    }
+    if (e.target.closest("[data-centralizar]")) {
+        // volta pra fase em que a pessoa está de verdade (a primeira por fazer; no fim, a última)
+        const atual = estado.fases.findIndex((f) => situacao(f) !== "feita");
+        estado.sel = atual === -1 ? estado.fases.length - 1 : atual;
+        estado.selManual = false;
+        estado.detalhe = null;
+        estado.centrar = true;
+        desenhar();
+        carregarDetalhe();
+        return;
+    }
     const troca = e.target.closest("[data-cenario]");
     if (troca) {
         definirCenario(estado.planoId, troca.dataset.cenario);

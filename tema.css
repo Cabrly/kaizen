@@ -1165,3 +1165,37 @@ html[data-cor="laranja"][data-tema="escuro"] {
 
 /* o passeio fica por cima da barra de navegação do celular (ela tem z-index 9500) */
 .tut { z-index: 9800; }
+
+
+/* ---------- Jornada compacta: botões grandes só com ícone, rótulos curtos, trilha com rolagem própria ---------- */
+.trilha-ferramentas { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-wrap: wrap; }
+.trilha-ferramentas .grupo { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--superficie); border: 1.5px solid var(--linha); }
+.trilha-ferramentas button {
+    min-width: 46px; height: 42px; padding: 0; border: 0; border-radius: 999px; cursor: pointer;
+    display: inline-grid; place-items: center; font-size: 21px; line-height: 1;
+    color: var(--texto-acento); background: transparent;
+}
+.trilha-ferramentas button:hover { background: var(--indigo-claro); }
+.trilha-ferramentas button[aria-pressed="true"] { color: #fff; background: var(--botao); }
+.trilha-ferramentas .localizar { height: 48px; min-width: 48px; border: 1.5px solid var(--linha); background: var(--superficie); box-shadow: 0 3px 0 var(--linha); }
+.trilha-ferramentas .pt { display: block; border-radius: 50%; background: currentColor; }
+.trilha-ferramentas .pt-1 { width: 8px; height: 8px; }
+.trilha-ferramentas .pt-2 { width: 13px; height: 13px; }
+.trilha-ferramentas .pt-3 { width: 19px; height: 19px; }
+@media (max-width: 560px) { .trilha-ferramentas { margin-left: 0; width: 100%; justify-content: space-between; } }
+
+/* o celular não precisa rolar a página inteira pra ver a trilha: ela rola por dentro */
+.trilha-rolagem:not(.horizontal) { max-height: min(68vh, 560px); overflow: auto; overscroll-behavior: contain; }
+.trilha-rolagem:not(.horizontal) svg { max-width: none; margin: 0 auto; display: block; }
+
+/* letras maiores nas fases */
+.trilha-no .rotulo { font-size: 17px; font-weight: 800; }
+.trilha-no .data { font-size: 14px; }
+.trilha-no .num { font-size: 20px; }
+
+/* "ver tudo": só o nó (e a fase escolhida ou atual com nome) */
+.zoom-0 .trilha-no:not(.atual):not(.escolhida) .rotulo, .zoom-0 .trilha-no:not(.atual):not(.escolhida) .data { display: none; }
+
+/* texto menor no cartão da fase */
+.trilha-heroi .trilha-objetivo { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.trilha-itens li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
