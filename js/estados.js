@@ -104,7 +104,7 @@ export function renderizarEstado(
 
 
         mensagem.textContent =
-            "Nenhuma tarefa cadastrada na fonte de dados.";
+            "Você ainda não tem tarefas. Toque em + Adicionar tarefa para criar a primeira.";
 
 
         renderizarTarefas(

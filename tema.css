@@ -1240,3 +1240,19 @@ dialog.quiz::backdrop { background: rgba(14, 20, 50, .55); }
 .quiz-r-res { font-size: 14px; color: var(--suave); padding-top: 4px; border-top: 1px dashed var(--linha); }
 @media (max-width: 520px) { dialog.quiz { padding: 14px 12px 12px; } .quiz-enunciado { font-size: 17px; } .quiz-rodape.fim button { flex: 1 1 100%; } }
 @media (prefers-reduced-motion: reduce) { .quiz-barra i { transition: none; } }
+
+
+/* ---------- celular: alvos de toque de 44px e filtros recolhidos ---------- */
+.filtros-caixa > summary { display: none; }
+@media (max-width: 700px) {
+    .filtros-caixa { margin: 0 0 12px; border: 1px solid var(--linha); border-radius: 14px; background: var(--superficie); }
+    .filtros-caixa > summary { display: flex; align-items: center; min-height: 48px; padding: 0 16px; font-weight: 700; color: var(--texto-acento); cursor: pointer; }
+    .filtros-caixa[open] > summary { border-bottom: 1px solid var(--linha); }
+    .filtros-caixa .filtros { margin: 0; box-shadow: none; border: 0; }
+
+    .est-icone { min-width: 44px; min-height: 44px; }
+    .est-plano header { gap: 2px; }
+    .trilha-detalhes > summary { min-height: 44px; display: flex; align-items: center; }
+    #est-mes-anterior, #est-mes-proximo { min-width: 44px; min-height: 44px; }
+    .rodape-backup .btn-secundario, .rodape-backup a { min-height: 44px; }
+}

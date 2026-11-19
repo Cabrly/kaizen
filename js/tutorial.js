@@ -184,6 +184,13 @@ function passosPresente(nome, notaPets = "") {
                    "o contraste. <b>PIN</b> protege a abertura do app."
         },
         {
+            tela: "estudos", alvo: ".rodape-backup",
+            titulo: "No celular, um cuidado",
+            texto: "Seus estudos ficam guardados <b>neste navegador</b>. Abra o link no <b>Chrome</b> (Android) ou no <b>Safari</b> (iPhone), " +
+                   "e não dentro do WhatsApp ou do Instagram, que esquecem tudo. Depois toque em <b>Adicionar à tela inicial</b> pra ele virar um app. " +
+                   "E, de vez em quando, use <b>Fazer backup</b> pra não perder nada."
+        },
+        {
             titulo: "Como estudar com o plano",
             texto: "1) Uma sessão por dia, na ordem. 2) Faça o <b>diagnóstico inicial</b> sem estudar antes: ele é o seu ponto de partida. " +
                    "3) Mantenha um <b>caderno de erros</b>: todo erro vira uma linha. 4) A meta do edital é no mínimo <b>50% em cada disciplina</b>; " +

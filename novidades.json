@@ -1,5 +1,13 @@
 [
     {
+        "versao": "2.0.9",
+        "data": "2026-11-19",
+        "itens": [
+            "Mais confortável no celular: botões de toque maiores (planos, calendário, rodapé), filtros de tarefas recolhidos por padrão e uma mensagem mais clara quando ainda não há tarefas.",
+            "O passeio dos planos de presente ganhou um passo com cuidados para estudar no celular: abrir no Chrome ou Safari, adicionar à tela inicial e fazer backup."
+        ]
+    },
+    {
         "versao": "2.0.8",
         "data": "2026-11-19",
         "itens": [
