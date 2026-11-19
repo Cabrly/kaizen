@@ -8,7 +8,7 @@
 ========================================================= */
 
 
-import { desenharPet } from "./pets-arte.js?v=4";
+import { desenharPet } from "./pets-arte.js?v=6";
 
 
 const secao = document.querySelector("#est-trilha");
